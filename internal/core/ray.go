@@ -47,7 +47,7 @@ type RayResult struct {
 type Ray struct {
 	P, D     m.Vec3  // 6
 	Dinv     m.Vec3  // 16
-	Tclosest float32 // 7
+	Tclosest float32 // offset 4*9 = 36 (total in RayData is 512+36=548)
 
 	S          [3]float32 //10
 	Kx, Ky, Kz int32      // 13

@@ -202,6 +202,9 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 		case "usemtl":
 			//fmt.Printf("Mtl %v\n", toks[1])
 			mtlid = r.rc.GetMaterialId(toks[1])
+
+			//TODO: Should check if this material is emissive and if so then create a new mesh lightsource.
+
 		case "f":
 			if len(toks) > 4 {
 				//log.Printf("%v", len(toks))

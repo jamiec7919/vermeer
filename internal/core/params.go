@@ -17,6 +17,14 @@ var ErrNotStruct = errors.New("Unmarshal: param is not a struct")
 
 type Params map[string]interface{}
 
+func (np *Params) GetString(key string) (string, error) {
+	if v, present := (*np)[key]; present {
+		return getString(v)
+	}
+
+	return "", nil
+}
+
 func (np *Params) GetFloat(key string) (float64, error) {
 	if v, present := (*np)[key]; present {
 		return getFloat(v)
@@ -39,6 +47,16 @@ func (np *Params) GetVec3(key string) (m.Vec3, error) {
 	}
 
 	return m.Vec3{}, nil
+}
+
+func getString(v interface{}) (string, error) {
+	switch t := v.(type) {
+	case string:
+		return t, nil
+	default:
+		return "", ErrParamNotString
+	}
+
 }
 
 func getFloat(v interface{}) (float64, error) {

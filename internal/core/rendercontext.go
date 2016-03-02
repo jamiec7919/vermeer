@@ -101,6 +101,7 @@ type WorkItem struct {
 
 /* This should return an rgb sample to be accumulated for the pixel */
 func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b float32) {
+	//log.Printf("Pix %v %v", x, y)
 	r0 := rnd.Float32()
 	r1 := rnd.Float32()
 
@@ -159,7 +160,11 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 			if !bsdf.IsDelta(&surf) {
 
 				if len(frame.scene.lights) > 0 {
-					nls := 2
+					nls := 4
+
+					if depth > 0 {
+						nls = 1
+					}
 					for i := 0; i < nls; i++ {
 						var P material.SurfacePoint
 						var pdf float64

@@ -125,7 +125,7 @@ func trisplit(verts []m.Vec3, idx int32, indexes *[]int32, boxes *[]m.BoundingBo
 			box.GrowVec3(top[i])
 		}
 
-		if box.SurfaceArea() > 5000000 {
+		if box.SurfaceArea() > 50000000 {
 			axis := box.MaxDim()
 
 			d := box.Centroid()[axis]
@@ -189,7 +189,7 @@ func (mesh *Mesh) initAccel() error {
 	//log.Printf("%v", boxes[i].SurfaceArea())
 	//	}
 	//panic("stop")
-	nodes, bounds := qbvh.BuildAccel(boxes, centroids, indxs, 4)
+	nodes, bounds := qbvh.BuildAccel(boxes, centroids, indxs, 16)
 
 	mesh.nodes = nodes
 	mesh.bounds = bounds

@@ -4,6 +4,10 @@
 
 package colour
 
+type RGB struct {
+	R, G, B float32
+}
+
 type ColourSpace struct {
 	m [9]float32 // Matrix to convert XYZ->RGB
 }

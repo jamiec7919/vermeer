@@ -13,6 +13,7 @@ import (
 	"github.com/jamiec7919/vermeer/internal/core"
 	_ "github.com/jamiec7919/vermeer/internal/geom/wfobj"
 	_ "github.com/jamiec7919/vermeer/internal/light/disk"
+	_ "github.com/jamiec7919/vermeer/internal/material"
 	"github.com/jamiec7919/vermeer/preview"
 	"log"
 	"os"
