@@ -33,6 +33,14 @@ func (np *Params) GetInt(key string) (int64, error) {
 	return 0, nil
 }
 
+func (np *Params) GetVec3(key string) (m.Vec3, error) {
+	if v, present := (*np)[key]; present {
+		return getVec3(v)
+	}
+
+	return m.Vec3{}, nil
+}
+
 func getFloat(v interface{}) (float64, error) {
 	switch t := v.(type) {
 	case float64:

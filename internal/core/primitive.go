@@ -7,4 +7,6 @@ package core
 import ()
 
 type Primitive interface {
+	TraceRay(*RayData)
+	VisRay(*RayData)
 }

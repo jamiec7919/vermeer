@@ -7,6 +7,8 @@ package core
 import (
 	"github.com/cheggaaa/pb"
 	"github.com/jamiec7919/vermeer/internal/nodeparser"
+	"github.com/jamiec7919/vermeer/material"
+	m "github.com/jamiec7919/vermeer/math"
 	"log"
 	"math/rand"
 	"sync"
@@ -15,13 +17,14 @@ import (
 
 const TILESIZE = 64
 const MAXGOROUTINES = 5
-const NSAMP = 64
+const NSAMP = 16
 
 type Frame struct {
 	w, h   int
 	du, dv float32
 	camera Camera
 	scene  *Scene
+	rc     *RenderContext
 	bar    *pb.ProgressBar
 }
 
@@ -30,20 +33,52 @@ type Scene struct {
 	lights []Light
 }
 
+func (s *Scene) VisRay(ray *RayData) {
+	// d is not normalized and Tclosest == 1-VisRayEpsilon
+	for _, prim := range s.prims {
+		prim.VisRay(ray)
+
+		if !ray.IsVis() { // Early out if we have a blocker
+			return
+		}
+	}
+}
+
+func (s *Scene) TraceRay(ray *RayData) {
+	for _, prim := range s.prims {
+		prim.TraceRay(ray)
+	}
+
+}
+
+type PreviewFrame struct {
+	W, H int
+	Buf  []uint8
+}
+
 type RenderContext struct {
-	globals Globals
-	imgbuf  []float32
-	frames  []Frame
-	nodes   []Node
-	scene   Scene
-	cameras []Camera
+	globals   Globals
+	imgbuf    []float32
+	frames    []Frame
+	nodes     []Node
+	scene     Scene
+	cameras   []Camera
+	materials []*material.Material
+
+	PreviewChan chan PreviewFrame
+}
+
+func (rc *RenderContext) GetMaterial(id material.Id) *material.Material {
+	if rc.materials != nil && id != material.ID_NONE && int(id) < len(rc.materials) {
+		return rc.materials[int(id)]
+	}
+	return nil
 }
 
 func NewRenderContext() *RenderContext {
 	rc := &RenderContext{}
 	rc.globals.XRes = 256
 	rc.globals.YRes = 256
-	rc.globals.UseProgress = true
 	rc.globals.MaxGoRoutines = MAXGOROUTINES
 	return rc
 }
@@ -56,7 +91,6 @@ func (rc *RenderContext) PreRender() error {
 		}
 	}
 
-	rc.imgbuf = make([]float32, 3*rc.globals.XRes*rc.globals.YRes)
 	return nil
 }
 
@@ -65,11 +99,126 @@ type WorkItem struct {
 	samples    []float32
 }
 
-type RayData struct{}
+/* This should return an rgb sample to be accumulated for the pixel */
+func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b float32) {
+	r0 := rnd.Float32()
+	r1 := rnd.Float32()
+
+	u := (float32(x) + r0) * frame.du
+	v := (float32(y) + r1) * frame.dv
+
+	lambda := ((720 - 450) * rnd.Float32()) + 450
+
+	P, D := frame.camera.ComputeRay(-1+u, 1-v, rnd)
+	fullsample := material.Spectrum{Lambda: lambda}
+	contrib := material.Spectrum{Lambda: fullsample.Lambda}
+	contrib.FromRGB(1, 1, 1)
+
+	for depth := 0; depth < 4; depth++ {
+
+		ray.InitRay(P, D)
+
+		frame.scene.TraceRay(ray)
+
+		var surf material.SurfacePoint
+
+		if ray.GetHitSurface(&surf) == nil {
+
+			mtl := frame.rc.GetMaterial(material.Id(surf.MtlId))
+
+			if mtl == nil { // can't do much with no material
+				return
+			}
+
+			Vout := m.Vec3Neg(D)
+			d := m.Vec3Dot(surf.N, Vout)
+
+			if d < 0.0 { // backface hit
+				return
+			}
+
+			surf.Ns = surf.WorldToTangent(m.Vec3Normalize(surf.Ns))
+
+			if m.Vec3Dot(surf.Ns, surf.N) < 0 {
+				//Ns := vm.Vec3Add(shade.Ns, vm.Vec3Scale(2*vm.Vec3Dot(shade.Ns, shade.Ng), shade.Ng))
+
+				surf.Ns = m.Vec3Neg(surf.Ns) // Should mirror in Ng really instead of -ve?
+			}
+
+			omega_i := surf.WorldToTangent(Vout)
+
+			bsdf := mtl.BSDF[0]
+
+			if bsdf == nil { // can't do much without BSDF
+				return
+			}
+
+			//var samp_pdf float64
+			//var omega_o m.Vec3
+
+			if !bsdf.IsDelta(&surf) {
+
+				if len(frame.scene.lights) > 0 {
+					nls := 2
+					for i := 0; i < nls; i++ {
+						var P material.SurfacePoint
+						var pdf float64
+
+						if frame.scene.lights[0].SampleArea(&surf, rnd, &P, &pdf) == nil {
+							V := m.Vec3Sub(P.P, surf.P)
+
+							if m.Vec3Dot(V, surf.N) > 0.0 && m.Vec3Dot(V, P.N) < 0.0 {
+								ray.InitVisRay(surf.P, P.P)
+								frame.scene.VisRay(ray)
+								if ray.IsVis() {
+									Vnorm := m.Vec3Normalize(V)
+
+									lightm := frame.rc.GetMaterial(material.Id(P.MtlId))
+									Le := material.Spectrum{Lambda: contrib.Lambda}
+									lightm.EDF.Eval(&P, P.WorldToTangent(m.Vec3Neg(Vnorm)), &Le)
+
+									rho := material.Spectrum{Lambda: contrib.Lambda}
+
+									bsdf.Eval(&surf, omega_i, surf.WorldToTangent(Vnorm), &rho)
+									geom := m.Abs(m.Vec3Dot(Vnorm, surf.N)) * m.Abs(m.Vec3Dot(Vnorm, P.N)) / m.Vec3Length2(V)
+									Le.Mul(rho)
+									Le.Mul(contrib)
+									Le.Scale(geom / (float32(pdf) * float32(nls)))
+									//rho.Mul()
+									fullsample.Add(Le)
+									//log.Printf("contrib:", contrib)
+								}
+							}
+						}
+					}
+				}
+			}
+
+			var omega_o m.Vec3
+			var pdf float64
+			rho := material.Spectrum{Lambda: fullsample.Lambda}
+			bsdf.Sample(&surf, omega_i, rnd, &omega_o, &rho, &pdf)
+
+			P = surf.P
+			D = surf.TangentToWorld(omega_o)
+
+			contrib.Mul(rho)
+			contrib.Scale(omega_o[2] / float32(pdf))
+			//log.Printf("%v %v", x, y)
+			//return contrib.ToRGB()
+			//r = m.Vec3Dot(surf.N, m.Vec3Neg(D))
+			//g = m.Vec3Dot(surf.N, m.Vec3Neg(D))
+			//b = m.Vec3Dot(surf.N, m.Vec3Neg(D))
+		} else { // Escaped scene
+			break
+		}
+	}
+	return fullsample.ToRGB()
+}
 
 // NOTE: we return the raydata here even though it is ignored in order to ensure that ray is
 // heap allocated (for alignment purposes)
-func renderFunc(frame *Frame, c chan *WorkItem, done chan *WorkItem, wg *sync.WaitGroup) *RayData {
+func renderFunc(n int, frame *Frame, c chan *WorkItem, done chan *WorkItem, wg *sync.WaitGroup) *RayData {
 	defer wg.Done()
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -77,34 +226,33 @@ func renderFunc(frame *Frame, c chan *WorkItem, done chan *WorkItem, wg *sync.Wa
 	for w := range c {
 		for j := 0; j < w.h; j++ {
 			for i := 0; i < w.w; i++ {
-				for k := 0; k < NSAMP; k++ {
-					r0 := rnd.Float32()
-					r1 := rnd.Float32()
+				r, g, b := samplePixel(i+w.x, j+w.y, frame, rnd, ray)
 
-					u := (float32(i+w.x) + r0) * frame.du
-					v := (float32(j+w.y) + r1) * frame.dv
+				w.samples[((i+w.x)+(j+w.y)*frame.w)*3+0] = (w.samples[((i+w.x)+(j+w.y)*frame.w)*3+0]*float32(n) + m.Clamp(r*1000, 0, 255)) / float32(n+1)
+				w.samples[((i+w.x)+(j+w.y)*frame.w)*3+1] = (w.samples[((i+w.x)+(j+w.y)*frame.w)*3+1]*float32(n) + m.Clamp(g*1000, 0, 255)) / float32(n+1)
+				w.samples[((i+w.x)+(j+w.y)*frame.w)*3+2] = (w.samples[((i+w.x)+(j+w.y)*frame.w)*3+2]*float32(n) + m.Clamp(b*1000, 0, 255)) / float32(n+1)
 
-					P, D := frame.camera.ComputeRay(-1+u, 1-v, rnd)
-
-					w.samples[(i+(j*w.w))*3] += P[0]
-					w.samples[(i+(j*w.w))*3+1] += D[0]
-					w.samples[(i+(j*w.w))*3+2] += 0
-
-				}
 				if frame.bar != nil {
 					frame.bar.Increment()
 				}
 			}
 		}
 
-		for i := range w.samples {
-			w.samples[i] /= NSAMP
-		}
-
 		done <- w
 	}
 
 	return ray
+}
+
+func tonemap(w, h int, hdr_rgb []float32, buf []uint8) {
+	// Tone map into buffer
+	for i := 0; i < w*h*3; i += 3 {
+		buf[i] = uint8(hdr_rgb[i])
+		buf[i+1] = uint8(hdr_rgb[i+1])
+		buf[i+2] = uint8(hdr_rgb[i+2])
+
+	}
+
 }
 
 func (rc *RenderContext) Render() error {
@@ -121,6 +269,7 @@ func (rc *RenderContext) Render() error {
 		return ErrNoCamera
 	}
 
+	frame.rc = rc
 	frame.scene = &rc.scene
 	frame.w = rc.globals.XRes
 	frame.h = rc.globals.YRes
@@ -131,48 +280,64 @@ func (rc *RenderContext) Render() error {
 		frame.bar = pb.StartNew(rc.globals.XRes * rc.globals.YRes)
 	}
 
-	var wg sync.WaitGroup
-	workChan := make(chan *WorkItem)
-	done := make(chan *WorkItem)
+	buf := make([]float32, frame.w*frame.h*3)
 
-	for n := 0; n < rc.globals.MaxGoRoutines; n++ {
-		wg.Add(1)
-		go renderFunc(&frame, workChan, done, &wg)
-	}
+	for k := 0; true; k++ {
 
-	complete := make(chan []float32)
-	go func() {
-		buf := make([]float32, frame.w*frame.h*3)
-		var q []*WorkItem
-		for d := range done {
-			q = append(q, d)
+		var wg sync.WaitGroup
+		workChan := make(chan *WorkItem)
+		done := make(chan *WorkItem)
+
+		for n := 0; n < rc.globals.MaxGoRoutines; n++ {
+			wg.Add(1)
+			go renderFunc(k, &frame, workChan, done, &wg)
 		}
 
-		for k := range q {
-			for j := 0; j < q[k].h; j++ {
-				for i := 0; i < q[k].w; i++ {
-					rc.imgbuf[((i+q[k].x)+(j+q[k].y)*frame.w)*3+0] = q[k].samples[(i+(j*q[k].w))*3+0]
-					rc.imgbuf[((i+q[k].x)+(j+q[k].y)*frame.w)*3+1] = q[k].samples[(i+(j*q[k].w))*3+1]
-					rc.imgbuf[((i+q[k].x)+(j+q[k].y)*frame.w)*3+2] = q[k].samples[(i+(j*q[k].w))*3+2]
+		complete := make(chan []float32)
+		go func() {
+			var q []*WorkItem
+			for d := range done {
+				q = append(q, d)
+			}
+			/*
+				for k := range q {
+					for j := 0; j < q[k].h; j++ {
+						for i := 0; i < q[k].w; i++ {
+							buf[((i+q[k].x)+(j+q[k].y)*frame.w)*3+0] = q[k].samples[(i+(j*q[k].w))*3+0]
+							buf[((i+q[k].x)+(j+q[k].y)*frame.w)*3+1] = q[k].samples[(i+(j*q[k].w))*3+1]
+							buf[((i+q[k].x)+(j+q[k].y)*frame.w)*3+2] = q[k].samples[(i+(j*q[k].w))*3+2]
+						}
+					}
 				}
+			*/
+			complete <- buf
+		}()
+
+		for j := 0; j < frame.h; j += TILESIZE {
+			for i := 0; i < frame.w; i += TILESIZE {
+
+				workChan <- &WorkItem{x: i, y: j, w: TILESIZE, h: TILESIZE, samples: buf /* make([]float32, TILESIZE*TILESIZE*3)*/}
 			}
 		}
 
-		complete <- buf
-	}()
+		close(workChan)
+		wg.Wait()
+		close(done)
 
-	for j := 0; j < frame.h; j += TILESIZE {
-		for i := 0; i < frame.w; i += TILESIZE {
+		rc.imgbuf = <-complete
 
-			workChan <- &WorkItem{x: i, y: j, w: TILESIZE, h: TILESIZE, samples: make([]float32, TILESIZE*TILESIZE*3)}
+		if rc.PreviewChan != nil {
+			fr := PreviewFrame{
+				W:   rc.globals.XRes,
+				H:   rc.globals.YRes,
+				Buf: make([]uint8, 3*rc.globals.XRes*rc.globals.YRes),
+			}
+
+			tonemap(rc.globals.XRes, rc.globals.YRes, rc.imgbuf, fr.Buf)
+
+			rc.PreviewChan <- fr
 		}
 	}
-
-	close(workChan)
-	wg.Wait()
-	close(done)
-
-	rc.imgbuf = <-complete
 
 	if frame.bar != nil {
 		frame.bar.FinishPrint("Render Complete")
@@ -192,6 +357,26 @@ func (rc *RenderContext) PostRender() error {
 	return nil
 }
 
+func (rc *RenderContext) GetMaterialId(name string) material.Id {
+	for id, mtl := range rc.materials {
+		if mtl.Name == name {
+			return material.Id(id)
+		}
+	}
+
+	return material.ID_NONE
+}
+
+func (rc *RenderContext) AddMaterial(name string, mtl *material.Material) material.Id {
+	mtl.Name = name
+
+	id := len(rc.materials)
+
+	rc.materials = append(rc.materials, mtl)
+
+	return material.Id(id)
+}
+
 func (rc *RenderContext) AddNode(node Node) {
 	rc.nodes = append(rc.nodes, node)
 
@@ -202,7 +387,6 @@ func (rc *RenderContext) AddNode(node Node) {
 		rc.scene.prims = append(rc.scene.prims, t)
 	case Light:
 		rc.scene.lights = append(rc.scene.lights, t)
-
 	}
 }
 

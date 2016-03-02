@@ -9,11 +9,20 @@ import (
 	"unsafe"
 )
 
+func SignMask(v float32) uint32 {
+	return sign_mask(v)
+}
+
 func sign_mask(v float32) uint32 {
 	return (*(*uint32)(unsafe.Pointer(&v))) & (1 << 31) //~0x7fffffff;
 }
 
 func xorf(v float32, i uint32) float32 {
+	return math.Float32frombits(*(*uint32)(unsafe.Pointer(&v)) ^ i)
+
+}
+
+func Xorf(v float32, i uint32) float32 {
 	return math.Float32frombits(*(*uint32)(unsafe.Pointer(&v)) ^ i)
 
 }

@@ -5,13 +5,14 @@
 package core
 
 import (
+	"github.com/jamiec7919/vermeer/material"
 	m "github.com/jamiec7919/vermeer/math"
 	"math/rand"
 )
 
 type Light interface {
-	SamplePoint(*rand.Rand, *SurfacePoint, *float64) error                         // Sample a point on the surface
-	SampleArea(*SurfacePoint, *rand.Rand, *SurfacePoint, *float64) error           // Sample a point on the surface visible from first point
-	SampleDirection(*SurfacePoint, *rand.Rand, *m.Vec3, *Spectrum, *float64) error // Sample direction given point
+	SamplePoint(*rand.Rand, *material.SurfacePoint, *float64) error                                  // Sample a point on the surface
+	SampleArea(*material.SurfacePoint, *rand.Rand, *material.SurfacePoint, *float64) error           // Sample a point on the surface visible from first point
+	SampleDirection(*material.SurfacePoint, *rand.Rand, *m.Vec3, *material.Spectrum, *float64) error // Sample direction given point
 
 }
