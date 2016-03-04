@@ -160,7 +160,7 @@ func visIntersectFace(ray *core.RayData, face *FaceGeom) bool {
 	} else {
 		det_sign := m.SignMask(det)
 
-		if m.Xorf(T, det_sign) < core.VisRayEpsilon || m.Xorf(T, det_sign) > (ray.Ray.Tclosest-core.VisRayEpsilon)*m.Xorf(det, det_sign) {
+		if m.Xorf(T, det_sign) < 0 || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
 			return false
 		}
 	}
@@ -736,7 +736,7 @@ func (mesh *Mesh) visRayAccel(ray *core.RayData) {
 			leaf_count := qbvh.LEAF_COUNT(node)
 			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
 			if mesh.visIntersectTris(ray, leaf_base, leaf_count) {
-				ray.Ray.Tclosest = 0
+				ray.Ray.Tclosest = 0.5
 				return // Early out if we have any inersection
 			}
 		}

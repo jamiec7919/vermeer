@@ -37,6 +37,25 @@ func makeBSDF(params core.Params) material.BSDF {
 			bsdf.Kd = &material.ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
 		}
 		return &bsdf
+
+	case "Specular":
+		bsdf := bsdf.Specular{}
+
+		Ks, present := params["Ks"]
+
+		if !present {
+			Ks = []float64{0.5, 0.5, 0.5}
+		}
+
+		switch t := Ks.(type) {
+		case string:
+			bsdf.Ks = &material.TextureMap{t}
+		case []float64:
+			bsdf.Ks = &material.ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
+		case []int64:
+			bsdf.Ks = &material.ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
+		}
+		return &bsdf
 	}
 
 	return nil

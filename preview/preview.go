@@ -98,7 +98,7 @@ func Init() (err error) {
 		return err
 	}
 
-	window, err = glfw.CreateWindow(256, 256, "Vermeer Light Tools", nil, nil)
+	window, err = glfw.CreateWindow(1024, 1024, "Vermeer Light Tools", nil, nil)
 
 	if err != nil {
 		return err

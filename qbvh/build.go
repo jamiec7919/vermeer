@@ -165,7 +165,7 @@ func binarySplit(boxes []m.BoundingBox, centroids []m.Vec3, indxs []int32) (axis
 		//		bounds.GrowVec3(boxes[indxs[i]].Centroid())
 	}
 
-	if len(indxs) <= 16 {
+	if len(indxs) <= 4 {
 		axis = 0
 		pivot = len(indxs)
 		return
@@ -274,11 +274,8 @@ func buildAccelRec(nodes *[]Node, boxes []m.BoundingBox, centroids []m.Vec3, ind
 	nodebox := m.BoundingBox{}
 	nodebox.Reset()
 	for i := 0; i < 4; i++ {
-		//FIXME:  DO NOT GROW BOX IF CHILD IS EMPTY!!
 		//nodebox.GrowBox(boxes[indxs[i]])
-		if (*nodes)[nodei].Children[i] != -1 {
-			nodebox.GrowBox((*nodes)[nodei].Bounds(i))
-		}
+		nodebox.GrowBox((*nodes)[nodei].Bounds(i))
 	}
 
 	return nodei, nodebox
