@@ -15,6 +15,7 @@ const MaxLeafCount = 16
 
 type Index int32 // Type of a triangle/prim index
 
+// 128 byte struct
 type Node struct {
 	Boxes               [4 * 3 * 2]float32
 	Axis0, Axis1, Axis2 int32
@@ -48,7 +49,8 @@ func LEAF_BASE(l int32) int { return int(((l) & 0x7ffffff) >> 4) }
 func (n *Node) SetEmptyLeaf(idx int) {
 	n.Children[idx] = -1
 	b := m.InfBox
-	//b.Reset()   setting it like this will not stop rays hitting!
+	//b := m.BoundingBox{}
+	b.Reset() // setting it like this will not stop rays hitting!
 	/*	b.Bounds[0][0] = m.Inf(1)
 		b.Bounds[0][1] = 50000
 		b.Bounds[0][1] = 50000
