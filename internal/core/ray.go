@@ -15,6 +15,7 @@ import (
 const CHECK_EMPTY_LEAF = true
 
 const VisRayEpsilon float32 = 0.0001
+const VisRayEpsilon2 float32 = 0.000001
 
 type TraverseElem struct {
 	Node int32

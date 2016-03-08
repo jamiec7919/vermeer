@@ -78,7 +78,7 @@ func (mesh *MeshFile) PreRender(rc *core.RenderContext) error {
 	}
 
 	if mesh.NodeName == "mesh02" {
-		trn := m.Matrix4Translate(0.4, -0.4, -0.4)
+		trn := m.Matrix4Translate(0.4, -0.3, -0.4)
 		rot := m.Matrix4Rotate(m.Pi/2, 0, 1, 0)
 		msh.Transform(m.Matrix4Mul(trn, rot))
 	}

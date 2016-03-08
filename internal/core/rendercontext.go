@@ -132,11 +132,11 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 			}
 
 			Vout := m.Vec3Neg(D)
-			d := m.Vec3Dot(surf.N, Vout)
+			//			d := m.Vec3Dot(surf.N, Vout)
 
-			if d < 0.0 { // backface hit
-				return
-			}
+			//if d < 0.0 { // backface hit
+			//	return
+			//}
 
 			surf.Ns = surf.WorldToTangent(m.Vec3Normalize(surf.Ns))
 
@@ -151,7 +151,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 			bsdf := mtl.BSDF[0]
 
 			if bsdf == nil { // can't do much without BSDF
-				return
+				//return
 			}
 
 			//var samp_pdf float64

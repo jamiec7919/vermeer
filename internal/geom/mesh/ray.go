@@ -118,8 +118,22 @@ func visIntersectFace(ray *core.RayData, face *FaceGeom) bool {
 	U := Cx*By - Cy*Bx
 	V := Ax*Cy - Ay*Cx
 	W := Bx*Ay - By*Ax
-	// Fallback..
-	//TODO
+
+	// Fallback to double precision if float edge tests fail
+	if U == 0.0 || V == 0.0 || W == 0.0 {
+		CxBy := float64(Cx) * float64(By)
+		CyBx := float64(Cy) * float64(Bx)
+		U = float32(CxBy - CyBx)
+
+		AxCy := float64(Ax) * float64(Cy)
+		AyCx := float64(Ay) * float64(Cx)
+		V = float32(AxCy - AyCx)
+
+		BxAy := float64(Bx) * float64(Ay)
+		ByAx := float64(By) * float64(Ax)
+		W = float32(BxAy - ByAx)
+
+	}
 
 	// Perform edge tests
 	// Backface cull:
@@ -151,6 +165,7 @@ func visIntersectFace(ray *core.RayData, face *FaceGeom) bool {
 	//Cz := ray.Ray.S[2] * C_Kz
 
 	T := ray.Ray.S[2] * (U*A_Kz + V*B_Kz + W*C_Kz)
+	//T := U*Az + V*Bz + W*Cz
 
 	// Backface cull:
 	if BACKFACE_CULL {
@@ -160,7 +175,7 @@ func visIntersectFace(ray *core.RayData, face *FaceGeom) bool {
 	} else {
 		det_sign := m.SignMask(det)
 
-		if m.Xorf(T, det_sign) < 0 || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
+		if m.Xorf(T, det_sign) < core.VisRayEpsilon2 || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
 			return false
 		}
 	}
@@ -198,8 +213,22 @@ func (mesh *Mesh) visIntersectTris_old(ray *core.RayData, base, count int) bool 
 		U := Cx*By - Cy*Bx
 		V := Ax*Cy - Ay*Cx
 		W := Bx*Ay - By*Ax
-		// Fallback..
-		//TODO
+
+		// Fallback to double precision if float edge tests fail
+		if U == 0.0 || V == 0.0 || W == 0.0 {
+			CxBy := float64(Cx) * float64(By)
+			CyBx := float64(Cy) * float64(Bx)
+			U = float32(CxBy - CyBx)
+
+			AxCy := float64(Ax) * float64(Cy)
+			AyCx := float64(Ay) * float64(Cx)
+			V = float32(AxCy - AyCx)
+
+			BxAy := float64(Bx) * float64(Ay)
+			ByAx := float64(By) * float64(Ax)
+			W = float32(BxAy - ByAx)
+
+		}
 
 		// Perform edge tests
 		// Backface cull:
@@ -284,6 +313,23 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 		U = Cx*By - Cy*Bx
 		V = Ax*Cy - Ay*Cx
 		W = Bx*Ay - By*Ax
+
+		// Fallback to double precision if float edge tests fail
+		if U == 0.0 || V == 0.0 || W == 0.0 {
+			CxBy := float64(Cx) * float64(By)
+			CyBx := float64(Cy) * float64(Bx)
+			U = float32(CxBy - CyBx)
+
+			AxCy := float64(Ax) * float64(Cy)
+			AyCx := float64(Ay) * float64(Cx)
+			V = float32(AxCy - AyCx)
+
+			BxAy := float64(Bx) * float64(Ay)
+			ByAx := float64(By) * float64(Ax)
+			W = float32(BxAy - ByAx)
+
+		}
+
 	}
 
 	if (U < 0.0 || V < 0.0 || W < 0.0) && (U > 0.0 || V > 0.0 || W > 0.0) {
