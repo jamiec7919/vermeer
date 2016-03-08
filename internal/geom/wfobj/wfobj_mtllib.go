@@ -85,7 +85,10 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 				return err
 			}
 		case "map_Kd":
-			mtl.BSDF[0] = &bsdf.Diffuse{Kd: &material.TextureMap{toks[1]}}
+
+			if len(toks) > 1 {
+				mtl.BSDF[0] = &bsdf.Diffuse{Kd: &material.TextureMap{toks[1]}}
+			}
 			//mtl.BSDF.Diffuse = TextureFile(toks[1])
 		}
 	}

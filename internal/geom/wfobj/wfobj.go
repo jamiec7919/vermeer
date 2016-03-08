@@ -170,8 +170,10 @@ func parseFaceField(field string) (p, n, t int) {
 		t, _ = strconv.Atoi(fields[1])
 	}
 
-	if len(fields[2]) > 0 {
-		n, _ = strconv.Atoi(fields[2])
+	if len(fields) > 2 {
+		if len(fields[2]) > 0 {
+			n, _ = strconv.Atoi(fields[2])
+		}
 	}
 	/*
 		fmt.Sscanf(field, "%d/%d/%d", &p, &t, &n)
