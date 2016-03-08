@@ -29,8 +29,8 @@ func init() {
 	tmp := CreateRGBTexture(2, 2)
 	tmp.url = "test"
 	tmp.SetRGB(0, 0, 250, 250, 250)
-	tmp.SetRGB(1, 0, 5, 5, 5)
-	tmp.SetRGB(0, 1, 5, 5, 5)
+	tmp.SetRGB(1, 0, 250, 5, 250)
+	tmp.SetRGB(0, 1, 250, 5, 250)
 	tmp.SetRGB(1, 1, 250, 250, 250)
 	testTexture = tmp
 }
