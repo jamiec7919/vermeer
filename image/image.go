@@ -11,6 +11,10 @@ import (
 	"errors"
 )
 
+var (
+	ErrNoWriter = errors.New("No writer")
+)
+
 type BaseType int
 type Aggregate int
 
@@ -65,24 +69,32 @@ type Writer interface {
 
 	Close()
 
-	WriteImage(TypeDesc, buf interface{}) error
-	WriteImageStride(TypeDesc, buf interface{}, xstride, ystride, zstride int) error
-	WriteScanline(y, z int, TypeDesc, buf interface{}) error
-	WriteScanlineStride(y, z int, TypeDesc, buf interface{}, xstride, ystride, zstride int) error
-	WriteTile(x, y, z int, TypeDesc, buf interface{}) error
-	WriteTileStride(x, y, z int, TypeDesc, buf interface{}, xstride, ystride, zstride int) error
+	WriteImage(ty TypeDesc, buf interface{}) error
+	WriteImageStride(ty TypeDesc, buf interface{}, xstride, ystride, zstride int) error
+	WriteScanline(y, z int, ty TypeDesc, buf interface{}) error
+	WriteScanlineStride(y, z int, ty TypeDesc, buf interface{}, xstride, ystride, zstride int) error
+	WriteTile(x, y, z int, ty TypeDesc, buf interface{}) error
+	WriteTileStride(x, y, z int, ty TypeDesc, buf interface{}, xstride, ystride, zstride int) error
 
 	Supports(tag string) bool
 
 	// Copy(Reader) error
 }
 
-func NewWriter(filename string) (Writer, error) {
-	return nil, errors.New("No Writer")
-}
-
+var writers []func(filename string) (Writer, error)
 var readers []func(filename string) (Reader, error)
 
+func NewWriter(filename string) (Writer, error) {
+	for _, w := range writers {
+		writer, err := w(filename)
+
+		if writer != nil && err == nil {
+			return writer, err
+		}
+	}
+
+	return nil, errors.New("No Writer")
+}
 func Open(filename string) (Reader, error) {
 	for _, reader := range readers {
 
@@ -99,4 +111,8 @@ func Open(filename string) (Reader, error) {
 
 func RegisterReader(open func(filename string) (Reader, error)) {
 	readers = append(readers, open)
+}
+
+func RegisterWriter(test func(filename string) (Writer, error)) {
+	writers = append(writers, test)
 }

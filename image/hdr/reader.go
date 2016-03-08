@@ -11,17 +11,51 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/jamiec7919/vermeer/image"
 	"os"
-	"vermeer/image"
 )
 
-type HDRReader struct {
+type Reader struct {
 	file   *os.File
 	reader *bufio.Reader
 	spec   image.Spec
 }
 
-func (h *HDRReader) readHeaders() error {
+func init() {
+
+	open := func(filename string) (image.Reader, error) {
+		r, err := Open(filename)
+
+		if err == nil && r != nil {
+			return r, err
+		}
+		return nil, err
+	}
+
+	image.RegisterReader(open)
+}
+
+func Open(filename string) (*Reader, error) {
+
+	h := Reader{}
+
+	file, err := os.Open(filename)
+
+	if err != nil {
+		return nil, err
+	}
+
+	h.file = file
+	h.reader = bufio.NewReader(h.file)
+
+	if err := h.readHeaders(); err != nil {
+		return nil, err
+	}
+
+	return &h, nil
+}
+
+func (h *Reader) readHeaders() error {
 	// bytes := make([]byte, DefaultBufferSize)
 
 	for {
@@ -67,10 +101,10 @@ func (h *HDRReader) readHeaders() error {
 	return nil
 }
 
-func (h *HDRReader) Spec() (image.Spec, error) { return h.spec, nil }
-func (h *HDRReader) Close()                    { h.file.Close() }
+func (h *Reader) Spec() (image.Spec, error) { return h.spec, nil }
+func (h *Reader) Close()                    { h.file.Close() }
 
-func (h *HDRReader) ReadImage(ty image.TypeDesc, buf interface{}) error {
+func (h *Reader) ReadImage(ty image.TypeDesc, buf interface{}) error {
 	if ty.BaseType != image.FLOAT {
 		return errors.New("HDR: only supports float32 pixels")
 	}
@@ -109,7 +143,7 @@ func (h *HDRReader) ReadImage(ty image.TypeDesc, buf interface{}) error {
 	return nil
 }
 
-func (h *HDRReader) ReadScanline(y, z int, ty image.TypeDesc, buf interface{}) error {
+func (h *Reader) ReadScanline(y, z int, ty image.TypeDesc, buf interface{}) error {
 	if ty.BaseType != image.FLOAT {
 		return errors.New("HDR: only supports float32 pixels")
 	}
@@ -124,11 +158,11 @@ func (h *HDRReader) ReadScanline(y, z int, ty image.TypeDesc, buf interface{}) e
 	return errors.New("HDR: scanline reading not supported")
 }
 
-func (h *HDRReader) ReadTile(x, y, z int, ty image.TypeDesc, buf interface{}) error {
+func (h *Reader) ReadTile(x, y, z int, ty image.TypeDesc, buf interface{}) error {
 	return errors.New("HDR: doesn't support tiles")
 }
 
-func (h *HDRReader) Supports(tag string) bool { return false }
+func (h *Reader) Supports(tag string) bool { return false }
 
 func readScanlineOld(fin *bufio.Reader, scanline []byte) error {
 	length := len(scanline) / 4
