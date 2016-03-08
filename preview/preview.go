@@ -88,6 +88,11 @@ func Run(rc *core.RenderContext) {
 			glfw.PollEvents()
 		}
 	}
+
+	close(rc.PreviewChan)
+	rc.PreviewChan = nil
+
+	runtime.UnlockOSThread()
 }
 
 func Init() (err error) {

@@ -48,28 +48,40 @@ func main() {
 		os.Exit(1)
 	}
 
+	renderstatus := make(chan error)
+
+	finish := make(chan bool)
+
 	go func() {
 
 		if err := rc.LoadNodeFile(filename); err != nil {
 			log.Printf("Error: LoadNodeFile: %v", err)
-			os.Exit(1)
+			renderstatus <- err
+			return
 		}
 		if err := rc.PreRender(); err != nil {
 			log.Printf("Error: PreRender: %v", err)
-			os.Exit(1)
+			renderstatus <- err
+			return
 		}
 
-		if err := rc.Render(); err != nil {
+		if err := rc.Render(finish); err != nil {
 			log.Printf("Error: Render: %v", err)
-			os.Exit(1)
+			renderstatus <- err
+			return
 		}
 
 		if err := rc.PostRender(); err != nil {
 			log.Printf("Error: PostRender: %v", err)
-			os.Exit(1)
+			renderstatus <- err
+			return
 		}
+		renderstatus <- nil
 	}()
 
 	preview.Run(rc)
 
+	finish <- true
+
+	<-renderstatus
 }
