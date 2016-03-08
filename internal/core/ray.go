@@ -100,7 +100,9 @@ func (r *RayData) GetHitSurface(surface *material.SurfacePoint) error {
 		surface.N = r.Result.Ng
 		surface.Ns = r.Result.Ns
 		surface.B = r.Result.Bg
-		surface.UV = r.Result.UV
+		for k := range surface.UV {
+			surface.UV[k] = r.Result.UV[k]
+		}
 		surface.POffset = r.Result.POffset
 		surface.MtlId = r.Result.MtlId
 		//surface.Extra = copy(r.Result.Extra)

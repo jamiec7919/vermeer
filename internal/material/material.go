@@ -2,10 +2,24 @@ package material
 
 import (
 	"github.com/jamiec7919/vermeer/internal/core"
-	"github.com/jamiec7919/vermeer/internal/nodeparser"
 	"github.com/jamiec7919/vermeer/material"
 	"github.com/jamiec7919/vermeer/material/bsdf"
 )
+
+type Node struct {
+	material *material.Material
+}
+
+func (node *Node) Material() *material.Material            { return node.material }
+func (node *Node) Name() string                            { return node.material.Name }
+func (node *Node) PreRender(rc *core.RenderContext) error  { return nil }
+func (node *Node) PostRender(rc *core.RenderContext) error { return nil }
+
+func makeBSDF2(rc *core.RenderContext, params core.Params) (interface{}, error) {
+	bsdf := makeBSDF(params)
+
+	return bsdf, nil
+}
 
 func makeBSDF(params core.Params) material.BSDF {
 	ty, _ := params.GetString("Type")
@@ -61,20 +75,20 @@ func makeBSDF(params core.Params) material.BSDF {
 	return nil
 }
 
-func makeMaterial(rc *core.RenderContext, params core.Params) error {
+func makeMaterial(rc *core.RenderContext, params core.Params) (interface{}, error) {
 
 	_bsdfs := params["BSDF"]
 
-	bsdfs := _bsdfs.([]nodeparser.Params) // Don't like this..
+	bsdfs := _bsdfs.([]interface{}) // Don't like this..
 
-	bsdf := makeBSDF(core.Params(bsdfs[0]))
+	bsdf := bsdfs[0].(material.BSDF)
 
 	name, _ := params.GetString("Name")
-
-	rc.AddMaterial(name, &material.Material{BSDF: [2]material.BSDF{bsdf}})
-	return nil
+	mtl := &material.Material{Name: name, BSDF: [2]material.BSDF{bsdf}}
+	return &Node{mtl}, nil
 }
 
 func init() {
-	core.RegisterNodeType("Material", makeMaterial)
+	core.RegisterType("BSDF", makeBSDF2)
+	core.RegisterType("Material", makeMaterial)
 }

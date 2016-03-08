@@ -71,13 +71,18 @@ type MeshFile struct {
 
 func (mesh *MeshFile) Name() string { return mesh.NodeName }
 func (mesh *MeshFile) PreRender(rc *core.RenderContext) error {
-	m, err := mesh.Loader.Load()
+	msh, err := mesh.Loader.Load()
 
 	if err != nil {
 		return err
 	}
 
-	mesh.mesh = m
+	if mesh.NodeName == "mesh02" {
+		trn := m.Matrix4Translate(0.4, -0.4, -0.4)
+		rot := m.Matrix4Rotate(m.Pi/2, 0, 1, 0)
+		msh.Transform(m.Matrix4Mul(trn, rot))
+	}
+	mesh.mesh = msh
 	return mesh.mesh.initAccel()
 }
 func (mesh *MeshFile) PostRender(rc *core.RenderContext) error { return nil }
@@ -90,6 +95,13 @@ func (mesh *MeshFile) VisRay(ray *core.RayData) {
 	mesh.mesh.visRayAccel(ray)
 }
 
+func (mesh *Mesh) Transform(trn m.Matrix4) {
+	for i := range mesh.Faces {
+		mesh.Faces[i].V[0] = m.Matrix4MulPoint(trn, mesh.Faces[i].V[0])
+		mesh.Faces[i].V[1] = m.Matrix4MulPoint(trn, mesh.Faces[i].V[1])
+		mesh.Faces[i].V[2] = m.Matrix4MulPoint(trn, mesh.Faces[i].V[2])
+	}
+}
 func (mesh *Mesh) WorldBounds(m m.Matrix4) (out m.BoundingBox) {
 	return
 }
@@ -225,7 +237,7 @@ func RegisterLoader(name string, open func(rc *core.RenderContext, filename stri
 	loaders[name] = open
 }
 
-func create(rc *core.RenderContext, params core.Params) error {
+func create(rc *core.RenderContext, params core.Params) (interface{}, error) {
 	if filename, present := params["Filename"]; present {
 		for _, open := range loaders {
 			loader, err := open(rc, filename.(string))
@@ -239,14 +251,14 @@ func create(rc *core.RenderContext, params core.Params) error {
 
 				mesh := MeshFile{NodeName: name.(string), Filename: filename.(string), Loader: loader}
 
-				rc.AddNode(&mesh)
-				return nil
+				//rc.AddNode(&mesh)
+				return &mesh, nil
 			}
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func init() {
-	core.RegisterNodeType("MeshFile", create)
+	core.RegisterType("MeshFile", create)
 }

@@ -297,28 +297,25 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 		return
 	}
 
-	{
-		// Calc scaled z-coords of verts and calc the hit dis
-		//Az := ray.Ray.S[2] * A_Kz
-		//Bz := ray.Ray.S[2] * B_Kz
-		//Cz := ray.Ray.S[2] * C_Kz
+	// Calc scaled z-coords of verts and calc the hit dis
+	//Az := ray.Ray.S[2] * A_Kz
+	//Bz := ray.Ray.S[2] * B_Kz
+	//Cz := ray.Ray.S[2] * C_Kz
 
-		T := ray.Ray.S[2] * (U*A_Kz + V*B_Kz + W*C_Kz)
+	T := ray.Ray.S[2] * (U*A_Kz + V*B_Kz + W*C_Kz)
 
-		det_sign := m.SignMask(det)
+	det_sign := m.SignMask(det)
 
-		if m.Xorf(T, det_sign) < 0.0 || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
-			return
-		}
-
-		rcpDet := 1.0 / det
-
-		U = U * rcpDet
-		V = V * rcpDet
-		W = W * rcpDet
-		ray.Ray.Tclosest = T * rcpDet
-
+	if m.Xorf(T, det_sign) < 0.0 || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
+		return
 	}
+
+	rcpDet := 1.0 / det
+
+	U = U * rcpDet
+	V = V * rcpDet
+	W = W * rcpDet
+	ray.Ray.Tclosest = T * rcpDet
 
 	xAbsSum := m.Abs(U*face.V[0][0]) + m.Abs(V*face.V[1][0]) + m.Abs(W*face.V[2][0])
 	yAbsSum := m.Abs(U*face.V[0][1]) + m.Abs(V*face.V[1][1]) + m.Abs(W*face.V[2][1])
@@ -346,22 +343,22 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 	if m.Vec3Dot(ray.Ray.D, face.N) > 0 { // Is it a back face hit?
 		offset = m.Vec3Neg(offset)
 	}
-
 	p := m.Vec3Add3(m.Vec3Scale(U, face.V[0]), m.Vec3Scale(V, face.V[1]), m.Vec3Scale(W, face.V[2]))
-	po := m.Vec3Add(p, offset)
+	/*
+		po := m.Vec3Add(p, offset)
 
-	// round po away from p
-	for i := range po {
-		//log.Printf("%v %v %v", i, offset[i], po[i])
-		if offset[i] > 0 {
-			po[i] = m.NextFloatUp(po[i])
-		} else if offset[i] < 0 {
-			po[i] = m.NextFloatDown(po[i])
-		}
-		//log.Printf("%v %v", i, po[i])
-	}
+		// round po away from p
+		for i := range po {
+			//log.Printf("%v %v %v", i, offset[i], po[i])
+			if offset[i] > 0 {
+				po[i] = m.NextFloatUp(po[i])
+			} else if offset[i] < 0 {
+				po[i] = m.NextFloatDown(po[i])
+			}
+			//log.Printf("%v %v", i, po[i])
+		}*/
 	ray.Result.POffset = offset
-	ray.Result.P = po
+	ray.Result.P = p
 
 	ray.Result.Ng = face.N
 	ray.Result.Tg = m.Vec3Normalize(m.Vec3Cross(face.N, m.Vec3Normalize(m.Vec3Sub(face.V[2], face.V[0]))))

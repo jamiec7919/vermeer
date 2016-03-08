@@ -11,6 +11,7 @@ import (
 var (
 	ErrNodeAlreadyRegistered = errors.New("Node type already registered.")
 	ErrNodeNotRegistered     = errors.New("Node type not registered")
+	ErrNotNode               = errors.New("Object is not Node")
 
 	ErrNoSample = errors.New("No sample")
 

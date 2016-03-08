@@ -6,7 +6,7 @@ package wfobj
 
 import (
 	"bufio"
-	"fmt"
+	//"fmt"
 	"github.com/jamiec7919/vermeer/internal/core"
 	"github.com/jamiec7919/vermeer/internal/geom/mesh"
 	"github.com/jamiec7919/vermeer/material"
@@ -161,6 +161,36 @@ func Open(rc *core.RenderContext, filename string) (mesh.Loader, error) {
 	return &reader, nil
 }
 
+func parseFaceField(field string) (p, n, t int) {
+	fields := strings.Split(field, "/")
+
+	p, _ = strconv.Atoi(fields[0])
+
+	if len(fields[1]) > 0 {
+		t, _ = strconv.Atoi(fields[1])
+	}
+
+	if len(fields[2]) > 0 {
+		n, _ = strconv.Atoi(fields[2])
+	}
+	/*
+		fmt.Sscanf(field, "%d/%d/%d", &p, &t, &n)
+
+		if p == 0 {
+			fmt.Sscanf(field, "%d", &p)
+			//fmt.Printf("p==0\n")
+		}
+		if t == 0 {
+			fmt.Sscanf(field, "%d//%d", &p, &n)
+			//fmt.Printf("t==0 %v %v\n", p, n)
+		}
+		if n == 0 {
+
+		}
+	*/
+	return
+
+}
 func (r *reader) Load() (out *mesh.Mesh, err error) {
 	fin, err := os.Open(r.filename)
 	if err != nil {
@@ -170,6 +200,7 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 	defer fin.Close()
 
 	scanner := bufio.NewScanner(bufio.NewReader(fin))
+	//scanner := bufio.NewScanner(fin)
 
 	// We will use the vt indices as given and remap the vn's.
 	//vn_i := map[int]int{}
@@ -214,20 +245,7 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 
 			for i := 1; i < len(toks); i++ {
 
-				var t, n, p int
-				fmt.Sscanf(toks[i], "%d/%d/%d", &p, &t, &n)
-
-				if p == 0 {
-					fmt.Sscanf(toks[i], "%d", &p)
-					//fmt.Printf("p==0\n")
-				}
-				if t == 0 {
-					fmt.Sscanf(toks[i], "%d//%d", &p, &n)
-					//fmt.Printf("t==0 %v %v\n", p, n)
-				}
-				if n == 0 {
-
-				}
+				p, n, t := parseFaceField(toks[i])
 
 				//log.Printf("Face %v %v %v %v %v %v", p, t, n, len(reader.v), len(reader.vt), len(reader.vn))
 				if p > 0 {
@@ -287,6 +305,10 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 			x, err := strconv.ParseFloat(toks[1], 32)
 			y, err := strconv.ParseFloat(toks[2], 32)
 			z, err := strconv.ParseFloat(toks[3], 32)
+			//var x, y, z float32
+			//fmt.Sscanf(toks[1], "%f", &x)
+			//fmt.Sscanf(toks[2], "%f", &y)
+			//fmt.Sscanf(toks[3], "%f", &z)
 
 			r.vn = append(r.vn, m.Vec3{float32(x), float32(y), float32(z)})
 			// log.Printf("%v",mesh.Verts)
@@ -296,10 +318,13 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 			}
 		case "v":
 			// log.Printf("%v %v %v %v",toks[1],toks[2],toks[3],toks)
+			//var x, y, z float32
 			x, err := strconv.ParseFloat(toks[1], 32)
 			y, err := strconv.ParseFloat(toks[2], 32)
 			z, err := strconv.ParseFloat(toks[3], 32)
-
+			//fmt.Sscanf(toks[1], "%f", &x)
+			//fmt.Sscanf(toks[2], "%f", &y)
+			//fmt.Sscanf(toks[3], "%f", &z)
 			r.v = append(r.v, m.Vec3{float32(x), float32(y), float32(z)})
 			// log.Printf("%v",mesh.Verts)
 			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})

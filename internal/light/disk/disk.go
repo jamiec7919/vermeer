@@ -111,7 +111,7 @@ func (d *Disk) Pos() m.Vec3 {
 	return d.P
 }
 
-func CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float32, mtlid material.Id) {
+func CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float32, mtlid material.Id) interface{} {
 	N := m.Vec3Normalize(m.Vec3Sub(t, P))
 	T := m.Vec3Normalize(m.Vec3Cross(N, up))
 	B := m.Vec3Cross(N, T)
@@ -146,12 +146,12 @@ func CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float32, mtlid m
 	*/
 	node := &Disk{P: P, T: T, N: N, B: B, Radius: radius, MtlId: mtlid}
 
-	rc.AddNode(node)
-	rc.AddNode(&mesh.StaticMesh{"lightmesh", &msh})
+	return []core.Node{node, &mesh.StaticMesh{"lightmesh", &msh}}
+
 }
 
 func init() {
-	core.RegisterNodeType("DiskLight", func(rc *core.RenderContext, params core.Params) error {
+	core.RegisterType("DiskLight", func(rc *core.RenderContext, params core.Params) (interface{}, error) {
 
 		diff2 := bsdf.Diffuse{Kd: &material.ConstantMap{[3]float32{0.8, 0.8, 0.8}}}
 		edf := edf.Diffuse{E: [3]float32{100, 100, 100}}
@@ -162,7 +162,7 @@ func init() {
 		LookAt, _ := params.GetVec3("LookAt")
 		Up, _ := params.GetVec3("Up")
 		radius, _ := params.GetFloat("Radius")
-		CreateDisk(rc, P, LookAt, Up, float32(radius), mtlid)
-		return nil
+		return CreateDisk(rc, P, LookAt, Up, float32(radius), mtlid), nil
+
 	})
 }

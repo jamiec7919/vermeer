@@ -25,3 +25,27 @@ func (surf *SurfacePoint) TangentToWorld(v m.Vec3) m.Vec3 {
 func (surf *SurfacePoint) WorldToTangent(v m.Vec3) m.Vec3 {
 	return m.Vec3BasisProject(surf.T, surf.B, surf.N, v)
 }
+
+// Offset the surface point out from surface by about 1ulp
+// Pass -ve value to push point 'into' surface (for transmission)
+func (r *SurfacePoint) OffsetP(dir int) {
+
+	if dir < 0 {
+		r.POffset = m.Vec3Neg(r.POffset)
+
+	}
+	po := m.Vec3Add(r.P, r.POffset)
+
+	// round po away from p
+	for i := range po {
+		//log.Printf("%v %v %v", i, offset[i], po[i])
+		if r.POffset[i] > 0 {
+			po[i] = m.NextFloatUp(po[i])
+		} else if r.POffset[i] < 0 {
+			po[i] = m.NextFloatDown(po[i])
+		}
+		//log.Printf("%v %v", i, po[i])
+	}
+
+	r.P = po
+}

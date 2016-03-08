@@ -11,7 +11,7 @@ type Globals struct {
 }
 
 func init() {
-	RegisterNodeType("Globals", func(rc *RenderContext, params Params) error {
-		return params.Unmarshal(&rc.globals)
+	RegisterType("Globals", func(rc *RenderContext, params Params) (interface{}, error) {
+		return nil, params.Unmarshal(&rc.globals)
 	})
 }

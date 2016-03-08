@@ -38,8 +38,8 @@ const (
 type Params map[string]interface{}
 
 type Dispatcher interface {
-	Dispatch(method string, v map[string]interface{}) error
-
+	CreateObj(objtype string, params map[string]interface{}) (interface{}, error)
+	DispatchNode(node interface{}) error
 	// Any errors reported by dispatch are passed here, if this returns an error
 	// then it is treated as fatal and parser stops.
 	Error(error) error
@@ -264,7 +264,7 @@ const (
 	array_OBJARRAY
 )
 
-func parseArray(l *Lex) (interface{}, error) {
+func (p *parser) parseArray() (interface{}, error) {
 
 	var v SymType
 
@@ -272,10 +272,10 @@ func parseArray(l *Lex) (interface{}, error) {
 	var fArray []float64
 	var iArray []int64
 	var sArray []string
-	var pArray []Params
+	var pArray []interface{}
 
 	for {
-		t := l.Lex(&v)
+		t := p.lex.Lex(&v)
 		switch t {
 		case TOK_STRING:
 			switch arrayType {
@@ -321,11 +321,16 @@ func parseArray(l *Lex) (interface{}, error) {
 			}
 			//log.Printf("INT: %v",v.numInt)
 
-		case TOK_OPENCURLYBRACE:
+		case TOK_TOKEN:
+			token := v.str
 			// log.Printf("BEGIN OBJ (array)")
-			params, _ := parseObj(l)
+			if t := p.lex.Lex(&v); t != TOK_OPENCURLYBRACE {
+				p.error("Invalid token in obj preamble")
+			}
 
-			pArray = append(pArray, params)
+			obj, _ := p.parseObj(token)
+
+			pArray = append(pArray, obj)
 
 			switch arrayType {
 			case array_NONE:
@@ -356,62 +361,6 @@ func parseArray(l *Lex) (interface{}, error) {
 
 }
 
-func parseParam(l *Lex) (param interface{}, err error) {
-
-	var v SymType
-
-	for {
-		t := l.Lex(&v)
-		switch t {
-		case TOK_FLOAT:
-			return v.numFloat, nil
-			//log.Printf("FLOAT: %v",v.numFloat)
-		case TOK_INT:
-			return v.numInt, nil
-			//log.Printf("INT: %v",v.numInt)
-		case TOK_OPENBRACE:
-			// collect items until closebrace.
-			// Arrays either arrays of strings or arrays of
-			// numbers.  Integers are promoted to floats if any element of
-			// array is a float.
-			return parseArray(l)
-		case TOK_STRING:
-			return v.str, nil
-
-		}
-	}
-
-	return nil, nil
-}
-
-func parseObj(l *Lex) (params map[string]interface{}, err error) {
-	params = map[string]interface{}{}
-
-	var v SymType
-
-	for {
-		t := l.Lex(&v)
-		// log.Printf("%v", t)
-		switch t {
-		case TOK_TOKEN:
-			token := v.str
-
-			param, _ := parseParam(l)
-
-			params[token] = param
-
-		case TOK_CLOSECURLYBRACE:
-			// log.Printf("Got obj %v", params)
-			return
-
-		default:
-			log.Printf("parseObj: Error, invalid token in object \"%v\" %v", t, v)
-
-		}
-	}
-
-}
-
 func Parse(disp Dispatcher, filename string) error {
 
 	b, err := ioutil.ReadFile(filename)
@@ -426,81 +375,119 @@ func Parse(disp Dispatcher, filename string) error {
 		in := bufio.NewReader(f)
 	*/
 	in := bufio.NewReader(bytes.NewBuffer(b))
-	var v SymType
+
 	var l Lex
 	l.in = in
 
-	var token string
-L:
+	parser := parser{lex: &l, dispatcher: disp}
+
+	return parser.parse()
+
+}
+
+type parser struct {
+	lex        *Lex
+	dispatcher Dispatcher
+}
+
+func (p *parser) parseParam() (param interface{}, err error) {
+
+	var v SymType
+
 	for {
-		t := l.Lex(&v)
+		t := p.lex.Lex(&v)
 		switch t {
-		/* case TOK_STRING:
-		//log.Printf("STRING: %v",v.str)
-		args = append(args, v.str)*/
-		case TOK_TOKEN:
-			token = v.str
-
-			if t := l.Lex(&v); t != TOK_OPENCURLYBRACE {
-				_error(disp, "Invalid token in obj preamble")
-			}
-
-			params, _ := parseObj(&l)
-			/*
-				if token != "" {
-					// process token and args
-					doToken(token, args, cxt)
-				}
-				token = v.str
-				args = nil */
-
-			//log.Printf("Got Object %v %v", token, params)
-			if err := disp.Dispatch(token, params); err != nil {
-				if err2 := disp.Error(err); err2 != nil {
-					return err2
-				}
-			}
-			// if current token is not nil then output
-			//log.Printf("TOKEN: %v",v.str)
-		/* case TOK_FLOAT:
-			args = append(args, v.numFloat)
-			//log.Printf("FLOAT: %v",v.numFloat)
+		case TOK_FLOAT:
+			return v.numFloat, nil
 		case TOK_INT:
-			args = append(args, v.numInt)
-			//log.Printf("INT: %v",v.numInt)
+			return v.numInt, nil
 		case TOK_OPENBRACE:
 			// collect items until closebrace.
 			// Arrays either arrays of strings or arrays of
 			// numbers.  Integers are promoted to floats if any element of
 			// array is a float.
-			a, _ := parseArray(&l)
-		*/
-		/* switch a.(type) {
-			case []float64:
-			  log.Printf("[]float64")
-		} */
+			return p.parseArray()
+		case TOK_STRING:
+			return v.str, nil
 
-		//	args = append(args, a)
+		case TOK_TOKEN:
+			token := v.str
+			if t := p.lex.Lex(&v); t != TOK_OPENCURLYBRACE {
+				p.error("Invalid token in obj preamble")
+			}
 
-		//log.Printf("[")
-		// case TOK_CLOSECURLYBRACE:
-		//log.Printf("]")
+			return p.parseObj(token)
+
+		}
+	}
+
+	return nil, nil
+}
+
+func (p *parser) parseObj(objtype string) (interface{}, error) {
+	params := map[string]interface{}{}
+
+	var v SymType
+
+	for {
+		t := p.lex.Lex(&v)
+		// log.Printf("%v", t)
+		switch t {
+		case TOK_TOKEN:
+			token := v.str
+
+			param, _ := p.parseParam()
+
+			params[token] = param
+
+		case TOK_CLOSECURLYBRACE:
+			// log.Printf("Got obj %v", params)
+			return p.dispatcher.CreateObj(objtype, params)
+
+		default:
+			p.error("parseObj: Error, invalid token in object \"%v\" %v", t, v)
+
+		}
+	}
+
+}
+
+func (p *parser) error(msg string, v ...interface{}) {
+	if err := p.dispatcher.Error(errors.New(msg)); err != nil {
+		panic(err)
+	}
+}
+
+func (p *parser) parse() error {
+	var v SymType
+L:
+	for {
+		t := p.lex.Lex(&v)
+		switch t {
+		case TOK_TOKEN:
+			token := v.str
+			if t := p.lex.Lex(&v); t != TOK_OPENCURLYBRACE {
+				p.error("Invalid token in obj preamble")
+			}
+
+			obj, _ := p.parseObj(token)
+
+			if err := p.dispatcher.DispatchNode(obj); err != nil {
+				if err2 := p.dispatcher.Error(err); err2 != nil {
+					return err2
+				}
+			}
 		// ERROR
 		default:
 			break L
 		}
 	}
 
-	// if token != "" {
-	// process token and args
-	// 	doToken(token, args, cxt)
-	// }
-	//}
 	return nil
 }
 
 /*
-func main() {
+func ParserTest() {
 	f,err := os.Open("test.vi")
 
 	if err != nil {

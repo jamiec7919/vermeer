@@ -11,6 +11,34 @@ import (
 	"math/rand"
 )
 
+/*
+Need to be able to sample the lens, with a pinhole we have:
+Spatial
+We(y0) = 1
+P_A(y0) = 1
+
+Directional
+We(y0->y1) = d^2 / (A_p * cos^3	theta_o),
+P(y0->y1) = d^2 / (A_p * cos^3	theta_o),
+
+cos theta_o = D dot camera.N  (camera.N = -camera.W)
+A_p is pixel density of image with respect to screen size.
+
+For a circular thin lense model camera:
+Spatial
+We(y0) = 1 / (pi * r^2)
+P_A(y0) = 1 / (pi * r^2)
+
+r is radius of lens/apeture
+Angular
+(same as pinhole)
+
+Should sample position on lens, and directional component.
+Note that for bpt these should be seperate as might want to join to
+lens.  However this should mean that light paths can contribute to
+*any* pixel when joining to lens. (and indeed may be splatted if
+there is a multi-pixel filter)
+*/
 type Camera struct {
 	Eye           m.Vec3
 	U, V, W       m.Vec3
@@ -43,6 +71,35 @@ func (c *Camera) Lookat(e, t, u m.Vec3) {
 
 */
 
+func (c *Camera) SampleLensArea(rnd *rand.Rand, P *m.Vec3, We *float32, pdf *float32) error {
+	*P = c.Eye
+
+	if c.Radius > 0.0 {
+		x, y := sample.UniformDisk2D(c.Radius, rnd.Float32(), rnd.Float32())
+		e := m.Vec3Add(m.Vec3Scale(x, c.U), m.Vec3Scale(y, c.V))
+		*P = m.Vec3Add(*P, e)
+
+		*We = 1.0 / (m.Pi * c.Radius * c.Radius)
+		*pdf = 1.0 / (m.Pi * c.Radius * c.Radius)
+	} else {
+		*We = 1
+		*pdf = 1
+	}
+
+	return nil
+}
+
+func (c *Camera) SampleImagePlaneDir(u, v float32, P m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, We *float32, pdf *float32) error {
+	s := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(u, c.U), m.Vec3Scale(v, c.V)), m.Vec3Scale(c.D, c.W))
+	*omega_o = m.Vec3Normalize(m.Vec3Sub(m.Vec3Add(c.Eye, s), P))
+
+	cos_omega_o := m.Vec3Dot(*omega_o, m.Vec3Neg(c.W))
+	A_p := float32(1.0) // pixel density WRT image size
+	*We = (c.D * c.D) / (A_p * cos_omega_o * cos_omega_o * cos_omega_o)
+	*pdf = (c.D * c.D) / (A_p * cos_omega_o * cos_omega_o * cos_omega_o)
+	return nil
+}
+
 func (c *Camera) ComputeRay(u, v float32, rnd *rand.Rand) (P, D m.Vec3) {
 	P = c.Eye
 	// D = || u*U + v*V - d*W  ||
@@ -69,15 +126,15 @@ type Lookat struct {
 }
 
 func init() {
-	core.RegisterNodeType("Camera", func(rc *core.RenderContext, params core.Params) error {
+	core.RegisterType("Camera", func(rc *core.RenderContext, params core.Params) (interface{}, error) {
 		l := Lookat{D: 2.5}
 		if err := params.Unmarshal(&l); err != nil {
-			return err
+			return nil, err
 		}
 
 		cam := &Camera{D: l.D, Radius: l.Radius}
 		cam.Lookat(l.From, l.To, l.Up)
-		rc.AddNode(cam)
-		return nil
+		//rc.AddNode(cam)
+		return cam, nil
 	})
 }

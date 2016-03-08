@@ -5,12 +5,15 @@
 package bsdf
 
 import (
+	"errors"
 	"github.com/jamiec7919/vermeer/material"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/sample"
 	"math"
 	"math/rand"
 )
+
+var ErrFailedEval = errors.New("Failed Eval")
 
 type OrenNayar struct {
 	Kd        material.MapSampler
@@ -48,8 +51,8 @@ func (b *OrenNayar) Eval(shade *material.SurfacePoint, omega_i, omega_o m.Vec3, 
 	if o_dot_n <= 0 {
 		//out.C[1] = 1
 		//o_dot_n = -o_dot_n
-		panic("bsdf.OrenNayar.Eval")
-		return nil
+		//panic("bsdf.OrenNayar.Eval")
+		return ErrFailedEval
 	}
 
 	sigma := b.Roughness.SampleScalar(shade.UV[0][0], shade.UV[0][1], 1, 1)

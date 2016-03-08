@@ -157,11 +157,14 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 			//var samp_pdf float64
 			//var omega_o m.Vec3
 
+			// Assume that no transmission, so offset surface point out from surface
+			surf.OffsetP(1)
+
 			if !bsdf.IsDelta(&surf) {
 
 				if len(frame.scene.lights) > 0 {
 					nls := 4
-
+					lightsamples := 0
 					if depth > 0 {
 						nls = 1
 					}
@@ -176,6 +179,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 								ray.InitVisRay(surf.P, P.P)
 								frame.scene.VisRay(ray)
 								if ray.IsVis() {
+									lightsamples++
 									Vnorm := m.Vec3Normalize(V)
 
 									lightm := frame.rc.GetMaterial(material.Id(P.MtlId))
@@ -189,7 +193,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 									Le.Mul(rho)
 									Le.Mul(contrib)
 									Le.Scale(geom / (float32(pdf) * float32(nls)))
-									//rho.Mul()
+
 									fullsample.Add(Le)
 									//log.Printf("contrib:", contrib)
 								}
@@ -260,7 +264,7 @@ func tonemap(w, h int, hdr_rgb []float32, buf []uint8) {
 
 }
 
-func (rc *RenderContext) Render() error {
+func (rc *RenderContext) Render(finish chan bool) error {
 	// render frames as given in frames (could be progressive)
 	var frame Frame
 
@@ -286,7 +290,7 @@ func (rc *RenderContext) Render() error {
 	}
 
 	buf := make([]float32, frame.w*frame.h*3)
-
+L:
 	for k := 0; true; k++ {
 
 		var wg sync.WaitGroup
@@ -342,6 +346,12 @@ func (rc *RenderContext) Render() error {
 
 			rc.PreviewChan <- fr
 		}
+
+		select {
+		case <-finish:
+			break L
+		default:
+		}
 	}
 
 	if frame.bar != nil {
@@ -392,6 +402,8 @@ func (rc *RenderContext) AddNode(node Node) {
 		rc.scene.prims = append(rc.scene.prims, t)
 	case Light:
 		rc.scene.lights = append(rc.scene.lights, t)
+	case Material:
+		rc.AddMaterial(t.Name(), t.Material())
 	}
 }
 
@@ -408,16 +420,34 @@ func (rc *RenderContext) LoadNodeFile(filename string) error {
 	return nodeparser.Parse(rc, filename)
 }
 
-func (rc *RenderContext) Dispatch(method string, _params map[string]interface{}) error {
+func (rc *RenderContext) DispatchNode(_node interface{}) error {
+	node, ok := _node.(Node)
+
+	if !ok {
+		nodes, ok := _node.([]Node)
+
+		if ok {
+			for _, n := range nodes {
+				rc.AddNode(n)
+			}
+			return nil
+		}
+		return ErrNotNode
+	}
+	rc.AddNode(node)
+	return nil
+}
+
+func (rc *RenderContext) CreateObj(method string, _params map[string]interface{}) (interface{}, error) {
 	params := Params(_params)
 
-	create, present := nodeTypes[method]
+	create, present := objTypes[method]
 
 	if present {
 		return create(rc, params)
 	}
 
-	return ErrNodeNotRegistered
+	return nil, ErrNodeNotRegistered
 }
 
 func (rc *RenderContext) Error(err error) error {
@@ -431,11 +461,11 @@ type Node interface {
 	PostRender(*RenderContext) error
 }
 
-var nodeTypes = map[string]func(*RenderContext, Params) error{}
+var objTypes = map[string]func(*RenderContext, Params) (interface{}, error){}
 
-func RegisterNodeType(name string, create func(*RenderContext, Params) error) error {
-	if nodeTypes[name] == nil {
-		nodeTypes[name] = create
+func RegisterType(name string, create func(*RenderContext, Params) (interface{}, error)) error {
+	if objTypes[name] == nil {
+		objTypes[name] = create
 		return nil
 	}
 	return ErrNodeAlreadyRegistered
