@@ -25,7 +25,19 @@ func makeBSDF(params core.Params) material.BSDF {
 	ty, _ := params.GetString("Type")
 
 	switch ty {
-	case "Diffuse":
+	case "Lambert":
+		bsdf := bsdf.Diffuse{}
+		Kd := params["Kd"]
+
+		switch t := Kd.(type) {
+		case string:
+			bsdf.Kd = &material.TextureMap{t}
+		case []float64:
+			bsdf.Kd = &material.ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
+		case []int64:
+			bsdf.Kd = &material.ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
+		}
+		return &bsdf
 	case "OrenNayar":
 		bsdf := bsdf.OrenNayar{}
 
@@ -54,6 +66,47 @@ func makeBSDF(params core.Params) material.BSDF {
 
 	case "Specular":
 		bsdf := bsdf.Specular{}
+
+		Ks, present := params["Ks"]
+
+		if !present {
+			Ks = []float64{0.5, 0.5, 0.5}
+		}
+
+		switch t := Ks.(type) {
+		case string:
+			bsdf.Ks = &material.TextureMap{t}
+		case []float64:
+			bsdf.Ks = &material.ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
+		case []int64:
+			bsdf.Ks = &material.ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
+		}
+		return &bsdf
+
+	case "GGXSpecular":
+		bsdf := bsdf.CookTorranceGGX{}
+
+		roughness := params["Roughness"]
+
+		switch t := roughness.(type) {
+		case string:
+			bsdf.Roughness = &material.TextureMap{t}
+		case float64:
+			bsdf.Roughness = &material.ConstantMap{[3]float32{float32(t)}}
+		case int64:
+			bsdf.Roughness = &material.ConstantMap{[3]float32{float32(t)}}
+		}
+
+		ior := params["IOR"]
+
+		switch t := ior.(type) {
+		case string:
+			bsdf.IOR = &material.TextureMap{t}
+		case float64:
+			bsdf.IOR = &material.ConstantMap{[3]float32{float32(t)}}
+		case int64:
+			bsdf.IOR = &material.ConstantMap{[3]float32{float32(t)}}
+		}
 
 		Ks, present := params["Ks"]
 

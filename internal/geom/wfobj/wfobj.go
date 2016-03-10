@@ -207,7 +207,7 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 	// We will use the vt indices as given and remap the vn's.
 	//vn_i := map[int]int{}
 
-	var mtlid material.Id
+	var mtlid material.Id = material.ID_NONE
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -290,6 +290,11 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 				*/
 			}
 
+			if mtlid == material.ID_NONE {
+				// assign 'default' material
+				mtlid = r.rc.GetMaterialId("mtl_default")
+				//log.Printf("setting default mtl %v", mtlid)
+			}
 			r.triangulateFace(face, mtlid)
 		case "vt":
 			// log.Printf("%v %v %v %v",toks[1],toks[2],toks[3],toks)
