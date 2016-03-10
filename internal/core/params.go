@@ -12,8 +12,10 @@ import (
 
 var ErrParamNotFloat = errors.New("Parameter is not float or convertible to float")
 var ErrParamNotInt = errors.New("Parameter is not int or convertible to int")
+var ErrParamNotBool = errors.New("Parameter is not bool or convertible to bool")
 var ErrParamNotString = errors.New("Parameter is not string")
 var ErrNotStruct = errors.New("Unmarshal: param is not a struct")
+var ErrNotFound = errors.New("Parameter not found")
 
 type Params map[string]interface{}
 
@@ -22,7 +24,22 @@ func (np *Params) GetString(key string) (string, error) {
 		return getString(v)
 	}
 
-	return "", nil
+	return "", ErrNotFound
+}
+
+func (np *Params) GetBool(key string) (bool, error) {
+	if v, present := (*np)[key]; present {
+		switch t := v.(type) {
+		case float64:
+			return t > 0.0, nil
+		case int64:
+			return t > 0, nil
+		default:
+			return false, ErrParamNotBool
+		}
+	}
+
+	return false, ErrNotFound
 }
 
 func (np *Params) GetFloat(key string) (float64, error) {
@@ -30,7 +47,7 @@ func (np *Params) GetFloat(key string) (float64, error) {
 		return getFloat(v)
 	}
 
-	return 0.0, nil
+	return 0.0, ErrNotFound
 }
 
 func (np *Params) GetInt(key string) (int64, error) {
@@ -38,7 +55,7 @@ func (np *Params) GetInt(key string) (int64, error) {
 		return getInt(v)
 	}
 
-	return 0, nil
+	return 0, ErrNotFound
 }
 
 func (np *Params) GetVec3(key string) (m.Vec3, error) {
@@ -46,7 +63,7 @@ func (np *Params) GetVec3(key string) (m.Vec3, error) {
 		return getVec3(v)
 	}
 
-	return m.Vec3{}, nil
+	return m.Vec3{}, ErrNotFound
 }
 
 func getString(v interface{}) (string, error) {
@@ -103,7 +120,7 @@ func getVec3(v interface{}) (m.Vec3, error) {
 }
 
 // This is a utility function for simple structs representing nodes
-func (np *Params) Unmarshal(v interface{}) error {
+func (p *Params) Unmarshal(v interface{}) error {
 	// Check v is struct
 
 	rv := reflect.ValueOf(v)
@@ -115,53 +132,56 @@ func (np *Params) Unmarshal(v interface{}) error {
 
 	}
 
-	for k, param := range *np {
-		// lookup k in v and assign as appropriate
-		field := relem.FieldByName(k)
-		// log.Printf("%v", k)
-		if field.IsValid() {
-			if field.CanSet() {
-				switch field.Kind() {
-				case reflect.Int:
-					v, _ := getInt(param)
-					field.SetInt(v)
-				case reflect.Float64:
-					fallthrough
-				case reflect.Float32:
-					v, _ := getFloat(param)
-					field.SetFloat(v)
-				case reflect.String:
-					field.SetString(param.(string))
-				case reflect.Slice:
-					// el := field.Type().Elem()
+	ty := relem.Type()
 
-					arr := param.([]Params)
+	for i := 0; i < relem.NumField(); i++ {
+		f := ty.Field(i)
 
-					v := reflect.MakeSlice(field.Type(), len(arr), len(arr))
+		fieldName := f.Name
 
-					for i := range arr {
-						arr[i].Unmarshal(v.Index(i).Addr().Interface())
-						// log.Printf("%v %v", i, arr[i])
-					}
-					field.Set(v)
-					// log.Printf("Filling array of %v %v", el, v)
-				default:
-					switch field.Type() {
-					case reflect.TypeOf(m.Vec3{}):
-						v, _ := getVec3(param)
-						field.Set(reflect.ValueOf(v))
-						//				case reflect.TypeOf(Colour{}):
-						//					v, _ := getColour(param)
-						//					field.Set(reflect.ValueOf(v))
-						//				case reflect.TypeOf((*Texture)(nil)):
-						//					v, _ := getTexture(param)
-						//					field.Set(reflect.ValueOf(v))
+		if tag := f.Tag.Get("node"); tag != "" {
+			fieldName = tag
+		}
+
+		fv := relem.Field(i)
+
+		if fv.CanSet() {
+			switch fv.Kind() {
+			case reflect.Int:
+				v, err := p.GetInt(fieldName)
+				if err == nil {
+					fv.SetInt(v)
+				}
+			case reflect.Float64:
+				fallthrough
+			case reflect.Float32:
+				v, err := p.GetFloat(fieldName)
+				if err == nil {
+					fv.SetFloat(v)
+				}
+			case reflect.String:
+				v, err := p.GetString(fieldName)
+				if err == nil {
+					fv.SetString(v)
+				}
+			case reflect.Bool:
+				v, err := p.GetBool(fieldName)
+				if err == nil {
+					fv.SetBool(v)
+				}
+
+			default:
+				switch fv.Type() {
+				case reflect.TypeOf(m.Vec3{}):
+					v, err := p.GetVec3(fieldName)
+					if err == nil {
+						fv.Set(reflect.ValueOf(v))
 					}
 				}
 			}
+
 		}
 	}
 
 	return nil
-
 }
