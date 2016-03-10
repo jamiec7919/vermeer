@@ -28,6 +28,8 @@ type Frame struct {
 	bar    *pb.ProgressBar
 }
 
+func (f *Frame) Aspect() float32 { return float32(f.w) / float32(f.h) }
+
 type Scene struct {
 	prims  []Primitive
 	lights []Light
@@ -262,6 +264,10 @@ func tonemap(w, h int, hdr_rgb []float32, buf []uint8) {
 
 	}
 
+}
+
+func (rc *RenderContext) FrameAspect() float32 {
+	return float32(rc.globals.XRes) / float32(rc.globals.YRes)
 }
 
 func (rc *RenderContext) Render(finish chan bool) error {

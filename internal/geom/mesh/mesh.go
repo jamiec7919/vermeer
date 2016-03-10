@@ -41,6 +41,7 @@ type Mesh struct {
 	nodes     []qbvh.Node
 	faceindex []int32 // Face indexes - used only with acceleration leaf structure, may contain duplicates
 	bounds    m.BoundingBox
+	RayBias   float32
 }
 
 type StaticMesh struct {
@@ -55,16 +56,26 @@ func (mesh *StaticMesh) PreRender(rc *core.RenderContext) error {
 func (mesh *StaticMesh) PostRender(rc *core.RenderContext) error { return nil }
 
 func (mesh *StaticMesh) TraceRay(ray *core.RayData) {
-	mesh.Mesh.traceRayAccel(ray)
+	if mesh.Mesh.RayBias == 0.0 {
+		mesh.Mesh.traceRayAccel(ray)
+	} else {
+		mesh.Mesh.traceRayAccelEpsilon(ray)
+
+	}
 }
 
 func (mesh *StaticMesh) VisRay(ray *core.RayData) {
-	mesh.Mesh.visRayAccel(ray)
+	if mesh.Mesh.RayBias == 0.0 {
+		mesh.Mesh.visRayAccel(ray)
+	} else {
+		mesh.Mesh.visRayAccelEpsilon(ray)
+	}
 }
 
 type MeshFile struct {
 	NodeName string
 	Filename string
+	RayBias  float32
 	Loader   Loader
 	mesh     *Mesh
 }
@@ -77,6 +88,8 @@ func (mesh *MeshFile) PreRender(rc *core.RenderContext) error {
 		return err
 	}
 
+	msh.RayBias = mesh.RayBias
+
 	if mesh.NodeName == "mesh02" {
 		trn := m.Matrix4Translate(0.4, -0.3, -0.4)
 		rot := m.Matrix4Rotate(m.Pi/2, 0, 1, 0)
@@ -88,11 +101,21 @@ func (mesh *MeshFile) PreRender(rc *core.RenderContext) error {
 func (mesh *MeshFile) PostRender(rc *core.RenderContext) error { return nil }
 
 func (mesh *MeshFile) TraceRay(ray *core.RayData) {
-	mesh.mesh.traceRayAccel(ray)
+	if mesh.mesh.RayBias == 0.0 {
+		mesh.mesh.traceRayAccel(ray)
+	} else {
+		mesh.mesh.traceRayAccelEpsilon(ray)
+
+	}
 }
 
 func (mesh *MeshFile) VisRay(ray *core.RayData) {
-	mesh.mesh.visRayAccel(ray)
+	if mesh.mesh.RayBias == 0.0 {
+		mesh.mesh.visRayAccel(ray)
+	} else {
+		mesh.mesh.visRayAccelEpsilon(ray)
+
+	}
 }
 
 func (mesh *Mesh) Transform(trn m.Matrix4) {
@@ -249,7 +272,14 @@ func create(rc *core.RenderContext, params core.Params) (interface{}, error) {
 					name = "<mesh>"
 				}
 
-				mesh := MeshFile{NodeName: name.(string), Filename: filename.(string), Loader: loader}
+				bias := params["RayBias"]
+
+				var raybias float32
+
+				if bias != nil {
+					raybias = float32(bias.(float64))
+				}
+				mesh := MeshFile{NodeName: name.(string), Filename: filename.(string), RayBias: raybias, Loader: loader}
 
 				//rc.AddNode(&mesh)
 				return &mesh, nil

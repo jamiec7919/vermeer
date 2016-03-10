@@ -15,7 +15,6 @@ import (
 const CHECK_EMPTY_LEAF = true
 
 const VisRayEpsilon float32 = 0.0001
-const VisRayEpsilon2 float32 = 0.000001
 
 type TraverseElem struct {
 	Node int32
@@ -147,12 +146,15 @@ func (r *Ray) setup() {
 		r.Ky = tmp
 	}
 
-	r.S[2] = 1.0 / r.D[r.Kz]
-	r.S[0] = r.D[r.Kx] / r.D[r.Kz]
-	r.S[1] = r.D[r.Ky] / r.D[r.Kz]
+	// Divisions as accurate as possible
+	z := float64(r.D[r.Kz])
 
-	r.Dinv[0] = 1.0 / r.D[0]
-	r.Dinv[1] = 1.0 / r.D[1]
-	r.Dinv[2] = 1.0 / r.D[2]
+	r.S[2] = float32(1.0 / z)
+	r.S[0] = float32(float64(r.D[r.Kx]) / z)
+	r.S[1] = float32(float64(r.D[r.Ky]) / z)
+
+	r.Dinv[0] = float32(1.0 / float64(r.D[0]))
+	r.Dinv[1] = float32(1.0 / float64(r.D[1]))
+	r.Dinv[2] = float32(1.0 / float64(r.D[2]))
 
 }
