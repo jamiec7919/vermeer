@@ -394,8 +394,8 @@ func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon flo
 	ray.Result.P = p
 
 	ray.Result.Ng = face.N
-	ray.Result.Tg = m.Vec3Normalize(m.Vec3Cross(face.N, m.Vec3Normalize(m.Vec3Sub(face.V[2], face.V[0]))))
-	ray.Result.Bg = m.Vec3Cross(face.N, ray.Result.Tg)
+	//ray.Result.Tg = m.Vec3Normalize(m.Vec3Cross(face.N, m.Vec3Normalize(m.Vec3Sub(face.V[2], face.V[0]))))
+	//ray.Result.Bg = m.Vec3Cross(face.N, ray.Result.Tg)
 
 	if mesh.Vn != nil {
 		ray.Result.Ns = m.Vec3Add3(m.Vec3Scale(U, mesh.Vn[face.Vi[0]]), m.Vec3Scale(V, mesh.Vn[face.Vi[1]]), m.Vec3Scale(W, mesh.Vn[face.Vi[2]]))
@@ -412,7 +412,39 @@ func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon flo
 		if mesh.Vuv[k] != nil {
 			ray.Result.UV[k][0] = U*mesh.Vuv[k][face.Vi[0]][0] + V*mesh.Vuv[k][face.Vi[1]][0] + W*mesh.Vuv[k][face.Vi[2]][0]
 			ray.Result.UV[k][1] = U*mesh.Vuv[k][face.Vi[0]][1] + V*mesh.Vuv[k][face.Vi[1]][1] + W*mesh.Vuv[k][face.Vi[2]][1]
+
+			s1 := mesh.Vuv[k][face.Vi[1]][0] - mesh.Vuv[k][face.Vi[0]][0]
+			t1 := mesh.Vuv[k][face.Vi[1]][1] - mesh.Vuv[k][face.Vi[0]][1]
+			s2 := mesh.Vuv[k][face.Vi[2]][0] - mesh.Vuv[k][face.Vi[0]][0]
+			t2 := mesh.Vuv[k][face.Vi[2]][1] - mesh.Vuv[k][face.Vi[0]][1]
+
+			det := 1.0 / (s1*t2 - s2*t1)
+			ray.Result.Pu[k][0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
+			ray.Result.Pu[k][1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
+			ray.Result.Pu[k][2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))
+			ray.Result.Pv[k][0] = det * (-s2*(face.V[1][0]-face.V[0][0]) + s1*(face.V[2][0]-face.V[0][0]))
+			ray.Result.Pv[k][1] = det * (-s2*(face.V[1][1]-face.V[0][1]) + s1*(face.V[2][1]-face.V[0][1]))
+			ray.Result.Pv[k][2] = det * (-s2*(face.V[1][2]-face.V[0][2]) + s1*(face.V[2][2]-face.V[0][2]))
 		}
+	}
+
+	if mesh.Vuv == nil {
+		ray.Result.UV[0][0] = U*0 + V*1 + W*0
+		ray.Result.UV[0][1] = U*0 + V*0 + W*1
+
+		s1 := float32(1 - 0)
+		t1 := float32(0 - 0)
+		s2 := float32(0 - 0)
+		t2 := float32(1 - 0)
+
+		det := 1.0 / (s1*t2 - s2*t1)
+		ray.Result.Pu[0][0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
+		ray.Result.Pu[0][1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
+		ray.Result.Pu[0][2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))
+		ray.Result.Pv[0][0] = det * (-s2*(face.V[1][0]-face.V[0][0]) + s1*(face.V[2][0]-face.V[0][0]))
+		ray.Result.Pv[0][1] = det * (-s2*(face.V[1][1]-face.V[0][1]) + s1*(face.V[2][1]-face.V[0][1]))
+		ray.Result.Pv[0][2] = det * (-s2*(face.V[1][2]-face.V[0][2]) + s1*(face.V[2][2]-face.V[0][2]))
+
 	}
 
 	ray.Result.MtlId = face.MtlId
@@ -531,8 +563,8 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 	ray.Result.P = p
 
 	ray.Result.Ng = face.N
-	ray.Result.Tg = m.Vec3Normalize(m.Vec3Cross(face.N, m.Vec3Normalize(m.Vec3Sub(face.V[2], face.V[0]))))
-	ray.Result.Bg = m.Vec3Cross(face.N, ray.Result.Tg)
+	//ray.Result.Tg = m.Vec3Normalize(m.Vec3Cross(face.N, m.Vec3Normalize(m.Vec3Sub(face.V[2], face.V[0]))))
+	//ray.Result.Bg = m.Vec3Cross(face.N, ray.Result.Tg)
 
 	if mesh.Vn != nil {
 		ray.Result.Ns = m.Vec3Add3(m.Vec3Scale(U, mesh.Vn[face.Vi[0]]), m.Vec3Scale(V, mesh.Vn[face.Vi[1]]), m.Vec3Scale(W, mesh.Vn[face.Vi[2]]))
@@ -549,7 +581,39 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 		if mesh.Vuv[k] != nil {
 			ray.Result.UV[k][0] = U*mesh.Vuv[k][face.Vi[0]][0] + V*mesh.Vuv[k][face.Vi[1]][0] + W*mesh.Vuv[k][face.Vi[2]][0]
 			ray.Result.UV[k][1] = U*mesh.Vuv[k][face.Vi[0]][1] + V*mesh.Vuv[k][face.Vi[1]][1] + W*mesh.Vuv[k][face.Vi[2]][1]
+
+			s1 := mesh.Vuv[k][face.Vi[1]][0] - mesh.Vuv[k][face.Vi[0]][0]
+			t1 := mesh.Vuv[k][face.Vi[1]][1] - mesh.Vuv[k][face.Vi[0]][1]
+			s2 := mesh.Vuv[k][face.Vi[2]][0] - mesh.Vuv[k][face.Vi[0]][0]
+			t2 := mesh.Vuv[k][face.Vi[2]][1] - mesh.Vuv[k][face.Vi[0]][1]
+
+			det := 1.0 / (s1*t2 - s2*t1)
+			ray.Result.Pu[k][0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
+			ray.Result.Pu[k][1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
+			ray.Result.Pu[k][2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))
+			ray.Result.Pv[k][0] = det * (-s2*(face.V[1][0]-face.V[0][0]) + s1*(face.V[2][0]-face.V[0][0]))
+			ray.Result.Pv[k][1] = det * (-s2*(face.V[1][1]-face.V[0][1]) + s1*(face.V[2][1]-face.V[0][1]))
+			ray.Result.Pv[k][2] = det * (-s2*(face.V[1][2]-face.V[0][2]) + s1*(face.V[2][2]-face.V[0][2]))
 		}
+	}
+
+	if mesh.Vuv == nil {
+		ray.Result.UV[0][0] = U*0 + V*1 + W*0
+		ray.Result.UV[0][1] = U*0 + V*0 + W*1
+
+		s1 := float32(1 - 0)
+		t1 := float32(0 - 0)
+		s2 := float32(0 - 0)
+		t2 := float32(1 - 0)
+
+		det := 1.0 / (s1*t2 - s2*t1)
+		ray.Result.Pu[0][0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
+		ray.Result.Pu[0][1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
+		ray.Result.Pu[0][2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))
+		ray.Result.Pv[0][0] = det * (-s2*(face.V[1][0]-face.V[0][0]) + s1*(face.V[2][0]-face.V[0][0]))
+		ray.Result.Pv[0][1] = det * (-s2*(face.V[1][1]-face.V[0][1]) + s1*(face.V[2][1]-face.V[0][1]))
+		ray.Result.Pv[0][2] = det * (-s2*(face.V[1][2]-face.V[0][2]) + s1*(face.V[2][2]-face.V[0][2]))
+
 	}
 
 	ray.Result.MtlId = face.MtlId

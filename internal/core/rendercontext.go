@@ -140,13 +140,13 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 			//	return
 			//}
 
-			surf.Ns = surf.WorldToTangent(m.Vec3Normalize(surf.Ns))
+			//surf.Ns = surf.WorldToTangent(m.Vec3Normalize(surf.Ns))
 
-			if m.Vec3Dot(surf.Ns, surf.N) < 0 {
-				//Ns := vm.Vec3Add(shade.Ns, vm.Vec3Scale(2*vm.Vec3Dot(shade.Ns, shade.Ng), shade.Ng))
+			//if m.Vec3Dot(surf.Ns, surf.N) < 0 {
+			//		Ns := vm.Vec3Add(shade.Ns, vm.Vec3Scale(2*vm.Vec3Dot(shade.Ns, shade.Ng), shade.Ng))
 
-				surf.Ns = m.Vec3Neg(surf.Ns) // Should mirror in Ng really instead of -ve?
-			}
+			//	surf.Ns = m.Vec3Neg(surf.Ns) // Should mirror in Ng really instead of -ve?
+			//}
 
 			omega_i := surf.WorldToTangent(Vout)
 
@@ -177,7 +177,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 						if frame.scene.lights[0].SampleArea(&surf, rnd, &P, &pdf) == nil {
 							V := m.Vec3Sub(P.P, surf.P)
 
-							if m.Vec3Dot(V, surf.N) > 0.0 && m.Vec3Dot(V, P.N) < 0.0 {
+							if m.Vec3Dot(V, surf.Ns) > 0.0 && m.Vec3Dot(V, P.N) < 0.0 {
 								ray.InitVisRay(surf.P, P.P)
 								frame.scene.VisRay(ray)
 								if ray.IsVis() {
@@ -191,7 +191,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 									rho := material.Spectrum{Lambda: contrib.Lambda}
 
 									bsdf.Eval(&surf, omega_i, surf.WorldToTangent(Vnorm), &rho)
-									geom := m.Abs(m.Vec3Dot(Vnorm, surf.N)) * m.Abs(m.Vec3Dot(Vnorm, P.N)) / m.Vec3Length2(V)
+									geom := m.Abs(m.Vec3Dot(Vnorm, surf.Ns)) * m.Abs(m.Vec3Dot(Vnorm, P.N)) / m.Vec3Length2(V)
 									Le.Mul(rho)
 									Le.Mul(contrib)
 									Le.Scale(geom / (float32(pdf) * float32(nls)))
@@ -207,14 +207,20 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 
 			var omega_o m.Vec3
 			var pdf float64
+		resample:
 			rho := material.Spectrum{Lambda: fullsample.Lambda}
 			bsdf.Sample(&surf, omega_i, rnd, &omega_o, &rho, &pdf)
 
-			P = surf.P
 			D = surf.TangentToWorld(omega_o)
+
+			if m.Vec3Dot(D, surf.N) < 0 {
+				goto resample
+			}
 
 			contrib.Mul(rho)
 			contrib.Scale(omega_o[2] / float32(pdf))
+
+			P = surf.P
 			//log.Printf("%v %v", x, y)
 			//return contrib.ToRGB()
 			//r = m.Vec3Dot(surf.N, m.Vec3Neg(D))

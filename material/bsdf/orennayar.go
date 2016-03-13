@@ -56,7 +56,7 @@ func (b *OrenNayar) Eval(shade *material.SurfacePoint, omega_i, omega_o m.Vec3, 
 	}
 
 	sigma := b.Roughness.SampleScalar(shade.UV[0][0], shade.UV[0][1], 1, 1)
-	//ColourScale(1.0*o_dot_n/math.Pi, b.Diffuse.SampleRGB(float32(shade.UVSet[0].uv[0]), float32(shade.UVSet[0].uv[1]), shade.UVSet[0].dTd0, shade.UVSet[0].dTd1, 1, 1))
+	//ColourScale(1.`0*o_dot_n/math.Pi, b.Diffuse.SampleRGB(float32(shade.UVSet[0].uv[0]), float32(shade.UVSet[0].uv[1]), shade.UVSet[0].dTd0, shade.UVSet[0].dTd1, 1, 1))
 	Kd := b.Kd.SampleRGB(shade.UV[0][0], shade.UV[0][1], 1, 1)
 	//colour.RGBToSpectrumSmits99(col[0], col[1], col[2], out)
 	A := 1 - (0.5 * (sigma * sigma) / ((sigma * sigma) + 0.57))

@@ -34,13 +34,14 @@ type TraceSupport struct {
 // We store the error offset in the result as we may want to move the point to either side depending
 // on the material (e.g. refraction will need point on other side)
 type RayResult struct {
-	P          m.Vec3
-	POffset    m.Vec3    // Offset to make sure any intersection point is outside face
-	Ng, Tg, Bg m.Vec3    // Tangent space, Tg & Bg not normalized, Ng is normalized (as stored with face)
-	Ns         m.Vec3    // Not normalized
-	MtlId      int32     // 64 bytes (first line)
-	UV         [6]m.Vec2 // 12 floats (48 bytes)
-	Extra      map[string]interface{}
+	P        m.Vec3
+	POffset  m.Vec3    // Offset to make sure any intersection point is outside face
+	Ng, T, B m.Vec3    // Tangent space, Tg & Bg not normalized, Ng is normalized (as stored with face)
+	Ns       m.Vec3    // Not normalized
+	MtlId    int32     // 64 bytes (first line)
+	UV       [4]m.Vec2 // 8 floats (48 bytes)
+	Pu, Pv   [4]m.Vec3 // 12 float32
+	Extra    map[string]interface{}
 }
 
 // 64bytes (one cache line)
@@ -96,13 +97,18 @@ func (r *RayData) IsVis() bool {
 func (r *RayData) GetHitSurface(surface *material.SurfacePoint) error {
 	if r.Ray.Tclosest < m.Inf(1) {
 		surface.P = r.Result.P
-		surface.T = r.Result.Tg
 		surface.N = r.Result.Ng
 		surface.Ns = r.Result.Ns
-		surface.B = r.Result.Bg
+		//		surface.B = r.Result.Bg
+		//		surface.T = r.Result.Tg
 		for k := range surface.UV {
 			surface.UV[k] = r.Result.UV[k]
+			surface.Pu[k] = r.Result.Pu[k]
+			surface.Pv[k] = r.Result.Pv[k]
 		}
+		surface.B = m.Vec3Normalize(m.Vec3Cross(surface.Ns, surface.Pu[0]))
+		surface.T = m.Vec3Normalize(m.Vec3Cross(surface.Ns, surface.B))
+
 		surface.POffset = r.Result.POffset
 		surface.MtlId = r.Result.MtlId
 		//surface.Extra = copy(r.Result.Extra)

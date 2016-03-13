@@ -14,16 +14,17 @@ type SurfacePoint struct {
 	Ns      m.Vec3
 	POffset m.Vec3    // Offset to make sure any intersection point is outside face
 	MtlId   int32     // 64 bytes (first line)
-	UV      [6]m.Vec2 // 12 floats (48 bytes)
+	UV      [4]m.Vec2 // 12 floats (48 bytes)
+	Pu, Pv  [4]m.Vec3
 	Extra   map[string]interface{}
 }
 
 func (surf *SurfacePoint) TangentToWorld(v m.Vec3) m.Vec3 {
-	return m.Vec3BasisExpand(surf.T, surf.B, surf.N, v)
+	return m.Vec3BasisExpand(surf.T, surf.B, surf.Ns, v)
 }
 
 func (surf *SurfacePoint) WorldToTangent(v m.Vec3) m.Vec3 {
-	return m.Vec3BasisProject(surf.T, surf.B, surf.N, v)
+	return m.Vec3BasisProject(surf.T, surf.B, surf.Ns, v)
 }
 
 // Offset the surface point out from surface by about 1ulp
