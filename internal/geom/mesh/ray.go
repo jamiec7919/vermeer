@@ -5,8 +5,9 @@
 package mesh
 
 import (
-	//"log"
+	//	"log"
 	//"unsafe"
+	//"fmt"
 	"github.com/jamiec7919/vermeer/internal/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/qbvh"
@@ -572,6 +573,8 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 		ray.Result.Ns = ray.Result.Ng
 	}
 
+	//log.Printf("%v %v", ray.Result.Ng, ray.Result.Ns)
+
 	for k := range mesh.Vuv {
 		if k >= len(ray.Result.UV) { // Would need to allocate.., could swap to a different allocated set if this occurs
 			// panic("ray->tri intersect: not implemented UV count > " + string(len(ray.Result.UV)))
@@ -587,7 +590,17 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 			s2 := mesh.Vuv[k][face.Vi[2]][0] - mesh.Vuv[k][face.Vi[0]][0]
 			t2 := mesh.Vuv[k][face.Vi[2]][1] - mesh.Vuv[k][face.Vi[0]][1]
 
-			det := 1.0 / (s1*t2 - s2*t1)
+			invDet := (s1*t2 - s2*t1)
+
+			if invDet == 0.0 {
+				//panic("Err" + fmt.Sprintf("%v", mesh.Name))
+				invDet = 1.0
+				s1 = 1.0
+				t1 = 0.0
+				s2 = 0.0
+				t2 = 1.0
+			}
+			det := 1.0 / invDet
 			ray.Result.Pu[k][0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
 			ray.Result.Pu[k][1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
 			ray.Result.Pu[k][2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))

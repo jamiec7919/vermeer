@@ -8,6 +8,7 @@ import (
 	"github.com/jamiec7919/vermeer/internal/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/qbvh"
+
 	"log"
 )
 
@@ -35,6 +36,7 @@ type Loader interface {
 }
 
 type Mesh struct {
+	Name      string
 	Faces     []FaceGeom
 	Vn        []m.Vec3
 	Vuv       [][]m.Vec2
@@ -62,6 +64,12 @@ func (mesh *Mesh) calcVertexNormals() error {
 		mesh.Vn[i] = m.Vec3Normalize(mesh.Vn[i])
 	}
 
+	if mesh.Name == "mesh02" {
+		for i := range mesh.Vn {
+			mesh.Vn[i] = m.Vec3Neg(mesh.Vn[i])
+		}
+
+	}
 	return nil
 }
 
@@ -95,7 +103,7 @@ func (mesh *StaticMesh) VisRay(ray *core.RayData) {
 }
 
 type MeshFile struct {
-	NodeName    string
+	NodeName    string `node:"Name"`
 	Filename    string
 	RayBias     float32
 	CalcNormals bool
@@ -124,7 +132,15 @@ func (mesh *MeshFile) PreRender(rc *core.RenderContext) error {
 	if mesh.CalcNormals {
 		msh.calcVertexNormals()
 	}
+	/*
+		if mesh.NodeName == "mesh02" {
+			for i := range msh.Vn {
+				msh.Vn[i] = m.Vec3Neg(msh.Vn[i])
+			}
 
+		}
+	*/
+	msh.Name = mesh.NodeName
 	mesh.mesh = msh
 	return mesh.mesh.initAccel()
 }
@@ -153,7 +169,13 @@ func (mesh *Mesh) Transform(trn m.Matrix4) {
 		mesh.Faces[i].V[0] = m.Matrix4MulPoint(trn, mesh.Faces[i].V[0])
 		mesh.Faces[i].V[1] = m.Matrix4MulPoint(trn, mesh.Faces[i].V[1])
 		mesh.Faces[i].V[2] = m.Matrix4MulPoint(trn, mesh.Faces[i].V[2])
+		//mesh.Faces[i].N = m.Matrix4MulVec(trn, mesh.Faces[i].N)
 	}
+
+	for i := range mesh.Vn {
+		mesh.Vn[i] = m.Matrix4MulVec(trn, mesh.Vn[i])
+	}
+
 }
 func (mesh *Mesh) WorldBounds(m m.Matrix4) (out m.BoundingBox) {
 	return

@@ -133,6 +133,20 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 				return
 			}
 
+			if mtl.BumpMap != nil {
+				delta := float32(1) / float32(6000)
+				//log.Printf("Bump %v %v %v %v", mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]-delta, surf.UV[0][1], delta, delta)[0], mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]+delta, surf.UV[0][1], delta, delta)[0], surf.UV[0][0]-delta, surf.UV[0][0]+delta)
+				Bu := (1.0 / (2.0 * delta)) * mtl.BumpMap.Scale * (mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]-delta, surf.UV[0][1], delta, delta)[0] - mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]+delta, surf.UV[0][1], delta, delta)[0])
+				Bv := (1.0 / (2.0 * delta)) * mtl.BumpMap.Scale * (mtl.BumpMap.Map.SampleRGB(surf.UV[0][0], surf.UV[0][1]-delta, delta, delta)[0] - mtl.BumpMap.Map.SampleRGB(surf.UV[0][0], surf.UV[0][1]+delta, delta, delta)[0])
+				//log.Printf("Bump %v %v %v", Bu, Bv, surf.Ns)
+				surf.Ns = m.Vec3Add(surf.Ns, m.Vec3Sub(m.Vec3Scale(Bu, m.Vec3Cross(surf.Ns, surf.Pv[0])), m.Vec3Scale(Bv, m.Vec3Cross(surf.Ns, surf.Pu[0]))))
+				//log.Printf("%v", surf.Ns)
+				surf.Ns = m.Vec3Normalize(surf.Ns)
+				surf.B = m.Vec3Normalize(m.Vec3Cross(surf.Ns, surf.Pu[0]))
+				surf.T = m.Vec3Normalize(m.Vec3Cross(surf.Ns, surf.B))
+
+			}
+
 			Vout := m.Vec3Neg(D)
 			//			d := m.Vec3Dot(surf.N, Vout)
 
@@ -216,9 +230,11 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 
 			if m.Vec3Dot(D, surf.N) < 0 {
 				if count < 5 {
+					count++
 					goto resample
 				} else {
-					log.Printf("Exceeded 5 resample")
+					//log.Printf("Exceeded 5 resample")
+					return
 				}
 			}
 

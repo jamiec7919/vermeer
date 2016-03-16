@@ -48,6 +48,7 @@ func (r *reader) init(rc *core.RenderContext, filename string) {
 	r.vn_i = make(map[texvert]int32)
 }
 
+//TODO: this is a bit of a mess
 func (r *reader) triangulateFace(face []facevert, mtlid material.Id) {
 	i := 1
 
@@ -75,6 +76,9 @@ func (r *reader) triangulateFace(face []facevert, mtlid material.Id) {
 				} else {
 					r.mvt = append(r.mvt, m.Vec2{})
 				}
+			} else {
+				r.mvt = append(r.mvt, m.Vec2{})
+
 			}
 			if r.vn != nil {
 				r.mvn = append(r.mvn, r.vn[face[0].n])
@@ -96,6 +100,9 @@ func (r *reader) triangulateFace(face []facevert, mtlid material.Id) {
 				} else {
 					r.mvt = append(r.mvt, m.Vec2{})
 				}
+			} else {
+				r.mvt = append(r.mvt, m.Vec2{})
+
 			}
 			if r.vn != nil {
 				r.mvn = append(r.mvn, r.vn[face[i].n])
@@ -116,6 +123,9 @@ func (r *reader) triangulateFace(face []facevert, mtlid material.Id) {
 				} else {
 					r.mvt = append(r.mvt, m.Vec2{})
 				}
+			} else {
+				r.mvt = append(r.mvt, m.Vec2{})
+
 			}
 			if r.vn != nil {
 				r.mvn = append(r.mvn, r.vn[face[i2].n])

@@ -7,6 +7,7 @@ package texture
 import (
 	"image"
 	_ "image/jpeg"
+	_ "image/png"
 	"log"
 	"os"
 	"sync"
@@ -66,6 +67,8 @@ func LoadTexture(url string) (*Texture, error) {
 		for i := m.Bounds().Min.X; i < m.Bounds().Max.X; i++ {
 			r, g, b, _ := m.At(i, j).RGBA()
 			t.SetRGB(i, m.Bounds().Max.Y-1-j, uint8(r>>8), uint8(g>>8), uint8(b>>8))
+			//t.SetRGB(i, m.Bounds().Max.Y-1-j, uint8(r), uint8(g), uint8(b))
+			//t.SetRGB(i, m.Bounds().Max.Y-1-j, uint8(r/alpha), uint8(g/alpha), uint8(b/alpha))
 			//				tex.Set(i, m.Bounds().Max.Y-1-j, byte(r), byte(g), byte(b))
 		}
 	}

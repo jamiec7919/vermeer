@@ -92,6 +92,22 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 				mtl.BSDF[0] = &bsdf.Diffuse{Kd: &material.TextureMap{toks[1]}}
 			}
 			//mtl.BSDF.Diffuse = TextureFile(toks[1])
+		case "map_bump":
+			i := 1
+			scale := float32(0.01)
+			if toks[i] == "-bm" {
+				i++
+				scale64, err := strconv.ParseFloat(toks[i], 32)
+				scale = float32(scale64)
+
+				if err != nil {
+					return err
+				}
+				i++
+			}
+			if i < len(toks) {
+				mtl.BumpMap = &material.BumpMap{&material.TextureMap{toks[i]}, scale}
+			}
 		}
 	}
 	return nil

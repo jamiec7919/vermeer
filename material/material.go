@@ -18,8 +18,14 @@ type Material struct {
 	BSDF  [2]BSDF // bsdf for sides
 	//Medium [2]Medium  // medium material
 	EDF EDF // Emission distribution for light materials (nil is not a light)
+
+	BumpMap *BumpMap
 }
 
+type BumpMap struct {
+	Map   MapSampler
+	Scale float32
+}
 type ConstantMap struct {
 	C [3]float32
 }

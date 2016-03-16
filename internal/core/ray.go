@@ -98,7 +98,7 @@ func (r *RayData) GetHitSurface(surface *material.SurfacePoint) error {
 	if r.Ray.Tclosest < m.Inf(1) {
 		surface.P = r.Result.P
 		surface.N = r.Result.Ng
-		surface.Ns = r.Result.Ns
+		surface.Ns = m.Vec3Normalize(r.Result.Ns)
 		//		surface.B = r.Result.Bg
 		//		surface.T = r.Result.Tg
 		for k := range surface.UV {
@@ -106,9 +106,11 @@ func (r *RayData) GetHitSurface(surface *material.SurfacePoint) error {
 			surface.Pu[k] = r.Result.Pu[k]
 			surface.Pv[k] = r.Result.Pv[k]
 		}
+
 		surface.B = m.Vec3Normalize(m.Vec3Cross(surface.Ns, surface.Pu[0]))
 		surface.T = m.Vec3Normalize(m.Vec3Cross(surface.Ns, surface.B))
 
+		//log.Printf("%v %v", surface.T, surface.B)
 		surface.POffset = r.Result.POffset
 		surface.MtlId = r.Result.MtlId
 		//surface.Extra = copy(r.Result.Extra)
