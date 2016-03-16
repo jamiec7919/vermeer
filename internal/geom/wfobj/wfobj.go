@@ -166,8 +166,10 @@ func parseFaceField(field string) (p, n, t int) {
 
 	p, _ = strconv.Atoi(fields[0])
 
-	if len(fields[1]) > 0 {
-		t, _ = strconv.Atoi(fields[1])
+	if len(fields) > 1 {
+		if len(fields[1]) > 0 {
+			t, _ = strconv.Atoi(fields[1])
+		}
 	}
 
 	if len(fields) > 2 {
@@ -347,7 +349,11 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 
 	out.Faces = r.Faces
 	out.Vn = r.mvn
-	out.Vuv = [][]m.Vec2{r.mvt}
+
+	if r.mvt != nil {
+		out.Vuv = [][]m.Vec2{r.mvt}
+	}
+
 	return
 }
 

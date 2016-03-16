@@ -78,7 +78,9 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 			g, err := strconv.ParseFloat(toks[2], 32)
 			b, err := strconv.ParseFloat(toks[3], 32)
 
-			mtl.BSDF[0] = &bsdf.Diffuse{Kd: &material.ConstantMap{[3]float32{float32(r), float32(g), float32(b)}}}
+			if mtl.BSDF[0] == nil {
+				mtl.BSDF[0] = &bsdf.Diffuse{Kd: &material.ConstantMap{[3]float32{float32(r), float32(g), float32(b)}}}
+			}
 			// log.Printf("%v",mesh.Verts)
 			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
 			if err != nil {

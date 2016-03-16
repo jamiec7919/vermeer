@@ -7,6 +7,7 @@ package texture
 import (
 	"image"
 	_ "image/jpeg"
+	"log"
 	"os"
 	"sync"
 )
@@ -124,6 +125,7 @@ func SampleRGB(filename string, s, t, ds, dt float32) (out [3]float32) {
 
 		if err != nil {
 			loadMutex.Unlock()
+			log.Printf("texture.SampleRGB: %v", err)
 			return
 		}
 
