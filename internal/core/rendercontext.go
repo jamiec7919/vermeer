@@ -207,6 +207,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 
 			var omega_o m.Vec3
 			var pdf float64
+			count := 0
 		resample:
 			rho := material.Spectrum{Lambda: fullsample.Lambda}
 			bsdf.Sample(&surf, omega_i, rnd, &omega_o, &rho, &pdf)
@@ -214,7 +215,11 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 			D = surf.TangentToWorld(omega_o)
 
 			if m.Vec3Dot(D, surf.N) < 0 {
-				goto resample
+				if count < 5 {
+					goto resample
+				} else {
+					log.Printf("Exceeded 5 resample")
+				}
 			}
 
 			contrib.Mul(rho)

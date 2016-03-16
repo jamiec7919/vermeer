@@ -44,6 +44,27 @@ type Mesh struct {
 	RayBias   float32
 }
 
+func (mesh *Mesh) calcVertexNormals() error {
+	//log.Printf("CalcVertexNormals")
+	if mesh.Vn == nil {
+		if mesh.Vuv[0] != nil {
+			mesh.Vn = make([]m.Vec3, len(mesh.Vuv[0]))
+		}
+	}
+
+	for _, f := range mesh.Faces {
+		mesh.Vn[f.Vi[0]] = m.Vec3Add(mesh.Vn[f.Vi[0]], f.N)
+		mesh.Vn[f.Vi[1]] = m.Vec3Add(mesh.Vn[f.Vi[1]], f.N)
+		mesh.Vn[f.Vi[2]] = m.Vec3Add(mesh.Vn[f.Vi[2]], f.N)
+		//	log.Printf("%v %v %v %v %v %v %v", f.Vi[0], f.Vi[1], f.Vi[2], mesh.Vn[f.Vi[0]], mesh.Vn[f.Vi[1]], mesh.Vn[f.Vi[2]], f.N)
+	}
+	for i := range mesh.Vn {
+		mesh.Vn[i] = m.Vec3Normalize(mesh.Vn[i])
+	}
+
+	return nil
+}
+
 type StaticMesh struct {
 	NodeName string
 	Mesh     *Mesh
@@ -51,6 +72,7 @@ type StaticMesh struct {
 
 func (mesh *StaticMesh) Name() string { return mesh.NodeName }
 func (mesh *StaticMesh) PreRender(rc *core.RenderContext) error {
+	mesh.Mesh.initFaces()
 	return mesh.Mesh.initAccel()
 }
 func (mesh *StaticMesh) PostRender(rc *core.RenderContext) error { return nil }
@@ -73,11 +95,12 @@ func (mesh *StaticMesh) VisRay(ray *core.RayData) {
 }
 
 type MeshFile struct {
-	NodeName string
-	Filename string
-	RayBias  float32
-	Loader   Loader
-	mesh     *Mesh
+	NodeName    string
+	Filename    string
+	RayBias     float32
+	CalcNormals bool
+	Loader      Loader
+	mesh        *Mesh
 }
 
 func (mesh *MeshFile) Name() string { return mesh.NodeName }
@@ -95,6 +118,13 @@ func (mesh *MeshFile) PreRender(rc *core.RenderContext) error {
 		rot := m.Matrix4Rotate(m.Pi/2, 0, 1, 0)
 		msh.Transform(m.Matrix4Mul(trn, rot))
 	}
+
+	msh.initFaces()
+
+	if mesh.CalcNormals {
+		msh.calcVertexNormals()
+	}
+
 	mesh.mesh = msh
 	return mesh.mesh.initAccel()
 }
@@ -189,11 +219,15 @@ func trisplit(verts []m.Vec3, idx int32, indexes *[]int32, boxes *[]m.BoundingBo
 	}
 }
 
-func (mesh *Mesh) initAccel() error {
+func (mesh *Mesh) initFaces() {
 	for face := range mesh.Faces {
 		mesh.Faces[face].setup()
 		//log.Printf("%v %v ", m.Faces[face].N, m.Faces[face].MtlId)
 	}
+
+}
+
+func (mesh *Mesh) initAccel() error {
 
 	boxes := make([]m.BoundingBox, 0, len(mesh.Faces))
 	centroids := make([]m.Vec3, 0, len(mesh.Faces))
@@ -261,29 +295,17 @@ func RegisterLoader(name string, open func(rc *core.RenderContext, filename stri
 }
 
 func create(rc *core.RenderContext, params core.Params) (interface{}, error) {
-	if filename, present := params["Filename"]; present {
-		for _, open := range loaders {
-			loader, err := open(rc, filename.(string))
+	mfile := MeshFile{}
 
-			if err == nil {
-				name := params["Name"]
+	params.Unmarshal(&mfile)
 
-				if name == nil {
-					name = "<mesh>"
-				}
+	for _, open := range loaders {
+		loader, err := open(rc, mfile.Filename)
 
-				bias := params["RayBias"]
+		if err == nil {
 
-				var raybias float32
-
-				if bias != nil {
-					raybias = float32(bias.(float64))
-				}
-				mesh := MeshFile{NodeName: name.(string), Filename: filename.(string), RayBias: raybias, Loader: loader}
-
-				//rc.AddNode(&mesh)
-				return &mesh, nil
-			}
+			mfile.Loader = loader
+			return &mfile, nil
 		}
 	}
 	return nil, nil

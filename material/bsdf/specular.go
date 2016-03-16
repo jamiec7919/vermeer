@@ -7,7 +7,7 @@ package bsdf
 import (
 	"github.com/jamiec7919/vermeer/material"
 	m "github.com/jamiec7919/vermeer/math"
-	"log"
+	//"log"
 	"math/rand"
 )
 
@@ -44,7 +44,7 @@ func (b *Specular) PDF(shade *material.SurfacePoint, omega_i, omega_o m.Vec3) fl
 func (b *Specular) Sample(shade *material.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *material.Spectrum, pdf *float64) error {
 
 	if omega_i[2] < 0 {
-		log.Printf("Specular.Sample: %v", omega_i)
+		//log.Printf("Specular.Sample: %v", omega_i)
 	}
 	//out.Omega = reflect(shade.Omega, m.Vec3{0, 0, 1})
 	*omega_o = reflect(omega_i, m.Vec3{0, 0, 1})
