@@ -27,6 +27,14 @@ func (surf *SurfacePoint) WorldToTangent(v m.Vec3) m.Vec3 {
 	return m.Vec3BasisProject(surf.T, surf.B, surf.Ns, v)
 }
 
+// The texture derivatives Pu & Pv should already be computed.
+func (surf *SurfacePoint) SetupTangentSpace(Ns m.Vec3) {
+	surf.Ns = m.Vec3Normalize(Ns)
+	surf.B = m.Vec3Normalize(m.Vec3Cross(surf.Ns, surf.Pu[0]))
+	surf.T = m.Vec3Normalize(m.Vec3Cross(surf.Ns, surf.B))
+
+}
+
 // Offset the surface point out from surface by about 1ulp
 // Pass -ve value to push point 'into' surface (for transmission)
 func (r *SurfacePoint) OffsetP(dir int) {

@@ -5,6 +5,8 @@
 package texture
 
 import (
+	//_ "github.com/ftrvxmtrx/tga"
+	_ "golang.org/x/image/tiff"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"

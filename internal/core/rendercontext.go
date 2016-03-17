@@ -110,12 +110,14 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 	u := (float32(x) + r0) * frame.du
 	v := (float32(y) + r1) * frame.dv
 
-	lambda := ((720 - 450) * rnd.Float32()) + 450
+	lambda := (float32(720-450) * rnd.Float32()) + 450
 
 	P, D := frame.camera.ComputeRay(-1+u, 1-v, rnd)
 	fullsample := material.Spectrum{Lambda: lambda}
 	contrib := material.Spectrum{Lambda: fullsample.Lambda}
 	contrib.FromRGB(1, 1, 1)
+
+	direct := true
 
 	for depth := 0; depth < 4; depth++ {
 
@@ -134,20 +136,11 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 			}
 
 			if mtl.BumpMap != nil {
-				delta := float32(1) / float32(6000)
-				//log.Printf("Bump %v %v %v %v", mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]-delta, surf.UV[0][1], delta, delta)[0], mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]+delta, surf.UV[0][1], delta, delta)[0], surf.UV[0][0]-delta, surf.UV[0][0]+delta)
-				Bu := (1.0 / (2.0 * delta)) * mtl.BumpMap.Scale * (mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]-delta, surf.UV[0][1], delta, delta)[0] - mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]+delta, surf.UV[0][1], delta, delta)[0])
-				Bv := (1.0 / (2.0 * delta)) * mtl.BumpMap.Scale * (mtl.BumpMap.Map.SampleRGB(surf.UV[0][0], surf.UV[0][1]-delta, delta, delta)[0] - mtl.BumpMap.Map.SampleRGB(surf.UV[0][0], surf.UV[0][1]+delta, delta, delta)[0])
-				//log.Printf("Bump %v %v %v", Bu, Bv, surf.Ns)
-				surf.Ns = m.Vec3Add(surf.Ns, m.Vec3Sub(m.Vec3Scale(Bu, m.Vec3Cross(surf.Ns, surf.Pv[0])), m.Vec3Scale(Bv, m.Vec3Cross(surf.Ns, surf.Pu[0]))))
-				//log.Printf("%v", surf.Ns)
-				surf.Ns = m.Vec3Normalize(surf.Ns)
-				surf.B = m.Vec3Normalize(m.Vec3Cross(surf.Ns, surf.Pu[0]))
-				surf.T = m.Vec3Normalize(m.Vec3Cross(surf.Ns, surf.B))
-
+				mtl.ApplyBumpMap(&surf)
 			}
 
 			Vout := m.Vec3Neg(D)
+
 			//			d := m.Vec3Dot(surf.N, Vout)
 
 			//if d < 0.0 { // backface hit
@@ -164,6 +157,13 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 
 			omega_i := surf.WorldToTangent(Vout)
 
+			if (true || direct) && mtl.EDF != nil {
+				Le := material.Spectrum{Lambda: contrib.Lambda}
+				mtl.EDF.Eval(&surf, omega_i, &Le)
+				Le.Mul(contrib)
+				//Le.Scale(1.0 / (float32(m.Vec3Dot(Vout, surf.N))))
+				fullsample.Add(Le)
+			}
 			bsdf := mtl.BSDF[0]
 
 			if bsdf == nil { // can't do much without BSDF
@@ -179,7 +179,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 			if !bsdf.IsDelta(&surf) {
 
 				if len(frame.scene.lights) > 0 {
-					nls := 4
+					nls := 8
 					lightsamples := 0
 					if depth > 0 {
 						nls = 1
@@ -191,7 +191,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 						if frame.scene.lights[0].SampleArea(&surf, rnd, &P, &pdf) == nil {
 							V := m.Vec3Sub(P.P, surf.P)
 
-							if m.Vec3Dot(V, surf.Ns) > 0.0 && m.Vec3Dot(V, P.N) < 0.0 {
+							if m.Vec3Dot(V, surf.Ns) > 0.0 && m.Vec3Dot(V, surf.N) > 0.0 && m.Vec3Dot(V, P.N) < 0.0 {
 								ray.InitVisRay(surf.P, P.P)
 								frame.scene.VisRay(ray)
 								if ray.IsVis() {
@@ -216,7 +216,11 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 							}
 						}
 					}
+
+					direct = false
 				}
+			} else {
+				direct = true
 			}
 
 			var omega_o m.Vec3

@@ -6,6 +6,7 @@ package material
 
 import (
 	"github.com/jamiec7919/vermeer/material/texture"
+	m "github.com/jamiec7919/vermeer/math"
 )
 
 type Id int32
@@ -26,6 +27,19 @@ type BumpMap struct {
 	Map   MapSampler
 	Scale float32
 }
+
+func (mtl *Material) ApplyBumpMap(surf *SurfacePoint) {
+	delta := float32(1) / float32(6000)
+	//log.Printf("Bump %v %v %v %v", mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]-delta, surf.UV[0][1], delta, delta)[0], mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]+delta, surf.UV[0][1], delta, delta)[0], surf.UV[0][0]-delta, surf.UV[0][0]+delta)
+	Bu := (1.0 / (2.0 * delta)) * mtl.BumpMap.Scale * (mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]-delta, surf.UV[0][1], delta, delta)[0] - mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]+delta, surf.UV[0][1], delta, delta)[0])
+	Bv := (1.0 / (2.0 * delta)) * mtl.BumpMap.Scale * (mtl.BumpMap.Map.SampleRGB(surf.UV[0][0], surf.UV[0][1]-delta, delta, delta)[0] - mtl.BumpMap.Map.SampleRGB(surf.UV[0][0], surf.UV[0][1]+delta, delta, delta)[0])
+	//log.Printf("Bump %v %v %v", Bu, Bv, surf.Ns)
+	surf.Ns = m.Vec3Add(surf.Ns, m.Vec3Sub(m.Vec3Scale(Bu, m.Vec3Cross(surf.Ns, surf.Pv[0])), m.Vec3Scale(Bv, m.Vec3Cross(surf.Ns, surf.Pu[0]))))
+	//log.Printf("%v", surf.Ns)
+	surf.SetupTangentSpace(surf.Ns)
+
+}
+
 type ConstantMap struct {
 	C [3]float32
 }
