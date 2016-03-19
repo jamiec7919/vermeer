@@ -6,14 +6,75 @@ package wfobj
 
 import (
 	"bufio"
+	"bytes"
 	"github.com/jamiec7919/vermeer/internal/core"
 	"github.com/jamiec7919/vermeer/material"
 	"github.com/jamiec7919/vermeer/material/bsdf"
 	"github.com/jamiec7919/vermeer/material/edf"
 	"os"
 	"strconv"
-	"strings"
+	//"strings"
+	//"log"
+	"unicode/utf8"
 )
+
+type lineScanner struct {
+	line []byte
+	pos  int
+}
+
+func (l *lineScanner) next() rune {
+	if len(l.line) == 0 {
+		return 0
+	}
+
+	c, size := utf8.DecodeRune(l.line)
+	l.line = l.line[size:]
+	if c == utf8.RuneError && size == 1 {
+		//log.Print("invalid utf8")
+		return l.next()
+	}
+	return c
+}
+func (l *lineScanner) init(line string) {
+	l.line = []byte(line)
+}
+
+func (l *lineScanner) Rest() string {
+	//log.Printf("rest: %v", string(l.line))
+	return string(l.line)
+}
+
+func (l *lineScanner) Token() string {
+	var buf bytes.Buffer
+
+	// skip whitespace
+L:
+	for {
+		switch r := l.next(); r {
+		case 0, '#':
+			return ""
+
+		case ' ', '\t':
+			// do nothing, skip
+		default:
+			buf.WriteRune(r)
+			break L
+		}
+	}
+
+L2:
+	for {
+		switch r := l.next(); r {
+		case 0, ' ', '\t':
+			break L2
+		default:
+			buf.WriteRune(r)
+		}
+	}
+	//log.Printf("tok: %v", buf.String())
+	return buf.String()
+}
 
 func ParseMtlLib(rc *core.RenderContext, filename string) error {
 	fin, err := os.Open(filename)
@@ -31,6 +92,8 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 	for scanner.Scan() {
 		line := scanner.Text()
 
+		lscan := lineScanner{}
+		lscan.init(line)
 		// fmt.Printf("Lines: %s (error)\n", line)
 		// line := string(bytes)
 		// bytes = bytes[:0]
@@ -38,22 +101,13 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 		// Process line
 		// toks := strings.Split(strings.TrimSpace(line), " ")
 		// NOTES: helpfully some .obj files are separated by tabs!!! Such a crappy format.
-		toks := strings.FieldsFunc(strings.TrimSpace(line), func(r rune) bool {
-			switch r {
-			case ' ', '\t':
-				return true
-			}
-			return false
-		})
 
-		// log.Print(toks)
-		if len(toks) < 1 {
-			continue
-		}
+		cmd := lscan.Token()
 
-		switch toks[0] {
+		switch cmd {
 		case "newmtl":
-			name := toks[1]
+			name := lscan.Token()
+
 			//log.Printf("Mtl %v", toks[1])
 			mtl = &material.Material{}
 			rc.AddMaterial(name, mtl)
@@ -62,9 +116,9 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 			//mtl.BSDF.Roughness = 0.6
 
 		case "Ke":
-			r, err := strconv.ParseFloat(toks[1], 32)
-			g, err := strconv.ParseFloat(toks[2], 32)
-			b, err := strconv.ParseFloat(toks[3], 32)
+			r, err := strconv.ParseFloat(lscan.Token(), 32)
+			g, err := strconv.ParseFloat(lscan.Token(), 32)
+			b, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			mtl.EDF = &edf.Diffuse{E: [3]float32{float32(r), float32(g), float32(b)}}
 			// log.Printf("%v",mesh.Verts)
@@ -74,11 +128,12 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 			}
 
 		case "Kd":
-			r, err := strconv.ParseFloat(toks[1], 32)
-			g, err := strconv.ParseFloat(toks[2], 32)
-			b, err := strconv.ParseFloat(toks[3], 32)
+			r, err := strconv.ParseFloat(lscan.Token(), 32)
+			g, err := strconv.ParseFloat(lscan.Token(), 32)
+			b, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			if mtl.BSDF[0] == nil {
+
 				mtl.BSDF[0] = &bsdf.Diffuse{Kd: &material.ConstantMap{[3]float32{float32(r), float32(g), float32(b)}}}
 			}
 			// log.Printf("%v",mesh.Verts)
@@ -88,26 +143,29 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 			}
 		case "map_Kd":
 
-			if len(toks) > 1 {
-				mtl.BSDF[0] = &bsdf.Diffuse{Kd: &material.TextureMap{toks[1]}}
-			}
+			mtl.BSDF[0] = &bsdf.Diffuse{Kd: &material.TextureMap{lscan.Rest()}}
 			//mtl.BSDF.Diffuse = TextureFile(toks[1])
 		case "map_bump":
 			i := 1
-			scale := float32(0.01)
-			if toks[i] == "-bm" {
+			scale := float32(1.0)
+			rest := lscan.Rest()
+			if lscan.Token() == "-bm" {
 				i++
-				scale64, err := strconv.ParseFloat(toks[i], 32)
+				scale64, err := strconv.ParseFloat(lscan.Token(), 32)
 				scale = float32(scale64)
 
 				if err != nil {
 					return err
 				}
 				i++
+				mtl.BumpMap = &material.BumpMap{&material.TextureMap{lscan.Rest()}, scale}
+			} else {
+
+				mtl.BumpMap = &material.BumpMap{&material.TextureMap{rest}, scale}
+
 			}
-			if i < len(toks) {
-				mtl.BumpMap = &material.BumpMap{&material.TextureMap{toks[i]}, scale}
-			}
+			//if i < len(toks) {
+			//}
 		}
 	}
 	return nil
