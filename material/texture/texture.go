@@ -130,7 +130,7 @@ func SampleRGB(filename string, s, t, ds, dt float32) (out [3]float32) {
 
 		if err != nil {
 			loadMutex.Unlock()
-			log.Printf("texture.SampleRGB: %v", err)
+			log.Printf("texture.SampleRGB: \"%v\": %v", filename, err)
 			return
 		}
 
