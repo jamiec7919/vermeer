@@ -150,8 +150,10 @@ L:
 		switch c {
 		case eof:
 			return eof // error really
-
-		case ' ', '\t', '\r', '\n', '"', '[', ']', '{', '}':
+		case '"', '[', ']', '{', '}':
+			x.peek = c
+			break L
+		case ' ', '\t', '\r', '\n':
 			break L
 		default:
 			add(&b, c)
