@@ -49,8 +49,12 @@ type Mesh struct {
 func (mesh *Mesh) calcVertexNormals() error {
 	//log.Printf("CalcVertexNormals")
 	if mesh.Vn == nil {
-		if mesh.Vuv[0] != nil {
-			mesh.Vn = make([]m.Vec3, len(mesh.Vuv[0]))
+		if mesh.Vuv != nil {
+			if mesh.Vuv[0] != nil {
+				mesh.Vn = make([]m.Vec3, len(mesh.Vuv[0]))
+			}
+		} else {
+			mesh.Vn = make([]m.Vec3, len(mesh.Faces)*3)
 		}
 	}
 
@@ -64,12 +68,6 @@ func (mesh *Mesh) calcVertexNormals() error {
 		mesh.Vn[i] = m.Vec3Normalize(mesh.Vn[i])
 	}
 
-	if mesh.Name == "mesh02" {
-		for i := range mesh.Vn {
-			mesh.Vn[i] = m.Vec3Neg(mesh.Vn[i])
-		}
-
-	}
 	return nil
 }
 

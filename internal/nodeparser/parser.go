@@ -16,6 +16,8 @@ import (
 	"log"
 	// "os"
 	"errors"
+	"fmt"
+	m "github.com/jamiec7919/vermeer/math"
 	"strconv"
 	"unicode"
 	"unicode/utf8"
@@ -53,6 +55,10 @@ type Lex struct {
 	line []byte
 	peek rune
 	in   *bufio.Reader
+
+	peekToken bool // Should we pass the token back?
+	psym      SymType
+	ptoken    int
 }
 
 type SymType struct {
@@ -76,9 +82,22 @@ func isAlphaNumeric(r rune) bool {
 	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
-// The parser calls this method to get each new token.  This
-// implementation returns operators and NUM.
+// Call this and the next call to Lex will return the given
+// data
+func (x *Lex) PeekToken(yylval *SymType, token int) {
+	x.peekToken = true
+	x.psym = *yylval
+	x.ptoken = token
+}
+
+// The parser calls this method to get each new token.
 func (x *Lex) Lex(yylval *SymType) int {
+	if x.peekToken {
+		x.peekToken = false
+		*yylval = x.psym
+		return x.ptoken
+	}
+
 	for {
 		c := x.next()
 
@@ -392,6 +411,154 @@ type parser struct {
 	dispatcher Dispatcher
 }
 
+func (p *parser) parseIntArray() (param interface{}, err error) {
+	// Will contain the length of array in [<int>]
+	var v SymType
+
+	if t := p.lex.Lex(&v); t != TOK_OPENBRACE {
+		p.error("Invalid token in array preamble")
+	}
+
+	if t := p.lex.Lex(&v); t != TOK_INT {
+		p.error("Expected array length")
+	}
+
+	length := v.numInt
+
+	if t := p.lex.Lex(&v); t != TOK_CLOSEBRACE {
+		p.error("Invalid token in array preamble")
+	}
+
+	// Now length * int
+
+	a := make([]int32, length)
+
+	for i := range a {
+		if t := p.lex.Lex(&v); t != TOK_INT {
+			p.error("Expecting %v ints", length)
+		}
+		a[i] = int32(v.numInt)
+	}
+
+	return a, nil
+}
+
+func (p *parser) parsePointArray() (param interface{}, err error) {
+	// Will contain the length of array in [<int>]
+	var v SymType
+
+	if t := p.lex.Lex(&v); t != TOK_OPENBRACE {
+		p.error("Invalid token in array preamble")
+	}
+
+	if t := p.lex.Lex(&v); t != TOK_INT {
+		p.error("Expected array length")
+	}
+
+	length := v.numInt
+
+	if t := p.lex.Lex(&v); t != TOK_CLOSEBRACE {
+		p.error("Invalid token in array preamble")
+	}
+
+	// Now length * int
+
+	a := make([]m.Vec3, length)
+
+	for i := range a {
+		var x m.Vec3
+
+		for k := 0; k < 3; k++ {
+			t := p.lex.Lex(&v)
+			switch t {
+			case TOK_FLOAT:
+				x[k] = float32(v.numFloat)
+			case TOK_INT:
+				x[k] = float32(v.numInt)
+
+			default:
+				p.error("Expecting %v points", length)
+			}
+
+		}
+
+		a[i] = x
+	}
+
+	return a, nil
+}
+
+func (p *parser) parseVec2Array() (param interface{}, err error) {
+	// Will contain the length of array in [<int>]
+	var v SymType
+
+	if t := p.lex.Lex(&v); t != TOK_OPENBRACE {
+		p.error("Invalid token in array preamble")
+	}
+
+	if t := p.lex.Lex(&v); t != TOK_INT {
+		p.error("Expected array length")
+	}
+
+	length := v.numInt
+
+	if t := p.lex.Lex(&v); t != TOK_CLOSEBRACE {
+		p.error("Invalid token in array preamble")
+	}
+
+	// Now length * int
+
+	a := make([]m.Vec2, length)
+
+	for i := range a {
+		var x m.Vec2
+
+		for k := 0; k < 2; k++ {
+			t := p.lex.Lex(&v)
+			switch t {
+			case TOK_FLOAT:
+				x[k] = float32(v.numFloat)
+			case TOK_INT:
+				x[k] = float32(v.numInt)
+
+			default:
+				p.error("Expecting %v vec2s", length)
+			}
+
+		}
+
+		a[i] = x
+	}
+
+	return a, nil
+}
+
+func (p *parser) parseMatrix() (param interface{}, err error) {
+	// Will contain the length of array in [<int>]
+	var v SymType
+
+	// Now length * int
+
+	var a m.Matrix4
+
+	for i := range a {
+		t := p.lex.Lex(&v)
+		switch t {
+		case TOK_FLOAT:
+			a[i] = float32(v.numFloat)
+		case TOK_INT:
+			a[i] = float32(v.numInt)
+
+		default:
+			p.error("Matrix expecting 16 floats")
+		}
+
+	}
+
+	// The simplest parsed layout is actually transpose of desired layout so transpose it here
+	return m.Matrix4Transpose(a), nil
+}
+
 func (p *parser) parseParam() (param interface{}, err error) {
 
 	var v SymType
@@ -414,6 +581,19 @@ func (p *parser) parseParam() (param interface{}, err error) {
 
 		case TOK_TOKEN:
 			token := v.str
+
+			// Is it a built in type?
+			switch token {
+			case "int":
+				return p.parseIntArray()
+			case "point":
+				return p.parsePointArray()
+			case "vec2":
+				return p.parseVec2Array()
+			case "matrix":
+				return p.parseMatrix()
+			}
+
 			if t := p.lex.Lex(&v); t != TOK_OPENCURLYBRACE {
 				p.error("Invalid token in obj preamble")
 			}
@@ -443,7 +623,7 @@ func (p *parser) parseObj(objtype string) (interface{}, error) {
 			params[token] = param
 
 		case TOK_CLOSECURLYBRACE:
-			// log.Printf("Got obj %v", params)
+			//log.Printf("Got obj %v %v", objtype, params)
 			return p.dispatcher.CreateObj(objtype, params)
 
 		default:
@@ -455,7 +635,7 @@ func (p *parser) parseObj(objtype string) (interface{}, error) {
 }
 
 func (p *parser) error(msg string, v ...interface{}) {
-	if err := p.dispatcher.Error(errors.New(msg)); err != nil {
+	if err := p.dispatcher.Error(errors.New(fmt.Sprintf(msg, v...))); err != nil {
 		panic(err)
 	}
 }
@@ -472,12 +652,15 @@ L:
 				p.error("Invalid token in obj preamble")
 			}
 
-			obj, _ := p.parseObj(token)
+			obj, err1 := p.parseObj(token)
 
+			if err1 != nil || obj == nil {
+				p.error("obj is nil: %v", err1)
+			}
+
+			// This is not necessarily an error, some objects don't create nodes
 			if err := p.dispatcher.DispatchNode(obj); err != nil {
-				if err2 := p.dispatcher.Error(err); err2 != nil {
-					return err2
-				}
+				p.error("DispatchNode %v: %v", token, err)
 			}
 		// ERROR
 		default:

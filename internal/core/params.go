@@ -66,6 +66,58 @@ func (np *Params) GetVec3(key string) (m.Vec3, error) {
 	return m.Vec3{}, ErrNotFound
 }
 
+func (np *Params) GetVec2(key string) (m.Vec2, error) {
+	if v, present := (*np)[key]; present {
+		return getVec2(v)
+	}
+
+	return m.Vec2{}, ErrNotFound
+}
+
+func (np *Params) GetMatrix4(key string) (m.Matrix4, error) {
+	if v, present := (*np)[key]; present {
+		switch t := v.(type) {
+		case m.Matrix4:
+			return t, nil
+		}
+	}
+
+	return m.Matrix4{}, ErrNotFound
+}
+
+func (np *Params) GetVec3Slice(key string) ([]m.Vec3, error) {
+	if v, present := (*np)[key]; present {
+		switch t := v.(type) {
+		case []m.Vec3:
+			return t, nil
+		}
+	}
+
+	return nil, ErrNotFound
+}
+
+func (np *Params) GetInt32Slice(key string) ([]int32, error) {
+	if v, present := (*np)[key]; present {
+		switch t := v.(type) {
+		case []int32:
+			return t, nil
+		}
+	}
+
+	return nil, ErrNotFound
+}
+
+func (np *Params) GetVec2Slice(key string) ([]m.Vec2, error) {
+	if v, present := (*np)[key]; present {
+		switch t := v.(type) {
+		case []m.Vec2:
+			return t, nil
+		}
+	}
+
+	return nil, ErrNotFound
+}
+
 func getString(v interface{}) (string, error) {
 	switch t := v.(type) {
 	case string:
@@ -116,6 +168,25 @@ func getVec3(v interface{}) (m.Vec3, error) {
 		}
 	default:
 		return m.Vec3{}, nil
+	}
+}
+
+func getVec2(v interface{}) (m.Vec2, error) {
+	switch t := v.(type) {
+	case []float64:
+		if len(t) == 2 {
+			return m.Vec2{float32(t[0]), float32(t[1])}, nil
+		} else {
+			return m.Vec2{}, nil
+		}
+	case []int64:
+		if len(t) == 2 {
+			return m.Vec2{float32(t[0]), float32(t[1])}, nil
+		} else {
+			return m.Vec2{}, nil
+		}
+	default:
+		return m.Vec2{}, nil
 	}
 }
 
@@ -170,10 +241,40 @@ func (p *Params) Unmarshal(v interface{}) error {
 					fv.SetBool(v)
 				}
 
+			case reflect.Slice:
+				switch fv.Type().Elem() {
+				case reflect.TypeOf(m.Vec3{}):
+					v, err := p.GetVec3Slice(fieldName)
+					if err == nil {
+						fv.Set(reflect.ValueOf(v))
+					}
+				case reflect.TypeOf(int32(0)):
+
+					v, err := p.GetInt32Slice(fieldName)
+					if err == nil {
+						fv.Set(reflect.ValueOf(v))
+					}
+				case reflect.TypeOf(m.Vec2{}):
+					v, err := p.GetVec2Slice(fieldName)
+					if err == nil {
+						fv.Set(reflect.ValueOf(v))
+					}
+				}
+
 			default:
 				switch fv.Type() {
 				case reflect.TypeOf(m.Vec3{}):
 					v, err := p.GetVec3(fieldName)
+					if err == nil {
+						fv.Set(reflect.ValueOf(v))
+					}
+				case reflect.TypeOf(m.Vec2{}):
+					v, err := p.GetVec2(fieldName)
+					if err == nil {
+						fv.Set(reflect.ValueOf(v))
+					}
+				case reflect.TypeOf(m.Matrix4{}):
+					v, err := p.GetMatrix4(fieldName)
 					if err == nil {
 						fv.Set(reflect.ValueOf(v))
 					}
