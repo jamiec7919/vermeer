@@ -115,6 +115,11 @@ func (mesh *StaticMesh) PreRender(rc *core.RenderContext) error {
 }
 func (mesh *StaticMesh) PostRender(rc *core.RenderContext) error { return nil }
 
+func (mesh *StaticMesh) WorldBounds() (out m.BoundingBox) {
+
+	return mesh.Mesh.WorldBounds()
+}
+
 func (mesh *StaticMesh) TraceRay(ray *core.RayData) {
 	mesh.Mesh.TraceRay(ray)
 }
@@ -171,6 +176,10 @@ func (mesh *MeshFile) TraceRay(ray *core.RayData) {
 	mesh.mesh.TraceRay(ray)
 }
 
+func (mesh *MeshFile) WorldBounds() (out m.BoundingBox) {
+	return mesh.mesh.WorldBounds()
+}
+
 func (mesh *MeshFile) VisRay(ray *core.RayData) {
 	mesh.mesh.VisRay(ray)
 }
@@ -188,7 +197,14 @@ func (mesh *Mesh) Transform(trn m.Matrix4) {
 	}
 
 }
-func (mesh *Mesh) WorldBounds(m m.Matrix4) (out m.BoundingBox) {
+func (mesh *Mesh) WorldBounds() (out m.BoundingBox) {
+	out.Reset()
+
+	for i := range mesh.Faces {
+		for k := range mesh.Faces[i].V {
+			out.GrowVec3(mesh.Faces[i].V[k])
+		}
+	}
 	return
 }
 

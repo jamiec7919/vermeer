@@ -37,6 +37,11 @@ type PolyMesh struct {
 	mesh *Mesh
 }
 
+func (mesh *PolyMesh) WorldBounds() (out m.BoundingBox) {
+
+	return mesh.mesh.WorldBounds()
+}
+
 func (mesh *PolyMesh) Name() string { return mesh.NodeName }
 func (mesh *PolyMesh) PreRender(rc *core.RenderContext) error {
 	if err := mesh.createMesh(rc); err != nil {

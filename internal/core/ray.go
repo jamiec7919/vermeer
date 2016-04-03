@@ -22,11 +22,12 @@ type TraverseElem struct {
 }
 
 // Heap allocation guarantees 16-byte alignment, stack allocation doesn't!
-// 512 bytes structure
+// 512 + (32*8) bytes structure
 type TraceSupport struct {
-	T     [4]float32
-	Hits  [4]int32
-	Stack [60]TraverseElem // Traverse Elem is 8 bytes
+	T             [4]float32
+	Hits          [4]int32
+	Stack         [60]TraverseElem // Traverse Elem is 8 bytes
+	TopLevelStack [32]TraverseElem
 }
 
 // 2 cache lines currently, or would be if 64 byte aligned, as it is should be 32byte aligned by
@@ -58,14 +59,14 @@ type RayStats struct {
 	Nnodes int
 }
 
-// For some reason Supp.T is not being aligned to 16-bytes..
+// For some reason Supp.T is not being aligned to 16-bytes.. (needs to be heap allocated)
 // Aligned into 64byte blocks
 type RayData struct {
 	Supp   TraceSupport
 	Ray    Ray
 	Result RayResult
-	//TransformRay Ray       // No longer used, all geometry is transformed to world space
-	LocalToWorld m.Matrix4 // No longer used, to transform from Ray space back to world
+	//SavedRay Ray       // Saved version of ray if needed (i.e. we've transformed Ray)
+	LocalToWorld m.Matrix4 // Local to world transform
 	Stats        RayStats
 }
 

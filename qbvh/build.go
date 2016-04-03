@@ -146,7 +146,7 @@ func calcBox(boxes []m.BoundingBox, indxs []int32) (box m.BoundingBox) {
 	return
 }
 
-func binarySplit(boxes []m.BoundingBox, centroids []m.Vec3, indxs []int32) (axis, pivot int, bounds m.BoundingBox) {
+func binarySplit(boxes []m.BoundingBox, centroids []m.Vec3, leafMax int, indxs []int32) (axis, pivot int, bounds m.BoundingBox) {
 
 	bounds.Reset()
 
@@ -165,7 +165,7 @@ func binarySplit(boxes []m.BoundingBox, centroids []m.Vec3, indxs []int32) (axis
 		//		bounds.GrowVec3(boxes[indxs[i]].Centroid())
 	}
 
-	if len(indxs) <= 16 {
+	if len(indxs) <= leafMax {
 		axis = 0
 		pivot = len(indxs)
 		return
@@ -177,16 +177,16 @@ func binarySplit(boxes []m.BoundingBox, centroids []m.Vec3, indxs []int32) (axis
 
 func buildAccelRec(nodes *[]Node, boxes []m.BoundingBox, centroids []m.Vec3, indxs []int32, leafMax, baseidx int) (int32, m.BoundingBox) {
 	//log.Printf("A %v", len(indxs))
-	axis0, pivot0, _ := binarySplit(boxes, centroids, indxs)
+	axis0, pivot0, _ := binarySplit(boxes, centroids, leafMax, indxs)
 
 	if len(indxs[:pivot0]) < 17 {
 		// create leaf
 	}
 
 	//log.Printf("B %v %v", pivot0, len(indxs[:pivot0]))
-	axis1, pivot1, _ := binarySplit(boxes[:pivot0], centroids[:pivot0], indxs[:pivot0])
+	axis1, pivot1, _ := binarySplit(boxes[:pivot0], centroids[:pivot0], leafMax, indxs[:pivot0])
 	//log.Printf("C")
-	axis2, pivot2, _ := binarySplit(boxes[pivot0:], centroids[pivot0:], indxs[pivot0:])
+	axis2, pivot2, _ := binarySplit(boxes[pivot0:], centroids[pivot0:], leafMax, indxs[pivot0:])
 
 	//log.Printf("Node %v %v %v %v %v %v %v %v %v", axis0, pivot0, bounds0, axis1, pivot1, bounds1, axis2, pivot2, bounds2)
 	nodei := int32(len(*nodes))
