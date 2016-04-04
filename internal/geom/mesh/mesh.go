@@ -308,9 +308,9 @@ func (mesh *Mesh) initAccel() error {
 	return nil
 }
 
-var loaders = map[string]func(rc *core.RenderContext, filename string) (Loader, error){}
+var loaders = map[string]func(rc *core.RenderContext, filename string, params core.Params) (Loader, error){}
 
-func RegisterLoader(name string, open func(rc *core.RenderContext, filename string) (Loader, error)) {
+func RegisterLoader(name string, open func(rc *core.RenderContext, filename string, params core.Params) (Loader, error)) {
 	loaders[name] = open
 }
 
@@ -320,7 +320,7 @@ func create(rc *core.RenderContext, params core.Params) (interface{}, error) {
 	params.Unmarshal(&mfile)
 
 	for _, open := range loaders {
-		loader, err := open(rc, mfile.Filename)
+		loader, err := open(rc, mfile.Filename, params)
 
 		if err == nil {
 

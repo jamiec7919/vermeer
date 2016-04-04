@@ -38,6 +38,9 @@ type reader struct {
 
 	areas []float64
 
+	MergeVertPos bool
+	MergeTexVert bool
+
 	rc       *core.RenderContext
 	filename string
 }
@@ -158,14 +161,17 @@ func (r *reader) printAreas() {
 
 }
 
-func Open(rc *core.RenderContext, filename string) (mesh.Loader, error) {
+func Open(rc *core.RenderContext, filename string, params core.Params) (mesh.Loader, error) {
 	fin, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 
 	fin.Close()
+
 	reader := reader{}
+	reader.MergeVertPos, err = params.GetBool("MergeVertPos")
+	reader.MergeTexVert, err = params.GetBool("MergeTexVert")
 	reader.init(rc, filename)
 
 	return &reader, nil
@@ -220,6 +226,19 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 	//vn_i := map[int]int{}
 
 	var mtlid material.Id = material.ID_NONE
+	var vertmerge map[m.Vec3]int32
+	var vertmergeface []int32
+
+	if r.MergeVertPos {
+		vertmerge = make(map[m.Vec3]int32)
+	}
+
+	var texvertmerge map[m.Vec2]int32
+	var texvertmergeface []int32
+
+	if r.MergeTexVert {
+		texvertmerge = make(map[m.Vec2]int32)
+	}
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -268,12 +287,21 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 					p = len(r.v) + p + 1
 				}
 
+				if r.MergeVertPos {
+					p = int(vertmergeface[p-1])
+				}
+
 				if t > 0 {
 					//		t -= 1
 				} else {
 					t = len(r.vt) + t + 1
 
 				}
+
+				if r.MergeTexVert {
+					t = int(texvertmergeface[t-1])
+				}
+
 				if n > 0 {
 					//		n -= 1
 				} else {
@@ -313,7 +341,20 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 			x, err := strconv.ParseFloat(toks[1], 32)
 			y, err := strconv.ParseFloat(toks[2], 32)
 
-			r.vt = append(r.vt, m.Vec2{float32(x), float32(y)})
+			vt := m.Vec2{float32(x), float32(y)}
+
+			if r.MergeTexVert {
+				vm, present := texvertmerge[vt]
+
+				if !present {
+					vm = int32(len(r.vt)) + 1
+					texvertmerge[vt] = vm
+				}
+
+				texvertmergeface = append(texvertmergeface, vm)
+
+			}
+			r.vt = append(r.vt, vt)
 			// log.Printf("%v",mesh.Verts)
 			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
 			if err != nil {
@@ -341,12 +382,27 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 			x, err := strconv.ParseFloat(toks[1], 32)
 			y, err := strconv.ParseFloat(toks[2], 32)
 			z, err := strconv.ParseFloat(toks[3], 32)
+			v := m.Vec3{float32(x), float32(y), float32(z)}
+
+			if r.MergeVertPos {
+				vm, present := vertmerge[v]
+
+				if !present {
+					vm = int32(len(r.v)) + 1
+					vertmerge[v] = vm
+				}
+
+				vertmergeface = append(vertmergeface, vm)
+
+			}
+
 			//fmt.Sscanf(toks[1], "%f", &x)
 			//fmt.Sscanf(toks[2], "%f", &y)
 			//fmt.Sscanf(toks[3], "%f", &z)
-			r.v = append(r.v, m.Vec3{float32(x), float32(y), float32(z)})
 			// log.Printf("%v",mesh.Verts)
 			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
+			r.v = append(r.v, v)
+
 			if err != nil {
 				return nil, err
 			}
