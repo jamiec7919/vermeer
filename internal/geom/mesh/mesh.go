@@ -8,8 +8,6 @@ import (
 	"github.com/jamiec7919/vermeer/internal/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/qbvh"
-
-	"log"
 )
 
 // WARNING: Do not modify this without careful consideration! Designed to fit neatly in cache.
@@ -36,14 +34,15 @@ type Loader interface {
 }
 
 type Mesh struct {
-	Name      string
-	Faces     []FaceGeom
-	Vn        []m.Vec3
-	Vuv       [][]m.Vec2
-	nodes     []qbvh.Node
-	faceindex []int32 // Face indexes - used only with acceleration leaf structure, may contain duplicates
-	bounds    m.BoundingBox
-	RayBias   float32
+	Name            string
+	Faces           []FaceGeom
+	Vn              []m.Vec3
+	Vuv             [][]m.Vec2
+	nodes           []qbvh.Node
+	faceindex       []int32 // Face indexes - used only with acceleration leaf structure, may contain duplicates
+	bounds          m.BoundingBox
+	RayBias         float32
+	UseIndexedFaces bool
 }
 
 func (mesh *Mesh) calcVertexNormals() error {
@@ -71,6 +70,39 @@ func (mesh *Mesh) calcVertexNormals() error {
 	return nil
 }
 
+func (mesh *Mesh) TraceRay(ray *core.RayData) {
+	if mesh.faceindex != nil {
+		if mesh.RayBias == 0.0 {
+			mesh.traceRayAccelIndexed(ray)
+		} else {
+			mesh.traceRayAccelIndexedEpsilon(ray)
+		}
+	} else {
+		if mesh.RayBias == 0.0 {
+			mesh.traceRayAccel(ray)
+		} else {
+			mesh.traceRayAccelEpsilon(ray)
+		}
+	}
+}
+
+func (mesh *Mesh) VisRay(ray *core.RayData) {
+	if mesh.faceindex != nil {
+		if mesh.RayBias == 0.0 {
+			mesh.visRayAccelIndexed(ray)
+		} else {
+			mesh.visRayAccelIndexedEpsilon(ray)
+		}
+	} else {
+		if mesh.RayBias == 0.0 {
+			mesh.visRayAccel(ray)
+		} else {
+			mesh.visRayAccelEpsilon(ray)
+		}
+
+	}
+}
+
 type StaticMesh struct {
 	NodeName string
 	Mesh     *Mesh
@@ -84,20 +116,11 @@ func (mesh *StaticMesh) PreRender(rc *core.RenderContext) error {
 func (mesh *StaticMesh) PostRender(rc *core.RenderContext) error { return nil }
 
 func (mesh *StaticMesh) TraceRay(ray *core.RayData) {
-	if mesh.Mesh.RayBias == 0.0 {
-		mesh.Mesh.traceRayAccel(ray)
-	} else {
-		mesh.Mesh.traceRayAccelEpsilon(ray)
-
-	}
+	mesh.Mesh.TraceRay(ray)
 }
 
 func (mesh *StaticMesh) VisRay(ray *core.RayData) {
-	if mesh.Mesh.RayBias == 0.0 {
-		mesh.Mesh.visRayAccel(ray)
-	} else {
-		mesh.Mesh.visRayAccelEpsilon(ray)
-	}
+	mesh.Mesh.VisRay(ray)
 }
 
 type MeshFile struct {
@@ -145,21 +168,11 @@ func (mesh *MeshFile) PreRender(rc *core.RenderContext) error {
 func (mesh *MeshFile) PostRender(rc *core.RenderContext) error { return nil }
 
 func (mesh *MeshFile) TraceRay(ray *core.RayData) {
-	if mesh.mesh.RayBias == 0.0 {
-		mesh.mesh.traceRayAccel(ray)
-	} else {
-		mesh.mesh.traceRayAccelEpsilon(ray)
-
-	}
+	mesh.mesh.TraceRay(ray)
 }
 
 func (mesh *MeshFile) VisRay(ray *core.RayData) {
-	if mesh.mesh.RayBias == 0.0 {
-		mesh.mesh.visRayAccel(ray)
-	} else {
-		mesh.mesh.visRayAccelEpsilon(ray)
-
-	}
+	mesh.mesh.VisRay(ray)
 }
 
 func (mesh *Mesh) Transform(trn m.Matrix4) {
@@ -210,7 +223,7 @@ func trisplit(verts []m.Vec3, idx int32, indexes *[]int32, boxes *[]m.BoundingBo
 			box.GrowVec3(top[i])
 		}
 
-		if box.SurfaceArea() > 50000000 {
+		if false /*box.SurfaceArea() > 50000000*/ {
 			axis := box.MaxDim()
 
 			d := box.Centroid()[axis]
@@ -283,28 +296,20 @@ func (mesh *Mesh) initAccel() error {
 	mesh.nodes = nodes
 	mesh.bounds = bounds
 
-	//newfaces := make([]FaceGeom, len(m.Faces))
+	if !mesh.UseIndexedFaces {
+		newfaces := make([]FaceGeom, len(mesh.Faces))
 
-	// rearrange faces to match index structure of nodes
-	//for i := range indxs {
-	//		newfaces[i] = m.Faces[indxs[i]]
-	//	}
-
-	totalleafs := 0
-
-	nodef := func(i int, bounds m.BoundingBox) { /*log.Printf("Node %v", i) */ }
-	leaf := func(bounds m.BoundingBox, base, count int, empty bool) {
-		totalleafs++
-		if !empty {
-			//			log.Printf("Leaf %v %v %v %v", bounds, base, count, bounds.SurfaceArea())
-		} else {
-			//			log.Printf("Leaf empty")
+		// rearrange faces to match index structure of nodes
+		for i := range indxs {
+			newfaces[i] = mesh.Faces[indxs[i]]
 		}
+
+		mesh.Faces = newfaces
+	} else {
+		mesh.faceindex = indxs
+
 	}
-	qbvh.Walk(nodes, 0, nodef, leaf)
-	log.Printf("Total leafs: %v", totalleafs)
-	//	m.Faces = newfaces
-	mesh.faceindex = indxs
+
 	return nil
 }
 

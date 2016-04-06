@@ -56,12 +56,7 @@ func (mesh *PolyMesh) PreRender(rc *core.RenderContext) error {
 func (mesh *PolyMesh) PostRender(rc *core.RenderContext) error { return nil }
 
 func (mesh *PolyMesh) TraceRay(ray *core.RayData) {
-	if mesh.mesh.RayBias == 0.0 {
-		mesh.mesh.traceRayAccel(ray)
-	} else {
-		mesh.mesh.traceRayAccelEpsilon(ray)
-
-	}
+	mesh.TraceRay(ray)
 }
 
 func (mesh *PolyMesh) triangulateFace(base, count int32, mtlid material.Id) {
@@ -168,11 +163,7 @@ func (mesh *PolyMesh) createMesh(rc *core.RenderContext) error {
 }
 
 func (mesh *PolyMesh) VisRay(ray *core.RayData) {
-	if mesh.mesh.RayBias == 0.0 {
-		mesh.mesh.visRayAccel(ray)
-	} else {
-		mesh.mesh.visRayAccelEpsilon(ray)
-	}
+	mesh.mesh.VisRay(ray)
 }
 
 func init() {

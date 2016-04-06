@@ -634,16 +634,7 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 }
 
 //go:nosplit
-func (mesh *Mesh) traceTris(ray *core.RayData, base, count int) {
-	for i := base; i < base+count; i++ {
-		face := &mesh.Faces[mesh.faceindex[i]]
-
-		traceFace(mesh, ray, face)
-	}
-}
-
-//go:nosplit
-func (mesh *Mesh) traceRayAccel(ray *core.RayData) {
+func (mesh *Mesh) traceRayAccelIndexed(ray *core.RayData) {
 	// Push root node on stack:
 	stackTop := 0
 	ray.Supp.Stack[stackTop].Node = 0
@@ -667,37 +658,17 @@ func (mesh *Mesh) traceRayAccel(ray *core.RayData) {
 
 			order := [4]int{0, 1, 2, 3} // actually in reverse order as this is order pushed on stack
 
-			if ray.Ray.D[pnode.Axis0] < 0 {
-				if ray.Ray.D[pnode.Axis2] < 0 {
-					order[3] = 3
-					order[2] = 2
-				} else {
-					order[3] = 2
-					order[2] = 3
-				}
-				if ray.Ray.D[pnode.Axis1] < 0 {
-					order[1] = 1
-					order[0] = 0
-				} else {
-					order[1] = 0
-					order[0] = 1
-				}
-			} else {
-				if ray.Ray.D[pnode.Axis2] < 0 {
-					order[1] = 3
-					order[0] = 2
-				} else {
-					order[1] = 2
-					order[0] = 3
-				}
-				if ray.Ray.D[pnode.Axis1] < 0 {
-					order[3] = 1
-					order[2] = 0
-				} else {
-					order[3] = 0
-					order[2] = 1
-				}
+			if m.SignMask(ray.Ray.D[pnode.Axis1]) != (1 << 31) {
+				order[0], order[1] = order[1], order[0]
+			}
 
+			if m.SignMask(ray.Ray.D[pnode.Axis2]) != (1 << 31) {
+				order[2], order[3] = order[3], order[2]
+			}
+
+			if m.SignMask(ray.Ray.D[pnode.Axis0]) != (1 << 31) {
+				order[0], order[2] = order[2], order[0]
+				order[1], order[3] = order[3], order[1]
 			}
 
 			for j := range order {
@@ -719,14 +690,18 @@ func (mesh *Mesh) traceRayAccel(ray *core.RayData) {
 			leaf_base := qbvh.LEAF_BASE(node)
 			leaf_count := qbvh.LEAF_COUNT(node)
 			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
-			mesh.traceTris(ray, leaf_base, leaf_count)
+			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+				face := &mesh.Faces[mesh.faceindex[i]]
+
+				traceFace(mesh, ray, face)
+			}
 		}
 	}
 
 }
 
 //go:nosplit
-func (mesh *Mesh) traceRayAccelEpsilon(ray *core.RayData) {
+func (mesh *Mesh) traceRayAccelIndexedEpsilon(ray *core.RayData) {
 	// Push root node on stack:
 	stackTop := 0
 	ray.Supp.Stack[stackTop].Node = 0
@@ -813,6 +788,256 @@ func (mesh *Mesh) traceRayAccelEpsilon(ray *core.RayData) {
 }
 
 //go:nosplit
+func (mesh *Mesh) visRayAccelIndexed(ray *core.RayData) {
+	// Push root node on stack:
+	stackTop := 0
+	ray.Supp.Stack[stackTop].Node = 0
+	ray.Supp.Stack[stackTop].T = ray.Ray.Tclosest
+
+	for stackTop >= 0 {
+
+		node := ray.Supp.Stack[stackTop].Node
+		T := ray.Supp.Stack[stackTop].T
+		stackTop--
+
+		if ray.Ray.Tclosest < T {
+			//stackTop-- // pop the top, it isn't interesting
+			node = -1 // pretend we're an empty leaf
+		}
+		// We already know ray intersects this node, so check all children and push onto stack if ray intersects.
+
+		if node >= 0 {
+			pnode := &(mesh.nodes[node])
+			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+
+			for k := range pnode.Children {
+				if ray.Supp.Hits[k] != 0 {
+					stackTop++
+					ray.Supp.Stack[stackTop].Node = pnode.Children[k]
+					ray.Supp.Stack[stackTop].T = ray.Supp.T[k]
+				}
+
+			}
+
+		} else if node < -1 {
+			// Leaf
+			leaf_base := qbvh.LEAF_BASE(node)
+			leaf_count := qbvh.LEAF_COUNT(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
+			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+				if visIntersectFace(ray, &mesh.Faces[mesh.faceindex[i]]) {
+					ray.Ray.Tclosest = 0.5
+					return
+				}
+			}
+		}
+	}
+
+}
+
+//go:nosplit
+func (mesh *Mesh) visRayAccelIndexedEpsilon(ray *core.RayData) {
+	// Push root node on stack:
+	stackTop := 0
+	ray.Supp.Stack[stackTop].Node = 0
+	ray.Supp.Stack[stackTop].T = ray.Ray.Tclosest
+
+	for stackTop >= 0 {
+
+		node := ray.Supp.Stack[stackTop].Node
+		T := ray.Supp.Stack[stackTop].T
+		stackTop--
+
+		if ray.Ray.Tclosest < T {
+			//stackTop-- // pop the top, it isn't interesting
+			node = -1 // pretend we're an empty leaf
+		}
+		// We already know ray intersects this node, so check all children and push onto stack if ray intersects.
+
+		if node >= 0 {
+			pnode := &(mesh.nodes[node])
+			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+
+			for k := range pnode.Children {
+				if ray.Supp.Hits[k] != 0 {
+					stackTop++
+					ray.Supp.Stack[stackTop].Node = pnode.Children[k]
+					ray.Supp.Stack[stackTop].T = ray.Supp.T[k]
+				}
+
+			}
+
+		} else if node < -1 {
+			// Leaf
+			leaf_base := qbvh.LEAF_BASE(node)
+			leaf_count := qbvh.LEAF_COUNT(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
+			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+				if visIntersectFaceEpsilon(ray, &mesh.Faces[mesh.faceindex[i]], mesh.RayBias) {
+					ray.Ray.Tclosest = 0.5
+					return
+				}
+			}
+		}
+	}
+
+}
+
+//go:nosplit
+func (mesh *Mesh) traceRayAccel(ray *core.RayData) {
+	// Push root node on stack:
+	stackTop := 0
+	ray.Supp.Stack[stackTop].Node = 0
+	ray.Supp.Stack[stackTop].T = ray.Ray.Tclosest
+
+	for stackTop >= 0 {
+
+		node := ray.Supp.Stack[stackTop].Node
+		T := ray.Supp.Stack[stackTop].T
+		stackTop--
+
+		if ray.Ray.Tclosest < T {
+			//stackTop-- // pop the top, it isn't interesting
+			node = -1 // pretend we're an empty leaf
+		}
+		// We already know ray intersects this node, so check all children and push onto stack if ray intersects.
+
+		if node >= 0 {
+			pnode := &(mesh.nodes[node])
+			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+
+			order := [4]int{0, 1, 2, 3} // actually in reverse order as this is order pushed on stack
+
+			if m.SignMask(ray.Ray.D[pnode.Axis1]) != (1 << 31) {
+				order[0], order[1] = order[1], order[0]
+			}
+
+			if m.SignMask(ray.Ray.D[pnode.Axis2]) != (1 << 31) {
+				order[2], order[3] = order[3], order[2]
+			}
+
+			if m.SignMask(ray.Ray.D[pnode.Axis0]) != (1 << 31) {
+				order[0], order[2] = order[2], order[0]
+				order[1], order[3] = order[3], order[1]
+			}
+
+			for j := range order {
+				k := order[j]
+
+				if ray.Supp.Hits[k] != 0 {
+					stackTop++
+					ray.Supp.Stack[stackTop].Node = pnode.Children[k]
+					ray.Supp.Stack[stackTop].T = ray.Supp.T[k]
+
+				} else {
+					//log.Printf("Miss %v %v", node, pnode.Children[k])
+				}
+
+			}
+
+		} else if node < -1 {
+			// Leaf
+			leaf_base := qbvh.LEAF_BASE(node)
+			leaf_count := qbvh.LEAF_COUNT(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
+			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+				face := &mesh.Faces[i]
+
+				traceFace(mesh, ray, face)
+			}
+		}
+	}
+
+}
+
+//go:nosplit
+func (mesh *Mesh) traceRayAccelEpsilon(ray *core.RayData) {
+	// Push root node on stack:
+	stackTop := 0
+	ray.Supp.Stack[stackTop].Node = 0
+	ray.Supp.Stack[stackTop].T = ray.Ray.Tclosest
+
+	for stackTop >= 0 {
+
+		node := ray.Supp.Stack[stackTop].Node
+		T := ray.Supp.Stack[stackTop].T
+		stackTop--
+
+		if ray.Ray.Tclosest < T {
+			//stackTop-- // pop the top, it isn't interesting
+			node = -1 // pretend we're an empty leaf
+		}
+		// We already know ray intersects this node, so check all children and push onto stack if ray intersects.
+
+		if node >= 0 {
+			pnode := &(mesh.nodes[node])
+			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+
+			order := [4]int{0, 1, 2, 3} // actually in reverse order as this is order pushed on stack
+
+			if ray.Ray.D[pnode.Axis0] < 0 {
+				if ray.Ray.D[pnode.Axis2] < 0 {
+					order[3] = 3
+					order[2] = 2
+				} else {
+					order[3] = 2
+					order[2] = 3
+				}
+				if ray.Ray.D[pnode.Axis1] < 0 {
+					order[1] = 1
+					order[0] = 0
+				} else {
+					order[1] = 0
+					order[0] = 1
+				}
+			} else {
+				if ray.Ray.D[pnode.Axis2] < 0 {
+					order[1] = 3
+					order[0] = 2
+				} else {
+					order[1] = 2
+					order[0] = 3
+				}
+				if ray.Ray.D[pnode.Axis1] < 0 {
+					order[3] = 1
+					order[2] = 0
+				} else {
+					order[3] = 0
+					order[2] = 1
+				}
+
+			}
+
+			for j := range order {
+				k := order[j]
+				if ray.Supp.Hits[k] != 0 {
+					stackTop++
+					ray.Supp.Stack[stackTop].Node = pnode.Children[k]
+					ray.Supp.Stack[stackTop].T = ray.Supp.T[k]
+
+				} else {
+					//log.Printf("Miss %v %v", node, pnode.Children[k])
+				}
+
+			}
+
+		} else if node < -1 {
+			// Leaf
+			leaf_base := qbvh.LEAF_BASE(node)
+			leaf_count := qbvh.LEAF_COUNT(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
+			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+				face := &mesh.Faces[i]
+
+				traceFaceEpsilon(mesh, ray, face, mesh.RayBias)
+			}
+
+		}
+	}
+
+}
+
+//go:nosplit
 func (mesh *Mesh) visRayAccel(ray *core.RayData) {
 	// Push root node on stack:
 	stackTop := 0
@@ -849,9 +1074,11 @@ func (mesh *Mesh) visRayAccel(ray *core.RayData) {
 			leaf_base := qbvh.LEAF_BASE(node)
 			leaf_count := qbvh.LEAF_COUNT(node)
 			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
-			if mesh.visIntersectTris(ray, leaf_base, leaf_count) {
-				ray.Ray.Tclosest = 0.5
-				return // Early out if we have any inersection
+			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+				if visIntersectFace(ray, &mesh.Faces[i]) {
+					ray.Ray.Tclosest = 0.5
+					return
+				}
 			}
 		}
 	}
@@ -896,7 +1123,7 @@ func (mesh *Mesh) visRayAccelEpsilon(ray *core.RayData) {
 			leaf_count := qbvh.LEAF_COUNT(node)
 			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
 			for i := leaf_base; i < leaf_base+leaf_count; i++ {
-				if visIntersectFaceEpsilon(ray, &mesh.Faces[mesh.faceindex[i]], mesh.RayBias) {
+				if visIntersectFaceEpsilon(ray, &mesh.Faces[i], mesh.RayBias) {
 					ray.Ray.Tclosest = 0.5
 					return
 				}
