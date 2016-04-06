@@ -9,7 +9,6 @@ import (
 	"github.com/jamiec7919/vermeer/internal/nodeparser"
 	"github.com/jamiec7919/vermeer/material"
 	m "github.com/jamiec7919/vermeer/math"
-	"github.com/jamiec7919/vermeer/qbvh"
 	"log"
 	"math/rand"
 	"sync"
@@ -30,24 +29,6 @@ type Frame struct {
 }
 
 func (f *Frame) Aspect() float32 { return float32(f.w) / float32(f.h) }
-
-type Scene struct {
-	prims  []Primitive
-	nodes  []qbvh.Node
-	bounds m.BoundingBox
-
-	lights []Light
-}
-
-func (s *Scene) VisRay(ray *RayData) {
-	s.visRayAccel(ray)
-
-}
-
-func (s *Scene) TraceRay(ray *RayData) {
-	s.traceRayAccel(ray)
-
-}
 
 type PreviewFrame struct {
 	W, H int
@@ -79,34 +60,6 @@ func NewRenderContext() *RenderContext {
 	rc.globals.YRes = 256
 	rc.globals.MaxGoRoutines = MAXGOROUTINES
 	return rc
-}
-
-func (scene *Scene) initAccel() error {
-	boxes := make([]m.BoundingBox, len(scene.prims))
-	indices := make([]int32, len(scene.prims))
-	centroids := make([]m.Vec3, len(scene.prims))
-
-	for i := range scene.prims {
-		boxes[i] = scene.prims[i].WorldBounds()
-		indices[i] = int32(i)
-		centroids[i] = boxes[i].Centroid()
-	}
-
-	nodes, bounds := qbvh.BuildAccel(boxes, centroids, indices, 1)
-
-	scene.nodes = nodes
-
-	// Rearrange primitive array to match leaf structure
-	nprims := make([]Primitive, len(scene.prims))
-
-	for i := range indices {
-		nprims[i] = scene.prims[indices[i]]
-	}
-
-	scene.prims = nprims
-	scene.bounds = bounds
-
-	return nil
 }
 
 func (rc *RenderContext) PreRender() error {
