@@ -179,7 +179,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 			if !bsdf.IsDelta(&surf) {
 
 				if len(frame.scene.lights) > 0 {
-					nls := 8
+					nls := 1
 					lightsamples := 0
 					if depth > 0 {
 						nls = 1
@@ -225,21 +225,15 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 
 			var omega_o m.Vec3
 			var pdf float64
-			count := 0
-		resample:
+
 			rho := material.Spectrum{Lambda: fullsample.Lambda}
 			bsdf.Sample(&surf, omega_i, rnd, &omega_o, &rho, &pdf)
 
 			D = surf.TangentToWorld(omega_o)
 
 			if m.Vec3Dot(D, surf.N) < 0 {
-				if count < 5 {
-					count++
-					goto resample
-				} else {
-					//log.Printf("Exceeded 5 resample")
-					return
-				}
+				// Discard this path as sampled direction is inside geometric surface
+				return
 			}
 
 			contrib.Mul(rho)
