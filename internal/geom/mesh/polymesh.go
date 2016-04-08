@@ -61,7 +61,7 @@ func (mesh *PolyMesh) PreRender(rc *core.RenderContext) error {
 func (mesh *PolyMesh) PostRender(rc *core.RenderContext) error { return nil }
 
 func (mesh *PolyMesh) TraceRay(ray *core.RayData) {
-	mesh.TraceRay(ray)
+	mesh.mesh.TraceRay(ray)
 }
 
 func (mesh *PolyMesh) triangulateFace(base, count int32, mtlid material.Id) {

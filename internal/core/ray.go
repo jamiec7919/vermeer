@@ -62,10 +62,10 @@ type RayStats struct {
 // For some reason Supp.T is not being aligned to 16-bytes.. (needs to be heap allocated)
 // Aligned into 64byte blocks
 type RayData struct {
-	Supp   TraceSupport
-	Ray    Ray
-	Result RayResult
-	//SavedRay Ray       // Saved version of ray if needed (i.e. we've transformed Ray)
+	Supp         TraceSupport
+	Ray          Ray
+	Result       RayResult
+	SavedRay     Ray       // Saved version of ray if needed (i.e. we've transformed Ray)
 	LocalToWorld m.Matrix4 // Local to world transform
 	Stats        RayStats
 }
