@@ -120,6 +120,7 @@ func (mesh *StaticMesh) WorldBounds() (out m.BoundingBox) {
 	return mesh.Mesh.WorldBounds()
 }
 
+func (mesh *StaticMesh) Visible() bool { return true }
 func (mesh *StaticMesh) TraceRay(ray *core.RayData) {
 	mesh.Mesh.TraceRay(ray)
 }
@@ -133,6 +134,7 @@ type MeshFile struct {
 	Filename    string
 	RayBias     float32
 	CalcNormals bool
+	IsVisible bool
 	Loader      Loader
 	mesh        *Mesh
 }
@@ -176,6 +178,7 @@ func (mesh *MeshFile) TraceRay(ray *core.RayData) {
 	mesh.mesh.TraceRay(ray)
 }
 
+func (mesh *MeshFile) Visible() bool { return mesh.IsVisible }
 func (mesh *MeshFile) WorldBounds() (out m.BoundingBox) {
 	return mesh.mesh.WorldBounds()
 }
@@ -336,7 +339,7 @@ func RegisterLoader(name string, open func(rc *core.RenderContext, filename stri
 }
 
 func create(rc *core.RenderContext, params core.Params) (interface{}, error) {
-	mfile := MeshFile{}
+	mfile := MeshFile{IsVisible:true}
 
 	params.Unmarshal(&mfile)
 

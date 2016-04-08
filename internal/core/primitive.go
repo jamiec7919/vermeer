@@ -13,6 +13,7 @@ type Primitive interface {
 	TraceRay(*RayData)
 	VisRay(*RayData)
 	WorldBounds() m.BoundingBox
+	Visible() bool
 }
 
 //go:nosplit

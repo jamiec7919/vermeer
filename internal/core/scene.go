@@ -28,22 +28,24 @@ func (s *Scene) TraceRay(ray *RayData) {
 }
 
 func (scene *Scene) initAccel() error {
-	boxes := make([]m.BoundingBox, len(scene.prims))
-	indices := make([]int32, len(scene.prims))
-	centroids := make([]m.Vec3, len(scene.prims))
+	boxes := make([]m.BoundingBox,0, len(scene.prims))
+	indices := make([]int32, 0,len(scene.prims))
+	centroids := make([]m.Vec3,0, len(scene.prims))
 
 	for i := range scene.prims {
-		boxes[i] = scene.prims[i].WorldBounds()
-		indices[i] = int32(i)
-		centroids[i] = boxes[i].Centroid()
+		if !scene.prims[i].Visible() {continue}
+		box :=scene.prims[i].WorldBounds()
+		boxes = append(boxes,box)
+		indices = append(indices,int32(i))
+		centroids = append(centroids,box.Centroid())
 	}
 
 	nodes, bounds := qbvh.BuildAccel(boxes, centroids, indices, 1)
 
 	scene.nodes = nodes
 
-	// Rearrange primitive array to match leaf structure
-	nprims := make([]Primitive, len(scene.prims))
+	// Rearrange (visible) primitive array to match leaf structure
+	nprims := make([]Primitive, len(indices))
 
 	for i := range indices {
 		nprims[i] = scene.prims[indices[i]]

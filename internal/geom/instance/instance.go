@@ -15,8 +15,9 @@ type Instance struct {
 	Primitive string
 	Transform m.Matrix4
 
-	prim         core.Primitive
-	invTransform m.Matrix4
+	prim              core.Primitive
+	invTransform      m.Matrix4
+	invTransTransform m.Matrix4 // INverse transpose for normals
 }
 
 func (i *Instance) Name() string { return i.NodeName }
@@ -34,10 +35,14 @@ func (i *Instance) PreRender(rc *core.RenderContext) error {
 	} else {
 
 		i.invTransform = invTransform
+		invTransTransform, _ := m.Matrix4Inverse(m.Matrix4Transpose(i.Transform))
+		i.invTransTransform = invTransTransform
 	}
 
 	return nil
 }
+
+func (i *Instance) Visible() bool                           { return true }
 func (i *Instance) PostRender(rc *core.RenderContext) error { return nil }
 
 func (i *Instance) WorldBounds() (out m.BoundingBox) {
@@ -93,10 +98,15 @@ func (i *Instance) TraceRay(ray *core.RayData) {
 		ray.Ray.Tclosest = t
 
 		ray.Result.P = m.Matrix4MulPoint(i.Transform, ray.Result.P)
-		ray.Result.Ng = m.Matrix4MulVec(i.Transform, ray.Result.Ng)
-		ray.Result.B = m.Matrix4MulVec(i.Transform, ray.Result.B)
-		ray.Result.T = m.Matrix4MulVec(i.Transform, ray.Result.T)
-		ray.Result.Ns = m.Matrix4MulVec(i.Transform, ray.Result.Ns)
+		ray.Result.POffset = m.Matrix4MulVec(i.Transform, ray.Result.POffset)
+		for k := range ray.Result.UV {
+			ray.Result.Pu[k] = m.Matrix4MulVec(i.invTransTransform, ray.Result.Pu[k])
+			ray.Result.Pv[k] = m.Matrix4MulVec(i.invTransTransform, ray.Result.Pv[k])
+		}
+		ray.Result.Ng = m.Matrix4MulVec(i.invTransTransform, ray.Result.Ng)
+		ray.Result.B = m.Matrix4MulVec(i.invTransTransform, ray.Result.B)
+		ray.Result.T = m.Matrix4MulVec(i.invTransTransform, ray.Result.T)
+		ray.Result.Ns = m.Matrix4MulVec(i.invTransTransform, ray.Result.Ns)
 	} else {
 		ray.Ray = ray.SavedRay
 	}
