@@ -19,6 +19,10 @@ const TILESIZE = 64
 const MAXGOROUTINES = 5
 const NSAMP = 16
 
+type RenderFuncStats struct {
+	RayCount, ShadowRayCount int
+}
+
 type Frame struct {
 	w, h   int
 	du, dv float32
@@ -79,7 +83,7 @@ type WorkItem struct {
 }
 
 /* This should return an rgb sample to be accumulated for the pixel */
-func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b float32) {
+func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *RenderFuncStats) (r, g, b float32) {
 	//log.Printf("Pix %v %v", x, y)
 	r0 := rnd.Float32()
 	r1 := rnd.Float32()
@@ -101,6 +105,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 		ray.InitRay(P, D)
 
 		frame.scene.TraceRay(ray)
+		stats.RayCount++
 
 		var surf material.SurfacePoint
 
@@ -171,6 +176,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 							if m.Vec3Dot(V, surf.Ns) > 0.0 && m.Vec3Dot(V, surf.N) > 0.0 && m.Vec3Dot(V, P.N) < 0.0 {
 								ray.InitVisRay(surf.P, P.P)
 								frame.scene.VisRay(ray)
+								stats.ShadowRayCount++
 								if ray.IsVis() {
 									lightsamples++
 									Vnorm := m.Vec3Normalize(V)
@@ -231,7 +237,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 
 // NOTE: we return the raydata here even though it is ignored in order to ensure that ray is
 // heap allocated (for alignment purposes)
-func renderFunc(n int, frame *Frame, c chan *WorkItem, done chan *WorkItem, wg *sync.WaitGroup) *RayData {
+func renderFunc(n int, frame *Frame, c chan *WorkItem, done chan *WorkItem, wg *sync.WaitGroup, stats *RenderFuncStats) *RayData {
 	defer wg.Done()
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -239,7 +245,7 @@ func renderFunc(n int, frame *Frame, c chan *WorkItem, done chan *WorkItem, wg *
 	for w := range c {
 		for j := 0; j < w.h; j++ {
 			for i := 0; i < w.w; i++ {
-				r, g, b := samplePixel(i+w.x, j+w.y, frame, rnd, ray)
+				r, g, b := samplePixel(i+w.x, j+w.y, frame, rnd, ray, stats)
 
 				w.samples[((i+w.x)+(j+w.y)*frame.w)*3+0] = (w.samples[((i+w.x)+(j+w.y)*frame.w)*3+0]*float32(n) + m.Clamp(r*1000, 0, 255)) / float32(n+1)
 				w.samples[((i+w.x)+(j+w.y)*frame.w)*3+1] = (w.samples[((i+w.x)+(j+w.y)*frame.w)*3+1]*float32(n) + m.Clamp(g*1000, 0, 255)) / float32(n+1)
@@ -298,6 +304,10 @@ func (rc *RenderContext) Render(finish chan bool) error {
 	}
 
 	buf := make([]float32, frame.w*frame.h*3)
+
+	startTime := time.Now()
+	stats := make([]RenderFuncStats, rc.globals.MaxGoRoutines)
+
 L:
 	for k := 0; true; k++ {
 
@@ -307,7 +317,7 @@ L:
 
 		for n := 0; n < rc.globals.MaxGoRoutines; n++ {
 			wg.Add(1)
-			go renderFunc(k, &frame, workChan, done, &wg)
+			go renderFunc(k, &frame, workChan, done, &wg, &stats[n])
 		}
 
 		complete := make(chan []float32)
@@ -357,6 +367,15 @@ L:
 
 		select {
 		case <-finish:
+			duration := time.Since(startTime)
+			totalRays := 0
+			shadowRays := 0
+
+			for i := range stats {
+				totalRays += stats[i].RayCount
+				shadowRays += stats[i].ShadowRayCount
+			}
+			log.Printf("%v iterations, %v (%v rays, %v shadow) %v r/sec", k, duration, totalRays, shadowRays, float64(totalRays+shadowRays)/duration.Seconds())
 			break L
 		default:
 		}

@@ -35,11 +35,11 @@ type TraceSupport struct {
 // We store the error offset in the result as we may want to move the point to either side depending
 // on the material (e.g. refraction will need point on other side)
 type RayResult struct {
-	P        m.Vec3
-	POffset  m.Vec3    // Offset to make sure any intersection point is outside face
-	Ng, T, B m.Vec3    // Tangent space, Tg & Bg not normalized, Ng is normalized (as stored with face)
-	Ns       m.Vec3    // Not normalized
-	MtlId    int32     // 64 bytes (first line)
+	P        m.Vec3    // 12
+	POffset  m.Vec3    // 12 Offset to make sure any intersection point is outside face
+	Ng, T, B m.Vec3    // 36 Tangent space, Tg & Bg not normalized, Ng is normalized (as stored with face)
+	Ns       m.Vec3    // 12 Not normalized
+	MtlId    int32     // 4   64 bytes (first line)
 	UV       [4]m.Vec2 // 8 floats (48 bytes)
 	Pu, Pv   [4]m.Vec3 // 12 float32
 	Extra    map[string]interface{}
@@ -64,9 +64,9 @@ type RayStats struct {
 type RayData struct {
 	Supp         TraceSupport
 	Ray          Ray
-	Result       RayResult
 	SavedRay     Ray       // Saved version of ray if needed (i.e. we've transformed Ray)
 	LocalToWorld m.Matrix4 // Local to world transform
+	Result       RayResult
 	Stats        RayStats
 }
 
