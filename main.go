@@ -17,6 +17,7 @@ import (
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+var maxiter = flag.Int("maxiter", -1, "Maximum iterations")
 
 func main() {
 	flag.Parse()
@@ -39,16 +40,19 @@ func main() {
 
 	rc := core.NewRenderContext()
 
-	if err := preview.Init(); err != nil {
+	pview, err := preview.Init()
+
+	if err != nil {
 		log.Printf("Error: preview: %v", err)
 		os.Exit(1)
 	}
 
+	rc.StartPreview(pview)
+
 	renderstatus := make(chan error)
 
-	finish := make(chan bool)
-
 	go func() {
+		defer pview.Close()
 
 		if err := rc.LoadNodeFile(filename); err != nil {
 			log.Printf("Error: LoadNodeFile: %v", err)
@@ -61,7 +65,7 @@ func main() {
 			return
 		}
 
-		if err := rc.Render(finish); err != nil {
+		if err := rc.Render(*maxiter); err != nil {
 			log.Printf("Error: Render: %v", err)
 			renderstatus <- err
 			return
@@ -75,9 +79,9 @@ func main() {
 		renderstatus <- nil
 	}()
 
-	preview.Run(rc)
+	pview.Run() // This blocks until window is closed
 
-	finish <- true
+	rc.Finish() // If render is still going we finish it
 
 	<-renderstatus
 }

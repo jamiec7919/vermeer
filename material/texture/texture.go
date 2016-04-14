@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"sync/atomic"
 )
 
 type Texture struct {
@@ -22,10 +23,11 @@ type Texture struct {
 	data []byte
 }
 
-var loadMutex sync.Mutex
-var texMutex sync.RWMutex
+type TexStore map[string]*Texture
 
-var textures = map[string]*Texture{}
+var texStore atomic.Value
+
+var loadMutex sync.Mutex
 
 var testTexture *Texture
 
@@ -37,6 +39,7 @@ func init() {
 	tmp.SetRGB(0, 1, 250, 5, 250)
 	tmp.SetRGB(1, 1, 250, 250, 250)
 	testTexture = tmp
+	texStore.Store(make(TexStore))
 }
 
 /*
@@ -117,28 +120,52 @@ func CreateRGBTexture(w, h int) *Texture {
 	}
 }
 
+func cacheMiss(filename string) (*Texture, error) {
+	loadMutex.Lock()
+	defer loadMutex.Unlock()
+
+	// Load current version, make sure the previous locker hasn't loaded the
+	// same image we want.
+	textures := texStore.Load().(TexStore)
+	if img, present := textures[filename]; present {
+		return img, nil
+	}
+
+	tex, err := LoadTexture(filename)
+
+	if err != nil {
+		loadMutex.Unlock()
+		log.Printf("texture.SampleRGB: \"%v\": %v", filename, err)
+		return nil, err
+	}
+
+	texturesNew := make(TexStore)
+
+	for k, v := range textures {
+		texturesNew[k] = v
+	}
+	texturesNew[filename] = tex
+	texStore.Store(texturesNew)
+
+	return tex, nil
+
+}
+
 func SampleRGB(filename string, s, t, ds, dt float32) (out [3]float32) {
+	// This uses an atomic copy-on-write for the textures store
 
 	//loadMutex.Lock()
-	texMutex.RLock()
+	textures := texStore.Load().(TexStore)
 	img := textures[filename]
-	texMutex.RUnlock()
 
 	if img == nil {
-		loadMutex.Lock()
-		tex, err := LoadTexture(filename)
+		img2, err := cacheMiss(filename)
 
 		if err != nil {
-			loadMutex.Unlock()
-			log.Printf("texture.SampleRGB: \"%v\": %v", filename, err)
 			return
 		}
 
-		texMutex.Lock()
-		textures[filename] = tex
-		texMutex.Unlock()
-		loadMutex.Unlock()
-		img = tex
+		img = img2
 	}
 	//	loadMutex.Unlock()
 

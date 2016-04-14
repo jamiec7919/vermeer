@@ -32,6 +32,12 @@ type Frame struct {
 	bar    *pb.ProgressBar
 }
 
+// Preview windows should implement this
+type PreviewWindow interface {
+	UpdateFrame(frame PreviewFrame)
+	Close()
+}
+
 func (f *Frame) Aspect() float32 { return float32(f.w) / float32(f.h) }
 
 type PreviewFrame struct {
@@ -49,6 +55,8 @@ type RenderContext struct {
 	materials []*material.Material
 
 	PreviewChan chan PreviewFrame
+	preview     PreviewWindow
+	finish      chan bool
 }
 
 func (rc *RenderContext) GetMaterial(id material.Id) *material.Material {
@@ -63,7 +71,17 @@ func NewRenderContext() *RenderContext {
 	rc.globals.XRes = 256
 	rc.globals.YRes = 256
 	rc.globals.MaxGoRoutines = MAXGOROUTINES
+	rc.finish = make(chan bool, 1)
 	return rc
+}
+
+func (rc *RenderContext) StartPreview(preview PreviewWindow) error {
+	rc.preview = preview
+	return nil
+}
+
+func (rc *RenderContext) Finish() {
+	rc.finish <- true
 }
 
 func (rc *RenderContext) PreRender() error {
@@ -278,7 +296,7 @@ func (rc *RenderContext) FrameAspect() float32 {
 	return float32(rc.globals.XRes) / float32(rc.globals.YRes)
 }
 
-func (rc *RenderContext) Render(finish chan bool) error {
+func (rc *RenderContext) Render(maxIter int) error {
 	// render frames as given in frames (could be progressive)
 	var frame Frame
 
@@ -310,6 +328,10 @@ func (rc *RenderContext) Render(finish chan bool) error {
 
 L:
 	for k := 0; true; k++ {
+
+		if maxIter >= 0 && k >= maxIter-1 {
+			rc.Finish()
+		}
 
 		var wg sync.WaitGroup
 		workChan := make(chan *WorkItem)
@@ -353,7 +375,7 @@ L:
 
 		rc.imgbuf = <-complete
 
-		if rc.PreviewChan != nil {
+		if rc.preview != nil {
 			fr := PreviewFrame{
 				W:   rc.globals.XRes,
 				H:   rc.globals.YRes,
@@ -362,11 +384,14 @@ L:
 
 			tonemap(rc.globals.XRes, rc.globals.YRes, rc.imgbuf, fr.Buf)
 
-			rc.PreviewChan <- fr
+			rc.preview.UpdateFrame(fr)
 		}
 
 		select {
-		case <-finish:
+		case <-rc.finish:
+			if rc.preview != nil {
+				rc.preview.Close()
+			}
 			duration := time.Since(startTime)
 			totalRays := 0
 			shadowRays := 0
@@ -375,7 +400,7 @@ L:
 				totalRays += stats[i].RayCount
 				shadowRays += stats[i].ShadowRayCount
 			}
-			log.Printf("%v iterations, %v (%v rays, %v shadow) %v r/sec", k, duration, totalRays, shadowRays, float64(totalRays+shadowRays)/duration.Seconds())
+			log.Printf("%v iterations, %v (%v rays, %v shadow) %v Mr/sec", k+1, duration, totalRays, shadowRays, float64(totalRays+shadowRays)/(1000000.0*duration.Seconds()))
 			break L
 		default:
 		}
