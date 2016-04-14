@@ -60,6 +60,10 @@ func (mesh *PolyMesh) PreRender(rc *core.RenderContext) error {
 }
 func (mesh *PolyMesh) PostRender(rc *core.RenderContext) error { return nil }
 
+func (mesh *PolyMesh) Visible() bool {
+	return true
+}
+
 func (mesh *PolyMesh) TraceRay(ray *core.RayData) {
 	mesh.mesh.TraceRay(ray)
 }
