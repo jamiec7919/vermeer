@@ -160,7 +160,7 @@ func (r *reader) printAreas() {
 
 }
 
-func Open(rc *core.RenderContext, filename string, params core.Params) (mesh.Loader, error) {
+func Open(rc *core.RenderContext, filename string) (mesh.Loader, error) {
 	fin, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -169,11 +169,24 @@ func Open(rc *core.RenderContext, filename string, params core.Params) (mesh.Loa
 	fin.Close()
 
 	reader := reader{}
-	reader.MergeVertPos, err = params.GetBool("MergeVertPos")
-	reader.MergeTexVert, err = params.GetBool("MergeTexVert")
+	// FIXME:
+	//reader.MergeVertPos, err = params.GetBool("MergeVertPos")
+	//reader.MergeTexVert, err = params.GetBool("MergeTexVert")
 	reader.init(rc, filename)
 
 	return &reader, nil
+}
+
+func (r *reader) SetOption(opt string, v interface{}) error {
+	switch opt {
+	case "MergeVertPos":
+		r.MergeVertPos = v.(bool)
+	case "MergeTexVert":
+		r.MergeTexVert = v.(bool)
+
+	}
+
+	return nil
 }
 
 func parseFaceField(field string) (p, n, t int) {

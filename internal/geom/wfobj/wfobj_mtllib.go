@@ -9,8 +9,6 @@ import (
 	"bytes"
 	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/material"
-	"github.com/jamiec7919/vermeer/material/bsdf"
-	"github.com/jamiec7919/vermeer/material/edf"
 	"os"
 	"strconv"
 	//"strings"
@@ -120,7 +118,7 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 			g, err := strconv.ParseFloat(lscan.Token(), 32)
 			b, err := strconv.ParseFloat(lscan.Token(), 32)
 
-			mtl.EDF = &edf.Diffuse{E: [3]float32{float32(r), float32(g), float32(b)}}
+			mtl.E = &material.ConstantMap{[3]float32{float32(r), float32(g), float32(b)}}
 			// log.Printf("%v",mesh.Verts)
 			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
 			if err != nil {
@@ -132,10 +130,8 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 			g, err := strconv.ParseFloat(lscan.Token(), 32)
 			b, err := strconv.ParseFloat(lscan.Token(), 32)
 
-			if mtl.BSDF[0] == nil {
-
-				mtl.BSDF[0] = &bsdf.Diffuse{Kd: &material.ConstantMap{[3]float32{float32(r), float32(g), float32(b)}}}
-			}
+			mtl.Diffuse = "Lambert"
+			mtl.Kd = &material.ConstantMap{[3]float32{float32(r), float32(g), float32(b)}}
 			// log.Printf("%v",mesh.Verts)
 			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
 			if err != nil {
@@ -143,7 +139,8 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 			}
 		case "map_Kd":
 
-			mtl.BSDF[0] = &bsdf.Diffuse{Kd: &material.TextureMap{lscan.Rest()}}
+			mtl.Diffuse = "Lambert"
+			mtl.Kd = &material.TextureMap{lscan.Rest()}
 			//mtl.BSDF.Diffuse = TextureFile(toks[1])
 		case "map_bump":
 			i := 1

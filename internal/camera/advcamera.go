@@ -9,6 +9,7 @@ import (
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/sample"
+	"github.com/jamiec7919/vermeer/nodes"
 	"math/rand"
 )
 
@@ -43,6 +44,7 @@ there is a multi-pixel filter)
 type AdvCamera struct {
 	NodeName string `node:"Name"`
 
+	Type   string
 	From   m.Vec3 // eye point
 	Target m.Vec3 `node:"To"`
 	Up     m.Vec3
@@ -150,11 +152,8 @@ func (c *AdvCamera) ComputeRay(u, v float32, rnd *rand.Rand) (P, D m.Vec3) {
 var advcameraCount = 0
 
 func init() {
-	core.RegisterType("AdvCamera", func(rc *core.RenderContext, params core.Params) (interface{}, error) {
+	nodes.Register("AdvCamera", func() (core.Node, error) {
 		cam := AdvCamera{Focal: 12, Fov: 90, NodeName: fmt.Sprintf("advcamera<%v>", advcameraCount)}
-		if err := params.Unmarshal(&cam); err != nil {
-			return nil, err
-		}
 
 		advcameraCount++
 

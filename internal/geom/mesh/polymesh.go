@@ -7,6 +7,7 @@ package mesh
 import (
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
+	"github.com/jamiec7919/vermeer/nodes"
 )
 
 type facevert struct {
@@ -175,12 +176,8 @@ func (mesh *PolyMesh) VisRay(ray *core.RayData) {
 }
 
 func init() {
-	core.RegisterType("PolyMesh", func(rc *core.RenderContext, params core.Params) (interface{}, error) {
+	nodes.Register("PolyMesh", func() (core.Node, error) {
 		mesh := PolyMesh{ModelToWorld: m.Matrix4Identity}
-
-		if err := params.Unmarshal(&mesh); err != nil {
-			return nil, err
-		}
 
 		return &mesh, nil
 	})

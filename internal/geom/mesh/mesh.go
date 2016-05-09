@@ -7,6 +7,7 @@ package mesh
 import (
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
+	"github.com/jamiec7919/vermeer/nodes"
 	"github.com/jamiec7919/vermeer/qbvh"
 )
 
@@ -31,6 +32,7 @@ func (f *FaceGeom) setup() {
 
 type Loader interface {
 	Load() (*Mesh, error)
+	SetOption(opt string, v interface{}) error
 }
 
 type Mesh struct {
@@ -130,17 +132,32 @@ func (mesh *StaticMesh) VisRay(ray *core.RayData) {
 }
 
 type MeshFile struct {
-	NodeName    string `node:"Name"`
-	Filename    string
-	RayBias     float32
-	CalcNormals bool
-	IsVisible   bool
-	Loader      Loader
-	mesh        *Mesh
+	NodeName     string `node:"Name"`
+	Filename     string
+	RayBias      float32
+	CalcNormals  bool
+	IsVisible    bool
+	MergeVertPos bool
+	MergeTexVert bool
+	Loader       Loader
+	mesh         *Mesh
 }
 
 func (mesh *MeshFile) Name() string { return mesh.NodeName }
 func (mesh *MeshFile) PreRender(rc *core.RenderContext) error {
+
+	for _, open := range loaders {
+		loader, err := open(rc, mesh.Filename)
+
+		if err == nil {
+
+			mesh.Loader = loader
+		}
+	}
+
+	mesh.Loader.SetOption("MergeVertPos", mesh.MergeVertPos)
+	mesh.Loader.SetOption("MergeTexVert", mesh.MergeTexVert)
+
 	msh, err := mesh.Loader.Load()
 
 	if err != nil {
@@ -332,29 +349,18 @@ func (mesh *Mesh) initAccel() error {
 	return nil
 }
 
-var loaders = map[string]func(rc *core.RenderContext, filename string, params core.Params) (Loader, error){}
+var loaders = map[string]func(rc *core.RenderContext, filename string) (Loader, error){}
 
-func RegisterLoader(name string, open func(rc *core.RenderContext, filename string, params core.Params) (Loader, error)) {
+func RegisterLoader(name string, open func(rc *core.RenderContext, filename string) (Loader, error)) {
 	loaders[name] = open
 }
 
-func create(rc *core.RenderContext, params core.Params) (interface{}, error) {
+func create() (core.Node, error) {
 	mfile := MeshFile{IsVisible: true}
 
-	params.Unmarshal(&mfile)
-
-	for _, open := range loaders {
-		loader, err := open(rc, mfile.Filename, params)
-
-		if err == nil {
-
-			mfile.Loader = loader
-			return &mfile, nil
-		}
-	}
-	return nil, nil
+	return &mfile, nil
 }
 
 func init() {
-	core.RegisterType("MeshFile", create)
+	nodes.Register("MeshFile", create)
 }

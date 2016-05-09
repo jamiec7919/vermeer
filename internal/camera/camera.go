@@ -8,6 +8,7 @@ import (
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/sample"
+	"github.com/jamiec7919/vermeer/nodes"
 	"math/rand"
 )
 
@@ -126,11 +127,8 @@ type Lookat struct {
 }
 
 func init() {
-	core.RegisterType("Camera", func(rc *core.RenderContext, params core.Params) (interface{}, error) {
+	nodes.Register("Camera", func() (core.Node, error) {
 		l := Lookat{D: 2.5}
-		if err := params.Unmarshal(&l); err != nil {
-			return nil, err
-		}
 
 		cam := &Camera{D: l.D, Radius: l.Radius}
 		cam.Lookat(l.From, l.To, l.Up)

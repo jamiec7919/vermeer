@@ -5,27 +5,37 @@
 package light
 
 import (
+	"errors"
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/internal/geom/mesh"
-	"github.com/jamiec7919/vermeer/material"
-	"github.com/jamiec7919/vermeer/material/bsdf"
-	"github.com/jamiec7919/vermeer/material/edf"
 	m "github.com/jamiec7919/vermeer/math"
+	"github.com/jamiec7919/vermeer/nodes"
 	"math/rand"
 )
 
 type Disk struct {
-	NodeName string
-	P        m.Vec3
-	T, B, N  m.Vec3
-	Radius   float32
-	EDF      material.EDF
-	MtlId    int32
+	NodeName      string `node:"Name"`
+	P, Up, LookAt m.Vec3
+	T, B, N       m.Vec3
+	Radius        float32
+	Material      string
+	MtlId         int32
 }
 
-func (d *Disk) Name() string                            { return d.NodeName }
-func (d *Disk) PreRender(rc *core.RenderContext) error  { return nil }
+func (d *Disk) Name() string { return d.NodeName }
+func (d *Disk) PreRender(rc *core.RenderContext) error {
+	mtlid := rc.GetMaterialId(d.Material)
+
+	if mtlid == -1 {
+		return errors.New("DiskLight: can't find material " + d.Material)
+	}
+	d.MtlId = mtlid
+
+	mesh := d.CreateDisk(rc, d.P, d.LookAt, d.Up, d.Radius, mtlid)
+	rc.AddNode(mesh)
+	return nil
+}
 func (d *Disk) PostRender(rc *core.RenderContext) error { return nil }
 
 func (d *Disk) SamplePoint(rnd *rand.Rand, surf *core.SurfacePoint, pdf *float64) error {
@@ -70,11 +80,7 @@ func (d *Disk) SampleArea(from *core.SurfacePoint, rnd *rand.Rand, surf *core.Su
 }
 
 func (d *Disk) SampleDirection(surf *core.SurfacePoint, rnd *rand.Rand, omega_o *m.Vec3, Le *colour.Spectrum, pdf *float64) error {
-	if d.EDF == nil {
-		return core.ErrNoSample
-	}
-
-	return d.EDF.Sample(surf, rnd, omega_o, Le, pdf)
+	return nil
 }
 
 /*
@@ -112,7 +118,7 @@ func (d *Disk) Pos() m.Vec3 {
 	return d.P
 }
 
-func CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float32, mtlid int32) interface{} {
+func (d *Disk) CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float32, mtlid int32) *mesh.StaticMesh {
 	N := m.Vec3Normalize(m.Vec3Sub(t, P))
 	T := m.Vec3Normalize(m.Vec3Cross(N, up))
 	B := m.Vec3Cross(N, T)
@@ -145,25 +151,18 @@ func CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float32, mtlid i
 			WorldBounds: mesh.WorldBounds(m.MatrixIdentity),
 		}
 	*/
-	node := &Disk{P: P, T: T, N: N, B: B, Radius: radius, MtlId: mtlid}
 
-	return []core.Node{node, &mesh.StaticMesh{"lightmesh", &msh}}
+	d.N = N
+	d.T = T
+	d.B = B
+	return &mesh.StaticMesh{"lightmesh", &msh}
 
 }
 
 func init() {
-	core.RegisterType("DiskLight", func(rc *core.RenderContext, params core.Params) (interface{}, error) {
+	nodes.Register("DiskLight", func() (core.Node, error) {
 
-		diff2 := bsdf.Diffuse{Kd: &material.ConstantMap{[3]float32{0.8, 0.8, 0.8}}}
-		edf := edf.Diffuse{E: [3]float32{100, 100, 100}}
-		mtl2 := material.Material{Sides: 1, BSDF: [2]material.BSDF{&diff2}, EDF: &edf}
-		rc.AddNode(&mtl2)
-
-		P, _ := params.GetVec3("P")
-		LookAt, _ := params.GetVec3("LookAt")
-		Up, _ := params.GetVec3("Up")
-		radius, _ := params.GetFloat("Radius")
-		return CreateDisk(rc, P, LookAt, Up, float32(radius), mtl2.Id()), nil
+		return &Disk{}, nil
 
 	})
 }

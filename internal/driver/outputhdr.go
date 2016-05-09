@@ -7,6 +7,7 @@ package driver
 import (
 	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/image"
+	"github.com/jamiec7919/vermeer/nodes"
 )
 
 type OutputHDR struct {
@@ -46,10 +47,8 @@ func (n *OutputHDR) PostRender(rc *core.RenderContext) error {
 }
 
 func init() {
-	core.RegisterType("OutputHDR", func(rc *core.RenderContext, params core.Params) (interface{}, error) {
+	nodes.Register("OutputHDR", func() (core.Node, error) {
 		out := OutputHDR{"out.hdr"}
-
-		params.Unmarshal(&out)
 
 		return &out, nil
 	})

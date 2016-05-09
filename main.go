@@ -10,6 +10,7 @@ package main
 import (
 	"flag"
 	"github.com/jamiec7919/vermeer/core"
+	"github.com/jamiec7919/vermeer/nodes"
 	"github.com/jamiec7919/vermeer/preview"
 	"log"
 	"os"
@@ -54,7 +55,7 @@ func main() {
 	go func() {
 		defer pview.Close()
 
-		if err := rc.LoadNodeFile(filename); err != nil {
+		if err := nodes.Parse(rc, filename); err != nil {
 			log.Printf("Error: LoadNodeFile: %v", err)
 			renderstatus <- err
 			return

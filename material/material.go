@@ -5,10 +5,13 @@
 package material
 
 import (
+	"errors"
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
+	"github.com/jamiec7919/vermeer/material/edf"
 	"github.com/jamiec7919/vermeer/material/texture"
 	m "github.com/jamiec7919/vermeer/math"
+	"github.com/jamiec7919/vermeer/nodes"
 	"math/rand"
 )
 
@@ -26,6 +29,8 @@ type Material struct {
 	Ks, Kd            core.MapSampler
 	Roughness         core.MapSampler
 	SpecularRoughness core.MapSampler
+	IOR               core.MapSampler
+	E                 core.MapSampler
 
 	BSDF [2]BSDF // bsdf for sides
 	//Medium [2]Medium  // medium material
@@ -35,8 +40,21 @@ type Material struct {
 }
 
 // core.Node methods
-func (m *Material) Name() string                            { return m.MtlName }
-func (m *Material) PreRender(rc *core.RenderContext) error  { return nil }
+func (m *Material) Name() string { return m.MtlName }
+func (m *Material) PreRender(rc *core.RenderContext) error {
+	bsdf := makeBSDF(m)
+
+	if bsdf == nil {
+		return errors.New("BSDF " + m.Diffuse + " " + m.Specular + " not found")
+	}
+	m.BSDF[0] = bsdf
+
+	if m.E != nil {
+		edf := &edf.Diffuse{E: m.E.SampleRGB(0, 0, 0, 0)}
+		m.EDF = edf
+	}
+	return nil
+}
 func (m *Material) PostRender(rc *core.RenderContext) error { return nil }
 
 // core.Material methods
@@ -119,15 +137,12 @@ func (c *TextureMap) SampleScalar(s, t, ds, dt float32) (out float32) {
 
 }
 
-func makeMaterial(rc *core.RenderContext, params core.Params) (interface{}, error) {
+func makeMaterial() (core.Node, error) {
 
-	bsdf := makeBSDF(params)
-
-	name, _ := params.GetString("Name")
-	mtl := &Material{MtlName: name, BSDF: [2]BSDF{bsdf}}
+	mtl := &Material{}
 	return mtl, nil
 }
 
 func init() {
-	core.RegisterType("Material", makeMaterial)
+	nodes.Register("Material", makeMaterial)
 }

@@ -7,7 +7,6 @@ package core
 import (
 	"github.com/cheggaaa/pb"
 	"github.com/jamiec7919/vermeer/colour"
-	"github.com/jamiec7919/vermeer/internal/nodeparser"
 	// "github.com/jamiec7919/vermeer/material"
 	m "github.com/jamiec7919/vermeer/math"
 	"log"
@@ -94,11 +93,25 @@ func (rc *RenderContext) Finish() {
 
 func (rc *RenderContext) PreRender() error {
 	// pre and fixup nodes
-	for _, node := range rc.nodes {
-		if err := node.PreRender(rc); err != nil {
-			return err
+	// Note that nodes in PreRender may add new nodes, so we must backup and
+	// keep track of the existing set so they are only processed once.
+
+	var allnodes []Node
+
+	for rc.nodes != nil {
+
+		nodes := rc.nodes
+		rc.nodes = nil
+		allnodes = append(allnodes, nodes...)
+
+		for _, node := range nodes {
+			if err := node.PreRender(rc); err != nil {
+				return err
+			}
 		}
 	}
+
+	rc.nodes = allnodes
 
 	return rc.scene.initAccel()
 }
@@ -180,7 +193,6 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 			surf.OffsetP(1)
 
 			if !mtl.IsDelta(&surf) {
-
 				if len(frame.scene.lights) > 0 {
 					nls := 1
 					lightsamples := 0
@@ -198,11 +210,13 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 								ray.InitVisRay(surf.P, P.P)
 								frame.scene.VisRay(ray)
 								stats.ShadowRayCount++
+
 								if ray.IsVis() {
 									lightsamples++
 									Vnorm := m.Vec3Normalize(V)
 
 									lightm := frame.rc.GetMaterial(P.MtlId)
+
 									Le := colour.Spectrum{Lambda: contrib.Lambda}
 									lightm.EvalEDF(&P, P.WorldToTangent(m.Vec3Neg(Vnorm)), &Le)
 
@@ -472,40 +486,6 @@ func (rc *RenderContext) FindNode(name string) Node {
 	return nil
 }
 
-func (rc *RenderContext) LoadNodeFile(filename string) error {
-	return nodeparser.Parse(rc, filename)
-}
-
-func (rc *RenderContext) DispatchNode(_node interface{}) error {
-	node, ok := _node.(Node)
-
-	if !ok {
-		nodes, ok := _node.([]Node)
-
-		if ok {
-			for _, n := range nodes {
-				rc.AddNode(n)
-			}
-			return nil
-		}
-		return ErrNotNode
-	}
-	rc.AddNode(node)
-	return nil
-}
-
-func (rc *RenderContext) CreateObj(method string, _params map[string]interface{}) (interface{}, error) {
-	params := Params(_params)
-
-	create, present := objTypes[method]
-
-	if present {
-		return create(rc, params)
-	}
-
-	return nil, ErrNodeNotRegistered
-}
-
 func (rc *RenderContext) Error(err error) error {
 	log.Printf("Parse error: %v", err)
 	return nil
@@ -515,14 +495,4 @@ type Node interface {
 	Name() string
 	PreRender(*RenderContext) error
 	PostRender(*RenderContext) error
-}
-
-var objTypes = map[string]func(*RenderContext, Params) (interface{}, error){}
-
-func RegisterType(name string, create func(*RenderContext, Params) (interface{}, error)) error {
-	if objTypes[name] == nil {
-		objTypes[name] = create
-		return nil
-	}
-	return ErrNodeAlreadyRegistered
 }

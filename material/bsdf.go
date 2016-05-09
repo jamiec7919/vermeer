@@ -54,107 +54,28 @@ func (b *WeightedBSDF) Sample(shade *ShadePoint, rnd *rand.Rand, out *Directiona
 func (b *WeightedBSDF) Eval(shade *ShadePoint, omega_o m.Vec3, out *colour.Spectrum) error { return nil }
 */
 
-func makeBSDF(params core.Params) BSDF {
-	ty, _ := params.GetString("Type")
+func makeBSDF(mtl *Material) BSDF {
+	ty := mtl.Diffuse
 
 	switch ty {
 	case "Lambert":
-		bsdf := bsdf.Diffuse{}
-		Kd := params["Kd"]
-
-		switch t := Kd.(type) {
-		case string:
-			bsdf.Kd = &TextureMap{t}
-		case []float64:
-			bsdf.Kd = &ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
-		case []int64:
-			bsdf.Kd = &ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
-		}
+		bsdf := bsdf.Diffuse{Kd: mtl.Kd}
 		return &bsdf
 	case "OrenNayar":
-		bsdf := bsdf.OrenNayar{}
-
-		roughness := params["Roughness"]
-
-		switch t := roughness.(type) {
-		case string:
-			bsdf.Roughness = &TextureMap{t}
-		case float64:
-			bsdf.Roughness = &ConstantMap{[3]float32{float32(t)}}
-		case int64:
-			bsdf.Roughness = &ConstantMap{[3]float32{float32(t)}}
-		}
-
-		Kd := params["Kd"]
-
-		switch t := Kd.(type) {
-		case string:
-			bsdf.Kd = &TextureMap{t}
-		case []float64:
-			bsdf.Kd = &ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
-		case []int64:
-			bsdf.Kd = &ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
-		}
+		bsdf := bsdf.OrenNayar{Roughness: mtl.Roughness, Kd: mtl.Kd}
 		return &bsdf
+	}
 
+	ty = mtl.Specular
+
+	switch ty {
 	case "Specular":
-		bsdf := bsdf.Specular{}
+		bsdf := bsdf.Specular{Ks: mtl.Ks}
 
-		Ks, present := params["Ks"]
-
-		if !present {
-			Ks = []float64{0.5, 0.5, 0.5}
-		}
-
-		switch t := Ks.(type) {
-		case string:
-			bsdf.Ks = &TextureMap{t}
-		case []float64:
-			bsdf.Ks = &ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
-		case []int64:
-			bsdf.Ks = &ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
-		}
 		return &bsdf
 
 	case "GGXSpecular":
-		bsdf := bsdf.CookTorranceGGX{}
-
-		roughness := params["Roughness"]
-
-		switch t := roughness.(type) {
-		case string:
-			bsdf.Roughness = &TextureMap{t}
-		case float64:
-			bsdf.Roughness = &ConstantMap{[3]float32{float32(t)}}
-		case int64:
-			bsdf.Roughness = &ConstantMap{[3]float32{float32(t)}}
-		}
-
-		ior := params["IOR"]
-
-		switch t := ior.(type) {
-		case string:
-			bsdf.IOR = &TextureMap{t}
-		case float64:
-			bsdf.IOR = &ConstantMap{[3]float32{float32(t)}}
-		case int64:
-			bsdf.IOR = &ConstantMap{[3]float32{float32(t)}}
-		}
-
-		Ks, present := params["Ks"]
-
-		if !present {
-			Ks = []float64{0.5, 0.5, 0.5}
-		}
-
-		switch t := Ks.(type) {
-		case string:
-			bsdf.Ks = &TextureMap{t}
-		case []float64:
-			bsdf.Ks = &ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
-		case []int64:
-			bsdf.Ks = &ConstantMap{[3]float32{float32(t[0]), float32(t[1]), float32(t[2])}}
-		}
+		bsdf := bsdf.CookTorranceGGX{Roughness: mtl.Roughness, Ks: mtl.Ks, IOR: mtl.IOR}
 		return &bsdf
 	}
 

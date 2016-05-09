@@ -8,6 +8,7 @@ import (
 	"errors"
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
+	"github.com/jamiec7919/vermeer/nodes"
 )
 
 type Instance struct {
@@ -27,7 +28,7 @@ func (i *Instance) PreRender(rc *core.RenderContext) error {
 	if prim, ok := node.(core.Primitive); ok {
 		i.prim = prim
 	} else {
-		return core.ErrNotFound
+		return errors.New("Can't find primitive " + i.Primitive)
 	}
 
 	if invTransform, ok := m.Matrix4Inverse(i.Transform); !ok {
@@ -129,16 +130,12 @@ func (i *Instance) VisRay(ray *core.RayData) {
 
 }
 
-func create(rc *core.RenderContext, params core.Params) (interface{}, error) {
+func create() (core.Node, error) {
 	i := Instance{}
-
-	if err := params.Unmarshal(&i); err != nil {
-		return nil, err
-	}
 
 	return &i, nil
 }
 
 func init() {
-	core.RegisterType("Instance", create)
+	nodes.Register("Instance", create)
 }
