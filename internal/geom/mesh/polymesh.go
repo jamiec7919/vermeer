@@ -5,8 +5,7 @@
 package mesh
 
 import (
-	"github.com/jamiec7919/vermeer/internal/core"
-	"github.com/jamiec7919/vermeer/material"
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 )
 
@@ -68,7 +67,7 @@ func (mesh *PolyMesh) TraceRay(ray *core.RayData) {
 	mesh.mesh.TraceRay(ray)
 }
 
-func (mesh *PolyMesh) triangulateFace(base, count int32, mtlid material.Id) {
+func (mesh *PolyMesh) triangulateFace(base, count int32, mtlid int32) {
 
 	for i := int32(0); i < count-2; i++ {
 		var face FaceGeom

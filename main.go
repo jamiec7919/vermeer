@@ -9,7 +9,7 @@ package main
 
 import (
 	"flag"
-	"github.com/jamiec7919/vermeer/internal/core"
+	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/preview"
 	"log"
 	"os"

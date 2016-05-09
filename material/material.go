@@ -5,8 +5,11 @@
 package material
 
 import (
+	"github.com/jamiec7919/vermeer/colour"
+	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/material/texture"
 	m "github.com/jamiec7919/vermeer/math"
+	"math/rand"
 )
 
 type Id int32
@@ -14,21 +17,67 @@ type Id int32
 const ID_NONE Id = -1
 
 type Material struct {
-	Name  string
-	Sides int
-	BSDF  [2]BSDF // bsdf for sides
+	MtlName string `node:"Name"`
+	id      int32  // This should only be assinged by RenderContext
+
+	Sides             int
+	Specular          string
+	Diffuse           string
+	Ks, Kd            core.MapSampler
+	Roughness         core.MapSampler
+	SpecularRoughness core.MapSampler
+
+	BSDF [2]BSDF // bsdf for sides
 	//Medium [2]Medium  // medium material
 	EDF EDF // Emission distribution for light materials (nil is not a light)
 
 	BumpMap *BumpMap
 }
 
+// core.Node methods
+func (m *Material) Name() string                            { return m.MtlName }
+func (m *Material) PreRender(rc *core.RenderContext) error  { return nil }
+func (m *Material) PostRender(rc *core.RenderContext) error { return nil }
+
+// core.Material methods
+func (m *Material) Id() int32 {
+	return m.id
+}
+
+func (m *Material) SetId(id int32) {
+	m.id = id
+}
+
+func (m *Material) HasEDF() bool {
+	return m.EDF != nil
+}
+
+func (m *Material) HasBumpMap() bool {
+	return m.BumpMap != nil
+}
+
+func (m *Material) IsDelta(surf *core.SurfacePoint) bool {
+	return m.BSDF[0].IsDelta(surf)
+}
+
+func (m *Material) EvalEDF(surf *core.SurfacePoint, omega_o m.Vec3, Le *colour.Spectrum) error {
+	return m.EDF.Eval(surf, omega_o, Le)
+}
+
+func (m *Material) EvalBSDF(surf *core.SurfacePoint, omega_i, omega_o m.Vec3, rho *colour.Spectrum) error {
+	return m.BSDF[0].Eval(surf, omega_i, omega_o, rho)
+}
+
+func (m *Material) SampleBSDF(surf *core.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *colour.Spectrum, pdf *float64) error {
+	return m.BSDF[0].Sample(surf, omega_i, rnd, omega_o, rho, pdf)
+}
+
 type BumpMap struct {
-	Map   MapSampler
+	Map   core.MapSampler
 	Scale float32
 }
 
-func (mtl *Material) ApplyBumpMap(surf *SurfacePoint) {
+func (mtl *Material) ApplyBumpMap(surf *core.SurfacePoint) {
 	delta := float32(1) / float32(6000)
 	//log.Printf("Bump %v %v %v %v", mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]-delta, surf.UV[0][1], delta, delta)[0], mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]+delta, surf.UV[0][1], delta, delta)[0], surf.UV[0][0]-delta, surf.UV[0][0]+delta)
 	Bu := (1.0 / (2.0 * delta)) * mtl.BumpMap.Scale * (mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]-delta, surf.UV[0][1], delta, delta)[0] - mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]+delta, surf.UV[0][1], delta, delta)[0])
@@ -68,4 +117,17 @@ func (c *TextureMap) SampleScalar(s, t, ds, dt float32) (out float32) {
 	q := texture.SampleRGB(c.Filename, s, t, ds, dt)
 	return q[0]
 
+}
+
+func makeMaterial(rc *core.RenderContext, params core.Params) (interface{}, error) {
+
+	bsdf := makeBSDF(params)
+
+	name, _ := params.GetString("Name")
+	mtl := &Material{MtlName: name, BSDF: [2]BSDF{bsdf}}
+	return mtl, nil
+}
+
+func init() {
+	core.RegisterType("Material", makeMaterial)
 }

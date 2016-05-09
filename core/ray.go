@@ -8,7 +8,6 @@ import (
 	//"log"
 	//"unsafe"
 	"errors"
-	"github.com/jamiec7919/vermeer/material"
 	m "github.com/jamiec7919/vermeer/math"
 )
 
@@ -95,7 +94,7 @@ func (r *RayData) IsVis() bool {
 	}
 }
 
-func (r *RayData) GetHitSurface(surface *material.SurfacePoint) error {
+func (r *RayData) GetHitSurface(surface *SurfacePoint) error {
 	if r.Ray.Tclosest < m.Inf(1) {
 		surface.P = r.Result.P
 		surface.N = r.Result.Ng

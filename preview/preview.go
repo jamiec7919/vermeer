@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/go-gl/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
-	"github.com/jamiec7919/vermeer/internal/core"
+	"github.com/jamiec7919/vermeer/core"
 	"runtime"
 )
 

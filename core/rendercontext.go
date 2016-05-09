@@ -6,8 +6,9 @@ package core
 
 import (
 	"github.com/cheggaaa/pb"
+	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/internal/nodeparser"
-	"github.com/jamiec7919/vermeer/material"
+	// "github.com/jamiec7919/vermeer/material"
 	m "github.com/jamiec7919/vermeer/math"
 	"log"
 	"math/rand"
@@ -45,6 +46,13 @@ type PreviewFrame struct {
 	Buf  []uint8
 }
 
+func (rc *RenderContext) OutputRes() (int, int) {
+	return rc.globals.XRes, rc.globals.YRes
+}
+func (rc *RenderContext) Image() []float32 {
+	return rc.imgbuf
+}
+
 type RenderContext struct {
 	globals   Globals
 	imgbuf    []float32
@@ -52,15 +60,15 @@ type RenderContext struct {
 	nodes     []Node
 	scene     Scene
 	cameras   []Camera
-	materials []*material.Material
+	materials []Material
 
 	PreviewChan chan PreviewFrame
 	preview     PreviewWindow
 	finish      chan bool
 }
 
-func (rc *RenderContext) GetMaterial(id material.Id) *material.Material {
-	if rc.materials != nil && id != material.ID_NONE && int(id) < len(rc.materials) {
+func (rc *RenderContext) GetMaterial(id int32) Material {
+	if rc.materials != nil && id != -1 && int(id) < len(rc.materials) {
 		return rc.materials[int(id)]
 	}
 	return nil
@@ -112,8 +120,8 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 	lambda := (float32(720-450) * rnd.Float32()) + 450
 
 	P, D := frame.camera.ComputeRay(-1+u, 1-v, rnd)
-	fullsample := material.Spectrum{Lambda: lambda}
-	contrib := material.Spectrum{Lambda: fullsample.Lambda}
+	fullsample := colour.Spectrum{Lambda: lambda}
+	contrib := colour.Spectrum{Lambda: fullsample.Lambda}
 	contrib.FromRGB(1, 1, 1)
 
 	direct := true
@@ -125,17 +133,17 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 		frame.scene.TraceRay(ray)
 		stats.RayCount++
 
-		var surf material.SurfacePoint
+		var surf SurfacePoint
 
 		if ray.GetHitSurface(&surf) == nil {
 
-			mtl := frame.rc.GetMaterial(material.Id(surf.MtlId))
+			mtl := frame.rc.GetMaterial(surf.MtlId)
 
 			if mtl == nil { // can't do much with no material
 				return
 			}
 
-			if mtl.BumpMap != nil {
+			if mtl.HasBumpMap() {
 				mtl.ApplyBumpMap(&surf)
 			}
 
@@ -157,17 +165,12 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 
 			omega_i := surf.WorldToTangent(Vout)
 
-			if (true || direct) && mtl.EDF != nil {
-				Le := material.Spectrum{Lambda: contrib.Lambda}
-				mtl.EDF.Eval(&surf, omega_i, &Le)
+			if (true || direct) && mtl.HasEDF() {
+				Le := colour.Spectrum{Lambda: contrib.Lambda}
+				mtl.EvalEDF(&surf, omega_i, &Le)
 				Le.Mul(contrib)
 				//Le.Scale(1.0 / (float32(m.Vec3Dot(Vout, surf.N))))
 				fullsample.Add(Le)
-			}
-			bsdf := mtl.BSDF[0]
-
-			if bsdf == nil { // can't do much without BSDF
-				//return
 			}
 
 			//var samp_pdf float64
@@ -176,7 +179,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 			// Assume that no transmission, so offset surface point out from surface
 			surf.OffsetP(1)
 
-			if !bsdf.IsDelta(&surf) {
+			if !mtl.IsDelta(&surf) {
 
 				if len(frame.scene.lights) > 0 {
 					nls := 1
@@ -185,7 +188,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 						nls = 1
 					}
 					for i := 0; i < nls; i++ {
-						var P material.SurfacePoint
+						var P SurfacePoint
 						var pdf float64
 
 						if frame.scene.lights[0].SampleArea(&surf, rnd, &P, &pdf) == nil {
@@ -199,13 +202,13 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 									lightsamples++
 									Vnorm := m.Vec3Normalize(V)
 
-									lightm := frame.rc.GetMaterial(material.Id(P.MtlId))
-									Le := material.Spectrum{Lambda: contrib.Lambda}
-									lightm.EDF.Eval(&P, P.WorldToTangent(m.Vec3Neg(Vnorm)), &Le)
+									lightm := frame.rc.GetMaterial(P.MtlId)
+									Le := colour.Spectrum{Lambda: contrib.Lambda}
+									lightm.EvalEDF(&P, P.WorldToTangent(m.Vec3Neg(Vnorm)), &Le)
 
-									rho := material.Spectrum{Lambda: contrib.Lambda}
+									rho := colour.Spectrum{Lambda: contrib.Lambda}
 
-									bsdf.Eval(&surf, omega_i, surf.WorldToTangent(Vnorm), &rho)
+									mtl.EvalBSDF(&surf, omega_i, surf.WorldToTangent(Vnorm), &rho)
 									geom := m.Abs(m.Vec3Dot(Vnorm, surf.Ns)) * m.Abs(m.Vec3Dot(Vnorm, P.N)) / m.Vec3Length2(V)
 									Le.Mul(rho)
 									Le.Mul(contrib)
@@ -227,8 +230,8 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 			var omega_o m.Vec3
 			var pdf float64
 
-			rho := material.Spectrum{Lambda: fullsample.Lambda}
-			bsdf.Sample(&surf, omega_i, rnd, &omega_o, &rho, &pdf)
+			rho := colour.Spectrum{Lambda: fullsample.Lambda}
+			mtl.SampleBSDF(&surf, omega_i, rnd, &omega_o, &rho, &pdf)
 
 			D = surf.TangentToWorld(omega_o)
 
@@ -424,24 +427,23 @@ func (rc *RenderContext) PostRender() error {
 	return nil
 }
 
-func (rc *RenderContext) GetMaterialId(name string) material.Id {
+func (rc *RenderContext) GetMaterialId(name string) int32 {
 	for id, mtl := range rc.materials {
-		if mtl.Name == name {
-			return material.Id(id)
+		if mtl.Name() == name {
+			return int32(id)
 		}
 	}
 
-	return material.ID_NONE
+	return -1
 }
 
-func (rc *RenderContext) AddMaterial(name string, mtl *material.Material) material.Id {
-	mtl.Name = name
+func (rc *RenderContext) addMaterial(mtl Material) {
 
 	id := len(rc.materials)
 
 	rc.materials = append(rc.materials, mtl)
 
-	return material.Id(id)
+	mtl.SetId(int32(id))
 }
 
 func (rc *RenderContext) AddNode(node Node) {
@@ -455,7 +457,9 @@ func (rc *RenderContext) AddNode(node Node) {
 	case Light:
 		rc.scene.lights = append(rc.scene.lights, t)
 	case Material:
-		rc.AddMaterial(t.Name(), t.Material())
+		rc.addMaterial(t)
+	case *Globals:
+		rc.globals = *t
 	}
 }
 

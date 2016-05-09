@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package material
+package colour
 
 /*
 
@@ -12,10 +12,6 @@ package material
   terrible speckling will occur.  You have been warned.  Should add a verification function that will
   make input RGB values 'reasonable'
 */
-
-import (
-	"github.com/jamiec7919/vermeer/colour"
-)
 
 const (
 	LAMBDA_MIN = 450
@@ -39,7 +35,7 @@ func (wv *Spectrum) SetZero() {
 
 func (wv *Spectrum) FromRGB(r, g, b float32) error {
 	for k := 0; k < 4; k++ {
-		wv.C[k] = colour.RGBToSpectrumSmits99(r, g, b, wv.Wavelength(k))
+		wv.C[k] = RGBToSpectrumSmits99(r, g, b, wv.Wavelength(k))
 	}
 	return nil
 }
@@ -51,13 +47,13 @@ func (wv *Spectrum) ToRGB() (r, g, b float32) {
 	// (How to Derive a Spectrum From an RGB Triple)
 
 	for i := 0; i < LAMBDA_N; i++ {
-		x += wv.C[i] * colour.Cie_x(wv.Wavelength(i))
-		y += wv.C[i] * colour.Cie_y(wv.Wavelength(i))
-		z += wv.C[i] * colour.Cie_z(wv.Wavelength(i))
+		x += wv.C[i] * Cie_x(wv.Wavelength(i))
+		y += wv.C[i] * Cie_y(wv.Wavelength(i))
+		z += wv.C[i] * Cie_z(wv.Wavelength(i))
 	}
 
 	// Now transform XYZ to RGB.  Should make this selectable as to which RGB.
-	r, g, b = colour.ColourSpace_sRGB.XYZToRGB(x, y, z)
+	r, g, b = ColourSpace_sRGB.XYZToRGB(x, y, z)
 	return
 }
 

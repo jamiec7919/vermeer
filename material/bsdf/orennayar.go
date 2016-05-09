@@ -6,7 +6,8 @@ package bsdf
 
 import (
 	"errors"
-	"github.com/jamiec7919/vermeer/material"
+	"github.com/jamiec7919/vermeer/colour"
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/sample"
 	"math"
@@ -16,17 +17,17 @@ import (
 var ErrFailedEval = errors.New("Failed Eval")
 
 type OrenNayar struct {
-	Kd        material.MapSampler
-	Roughness material.MapSampler
+	Kd        core.MapSampler
+	Roughness core.MapSampler
 }
 
-func (b *OrenNayar) IsDelta(shade *material.SurfacePoint) bool { return false }
+func (b *OrenNayar) IsDelta(shade *core.SurfacePoint) bool { return false }
 
-func (b *OrenNayar) ContinuationProb(shade *material.SurfacePoint) float64 {
+func (b *OrenNayar) ContinuationProb(shade *core.SurfacePoint) float64 {
 	return 1.0
 }
 
-func (b *OrenNayar) PDF(shade *material.SurfacePoint, omega_i, omega_o m.Vec3) float64 {
+func (b *OrenNayar) PDF(shade *core.SurfacePoint, omega_i, omega_o m.Vec3) float64 {
 	o_dot_n := float64(omega_o[2])
 
 	//if o_dot_n < 0.0 {
@@ -37,7 +38,7 @@ func (b *OrenNayar) PDF(shade *material.SurfacePoint, omega_i, omega_o m.Vec3) f
 	return o_dot_n / math.Pi
 }
 
-func (b *OrenNayar) Sample(shade *material.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *material.Spectrum, pdf *float64) error {
+func (b *OrenNayar) Sample(shade *core.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *colour.Spectrum, pdf *float64) error {
 	*omega_o = sample.CosineHemisphere(rnd.Float64(), rnd.Float64())
 
 	*pdf = b.PDF(shade, omega_i, *omega_o)
@@ -45,7 +46,7 @@ func (b *OrenNayar) Sample(shade *material.SurfacePoint, omega_i m.Vec3, rnd *ra
 	return b.Eval(shade, omega_i, *omega_o, rho)
 }
 
-func (b *OrenNayar) Eval(shade *material.SurfacePoint, omega_i, omega_o m.Vec3, rho *material.Spectrum) error {
+func (b *OrenNayar) Eval(shade *core.SurfacePoint, omega_i, omega_o m.Vec3, rho *colour.Spectrum) error {
 	o_dot_n := omega_o[2]
 
 	if o_dot_n <= 0 {

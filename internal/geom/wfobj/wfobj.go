@@ -7,9 +7,8 @@ package wfobj
 import (
 	"bufio"
 	//"fmt"
-	"github.com/jamiec7919/vermeer/internal/core"
+	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/internal/geom/mesh"
-	"github.com/jamiec7919/vermeer/material"
 	m "github.com/jamiec7919/vermeer/math"
 	"log"
 	"os"
@@ -52,7 +51,7 @@ func (r *reader) init(rc *core.RenderContext, filename string) {
 }
 
 //TODO: this is a bit of a mess
-func (r *reader) triangulateFace(face []facevert, mtlid material.Id) {
+func (r *reader) triangulateFace(face []facevert, mtlid int32) {
 	i := 1
 
 	for k := 0; k < len(face)-2; k++ {
@@ -225,7 +224,7 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 	// We will use the vt indices as given and remap the vn's.
 	//vn_i := map[int]int{}
 
-	var mtlid material.Id = material.ID_NONE
+	var mtlid int32 = -1
 	var vertmerge map[m.Vec3]int32
 	var vertmergeface []int32
 
@@ -330,7 +329,7 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 				*/
 			}
 
-			if mtlid == material.ID_NONE {
+			if mtlid == -1 {
 				// assign 'default' material
 				mtlid = r.rc.GetMaterialId("mtl_default")
 				//log.Printf("setting default mtl %v", mtlid)

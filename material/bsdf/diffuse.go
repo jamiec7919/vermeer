@@ -5,7 +5,8 @@
 package bsdf
 
 import (
-	"github.com/jamiec7919/vermeer/material"
+	"github.com/jamiec7919/vermeer/colour"
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/sample"
 	"math"
@@ -16,16 +17,16 @@ import (
 // pdf := dot(omega_o,n) / m.Pi
 // f := rho / m.Pi
 type Diffuse struct {
-	Kd material.MapSampler
+	Kd core.MapSampler
 }
 
-func (b *Diffuse) IsDelta(shade *material.SurfacePoint) bool { return false }
+func (b *Diffuse) IsDelta(shade *core.SurfacePoint) bool { return false }
 
-func (b *Diffuse) ContinuationProb(shade *material.SurfacePoint) float64 {
+func (b *Diffuse) ContinuationProb(shade *core.SurfacePoint) float64 {
 	return 1.0
 }
 
-func (b *Diffuse) PDF(shade *material.SurfacePoint, omega_i, omega_o m.Vec3) float64 {
+func (b *Diffuse) PDF(shade *core.SurfacePoint, omega_i, omega_o m.Vec3) float64 {
 	o_dot_n := float64(omega_o[2])
 
 	//if o_dot_n < 0.0 {
@@ -36,7 +37,7 @@ func (b *Diffuse) PDF(shade *material.SurfacePoint, omega_i, omega_o m.Vec3) flo
 	return o_dot_n / math.Pi
 }
 
-func (b *Diffuse) Sample(shade *material.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *material.Spectrum, pdf *float64) error {
+func (b *Diffuse) Sample(shade *core.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *colour.Spectrum, pdf *float64) error {
 	*omega_o = sample.CosineHemisphere(rnd.Float64(), rnd.Float64())
 
 	*pdf = b.PDF(shade, omega_i, *omega_o)
@@ -51,7 +52,7 @@ func (b *Diffuse) Sample(shade *material.SurfacePoint, omega_i m.Vec3, rnd *rand
 	return nil
 }
 
-func (b *Diffuse) Eval(shade *material.SurfacePoint, omega_i, omega_o m.Vec3, rho *material.Spectrum) error {
+func (b *Diffuse) Eval(shade *core.SurfacePoint, omega_i, omega_o m.Vec3, rho *colour.Spectrum) error {
 	o_dot_n := omega_o[2]
 
 	if o_dot_n <= 0 {

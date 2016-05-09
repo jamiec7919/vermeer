@@ -5,7 +5,8 @@
 package light
 
 import (
-	"github.com/jamiec7919/vermeer/internal/core"
+	"github.com/jamiec7919/vermeer/colour"
+	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/internal/geom/mesh"
 	"github.com/jamiec7919/vermeer/material"
 	"github.com/jamiec7919/vermeer/material/bsdf"
@@ -20,14 +21,14 @@ type Disk struct {
 	T, B, N  m.Vec3
 	Radius   float32
 	EDF      material.EDF
-	MtlId    material.Id
+	MtlId    int32
 }
 
 func (d *Disk) Name() string                            { return d.NodeName }
 func (d *Disk) PreRender(rc *core.RenderContext) error  { return nil }
 func (d *Disk) PostRender(rc *core.RenderContext) error { return nil }
 
-func (d *Disk) SamplePoint(rnd *rand.Rand, surf *material.SurfacePoint, pdf *float64) error {
+func (d *Disk) SamplePoint(rnd *rand.Rand, surf *core.SurfacePoint, pdf *float64) error {
 	r0 := rnd.Float32()
 	r1 := rnd.Float32()
 
@@ -47,7 +48,7 @@ func (d *Disk) SamplePoint(rnd *rand.Rand, surf *material.SurfacePoint, pdf *flo
 
 	return nil
 }
-func (d *Disk) SampleArea(from *material.SurfacePoint, rnd *rand.Rand, surf *material.SurfacePoint, pdf *float64) error {
+func (d *Disk) SampleArea(from *core.SurfacePoint, rnd *rand.Rand, surf *core.SurfacePoint, pdf *float64) error {
 	r0 := rnd.Float32()
 	r1 := rnd.Float32()
 
@@ -68,7 +69,7 @@ func (d *Disk) SampleArea(from *material.SurfacePoint, rnd *rand.Rand, surf *mat
 	return nil
 }
 
-func (d *Disk) SampleDirection(surf *material.SurfacePoint, rnd *rand.Rand, omega_o *m.Vec3, Le *material.Spectrum, pdf *float64) error {
+func (d *Disk) SampleDirection(surf *core.SurfacePoint, rnd *rand.Rand, omega_o *m.Vec3, Le *colour.Spectrum, pdf *float64) error {
 	if d.EDF == nil {
 		return core.ErrNoSample
 	}
@@ -111,7 +112,7 @@ func (d *Disk) Pos() m.Vec3 {
 	return d.P
 }
 
-func CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float32, mtlid material.Id) interface{} {
+func CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float32, mtlid int32) interface{} {
 	N := m.Vec3Normalize(m.Vec3Sub(t, P))
 	T := m.Vec3Normalize(m.Vec3Cross(N, up))
 	B := m.Vec3Cross(N, T)
@@ -156,13 +157,13 @@ func init() {
 		diff2 := bsdf.Diffuse{Kd: &material.ConstantMap{[3]float32{0.8, 0.8, 0.8}}}
 		edf := edf.Diffuse{E: [3]float32{100, 100, 100}}
 		mtl2 := material.Material{Sides: 1, BSDF: [2]material.BSDF{&diff2}, EDF: &edf}
-		mtlid := rc.AddMaterial("light1", &mtl2)
+		rc.AddNode(&mtl2)
 
 		P, _ := params.GetVec3("P")
 		LookAt, _ := params.GetVec3("LookAt")
 		Up, _ := params.GetVec3("Up")
 		radius, _ := params.GetFloat("Radius")
-		return CreateDisk(rc, P, LookAt, Up, float32(radius), mtlid), nil
+		return CreateDisk(rc, P, LookAt, Up, float32(radius), mtl2.Id()), nil
 
 	})
 }

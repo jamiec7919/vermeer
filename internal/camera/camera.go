@@ -5,7 +5,7 @@
 package camera
 
 import (
-	"github.com/jamiec7919/vermeer/internal/core"
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/sample"
 	"math/rand"

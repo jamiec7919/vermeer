@@ -7,7 +7,7 @@ package wfobj
 import (
 	"bufio"
 	"bytes"
-	"github.com/jamiec7919/vermeer/internal/core"
+	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/material"
 	"github.com/jamiec7919/vermeer/material/bsdf"
 	"github.com/jamiec7919/vermeer/material/edf"
@@ -109,8 +109,8 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 			name := lscan.Token()
 
 			//log.Printf("Mtl %v", toks[1])
-			mtl = &material.Material{}
-			rc.AddMaterial(name, mtl)
+			mtl = &material.Material{MtlName: name}
+			rc.AddNode(mtl)
 			//mtllib.Mtls[toks[1]] = mtl
 			//mtl.BSDF.IOR = 1.5
 			//mtl.BSDF.Roughness = 0.6

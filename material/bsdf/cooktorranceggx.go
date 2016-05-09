@@ -5,7 +5,8 @@
 package bsdf
 
 import (
-	"github.com/jamiec7919/vermeer/material"
+	"github.com/jamiec7919/vermeer/colour"
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"log"
 	"math"
@@ -13,15 +14,15 @@ import (
 )
 
 type CookTorranceGGX struct {
-	Ks        material.MapSampler
-	IOR       material.MapSampler // n_i/n_t  (n_i = air)
-	Roughness material.MapSampler
+	Ks        core.MapSampler
+	IOR       core.MapSampler // n_i/n_t  (n_i = air)
+	Roughness core.MapSampler
 }
 
 func sqr(x float64) float64   { return x * x }
 func sqr32(x float32) float32 { return x * x }
 
-func (b *CookTorranceGGX) IsDelta(shade *material.SurfacePoint) bool {
+func (b *CookTorranceGGX) IsDelta(shade *core.SurfacePoint) bool {
 	alpha := sqr32(b.Roughness.SampleScalar(shade.UV[0][0], shade.UV[0][1], 1, 1))
 	if alpha < 0.2 {
 		return true
@@ -29,11 +30,11 @@ func (b *CookTorranceGGX) IsDelta(shade *material.SurfacePoint) bool {
 	return false
 }
 
-func (b *CookTorranceGGX) ContinuationProb(shade *material.SurfacePoint) float64 {
+func (b *CookTorranceGGX) ContinuationProb(shade *core.SurfacePoint) float64 {
 	return 1.0
 }
 
-func (b *CookTorranceGGX) PDF(shade *material.SurfacePoint, omega_i, omega_o m.Vec3) float64 {
+func (b *CookTorranceGGX) PDF(shade *core.SurfacePoint, omega_i, omega_o m.Vec3) float64 {
 	alpha := sqr32(b.Roughness.SampleScalar(shade.UV[0][0], shade.UV[0][1], 1, 1))
 
 	if alpha == 0.0 {
@@ -63,7 +64,7 @@ func (b *CookTorranceGGX) G1(omega m.Vec3, alpha float32) float32 {
 	return 2 * o_dot_n / denom
 }
 
-func (b *CookTorranceGGX) Sample(shade *material.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *material.Spectrum, pdf *float64) error {
+func (b *CookTorranceGGX) Sample(shade *core.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *colour.Spectrum, pdf *float64) error {
 	alpha := sqr32(b.Roughness.SampleScalar(shade.UV[0][0], shade.UV[0][1], 1, 1))
 
 	if alpha == 0.0 {
@@ -90,7 +91,7 @@ func (b *CookTorranceGGX) Sample(shade *material.SurfacePoint, omega_i m.Vec3, r
 	return nil
 }
 
-func (b *CookTorranceGGX) Eval(shade *material.SurfacePoint, omega_i, omega_o m.Vec3, rho *material.Spectrum) error {
+func (b *CookTorranceGGX) Eval(shade *core.SurfacePoint, omega_i, omega_o m.Vec3, rho *colour.Spectrum) error {
 	alpha := sqr32(b.Roughness.SampleScalar(shade.UV[0][0], shade.UV[0][1], 1, 1))
 
 	if alpha == 0.0 {

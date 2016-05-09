@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package core
+package driver
 
 import (
+	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/image"
 )
 
@@ -12,19 +13,21 @@ type OutputHDR struct {
 	Filename string
 }
 
-func (n *OutputHDR) Name() string                      { return "OutputHDR<>" }
-func (n *OutputHDR) PreRender(rc *RenderContext) error { return nil }
+func (n *OutputHDR) Name() string                           { return "OutputHDR<>" }
+func (n *OutputHDR) PreRender(rc *core.RenderContext) error { return nil }
 
-func (n *OutputHDR) PostRender(rc *RenderContext) error {
+func (n *OutputHDR) PostRender(rc *core.RenderContext) error {
 	i, err := image.NewWriter(n.Filename)
 
 	if err != nil {
 		return err
 	}
 
+	w, h := rc.OutputRes()
+
 	spec := image.Spec{
-		Width:  rc.globals.XRes,
-		Height: rc.globals.YRes,
+		Width:  w,
+		Height: h,
 	}
 
 	if err := i.Open(n.Filename, &spec); err != nil {
@@ -33,7 +36,7 @@ func (n *OutputHDR) PostRender(rc *RenderContext) error {
 
 	ty := image.TypeDesc{BaseType: image.FLOAT}
 
-	if err := i.WriteImage(ty, rc.imgbuf); err != nil {
+	if err := i.WriteImage(ty, rc.Image()); err != nil {
 		return err
 	}
 
@@ -43,7 +46,7 @@ func (n *OutputHDR) PostRender(rc *RenderContext) error {
 }
 
 func init() {
-	RegisterType("OutputHDR", func(rc *RenderContext, params Params) (interface{}, error) {
+	core.RegisterType("OutputHDR", func(rc *core.RenderContext, params core.Params) (interface{}, error) {
 		out := OutputHDR{"out.hdr"}
 
 		params.Unmarshal(&out)

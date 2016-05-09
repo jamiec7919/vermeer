@@ -10,8 +10,6 @@ type Globals struct {
 	MaxGoRoutines int
 }
 
-func init() {
-	RegisterType("Globals", func(rc *RenderContext, params Params) (interface{}, error) {
-		return nil, params.Unmarshal(&rc.globals)
-	})
-}
+func (g *Globals) Name() string                    { return "<globals>" }
+func (g *Globals) PreRender(*RenderContext) error  { return nil }
+func (g *Globals) PostRender(*RenderContext) error { return nil }

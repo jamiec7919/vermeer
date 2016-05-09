@@ -5,11 +5,13 @@
 package material
 
 import (
+	"github.com/jamiec7919/vermeer/colour"
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"math/rand"
 )
 
 type EDF interface {
-	Eval(*SurfacePoint, m.Vec3, *Spectrum) error
-	Sample(*SurfacePoint, *rand.Rand, *m.Vec3, *Spectrum, *float64) error // Sample direction given point
+	Eval(*core.SurfacePoint, m.Vec3, *colour.Spectrum) error
+	Sample(*core.SurfacePoint, *rand.Rand, *m.Vec3, *colour.Spectrum, *float64) error // Sample direction given point
 }

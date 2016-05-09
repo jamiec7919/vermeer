@@ -5,19 +5,20 @@
 package bsdf
 
 import (
-	"github.com/jamiec7919/vermeer/material"
+	"github.com/jamiec7919/vermeer/colour"
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	//"log"
 	"math/rand"
 )
 
 type Specular struct {
-	Ks material.MapSampler
+	Ks core.MapSampler
 }
 
-func (b *Specular) IsDelta(shade *material.SurfacePoint) bool { return true }
+func (b *Specular) IsDelta(shade *core.SurfacePoint) bool { return true }
 
-func (b *Specular) ContinuationProb(shade *material.SurfacePoint) float64 {
+func (b *Specular) ContinuationProb(shade *core.SurfacePoint) float64 {
 	return 1.0
 }
 
@@ -26,7 +27,7 @@ func reflect(omega_in, N m.Vec3) (omega_out m.Vec3) {
 	return
 }
 
-func (b *Specular) PDF(shade *material.SurfacePoint, omega_i, omega_o m.Vec3) float64 {
+func (b *Specular) PDF(shade *core.SurfacePoint, omega_i, omega_o m.Vec3) float64 {
 
 	R := reflect(omega_i, m.Vec3{0, 0, 1})
 	if d := m.Vec3Dot(R, m.Vec3{0, 0, 1}); d <= 0.0 {
@@ -41,7 +42,7 @@ func (b *Specular) PDF(shade *material.SurfacePoint, omega_i, omega_o m.Vec3) fl
 	return 1
 }
 
-func (b *Specular) Sample(shade *material.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *material.Spectrum, pdf *float64) error {
+func (b *Specular) Sample(shade *core.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *colour.Spectrum, pdf *float64) error {
 
 	if omega_i[2] < 0 {
 		//log.Printf("Specular.Sample: %v", omega_i)
@@ -65,7 +66,7 @@ func (b *Specular) Sample(shade *material.SurfacePoint, omega_i m.Vec3, rnd *ran
 	return nil
 }
 
-func (b *Specular) Eval(shade *material.SurfacePoint, omega_i, omega_o m.Vec3, rho *material.Spectrum) error {
+func (b *Specular) Eval(shade *core.SurfacePoint, omega_i, omega_o m.Vec3, rho *colour.Spectrum) error {
 	//R := reflect(shade.Omega, m.Vec3{0, 0, 1})
 	//R := reflect(omega_i, shade.Ns)
 

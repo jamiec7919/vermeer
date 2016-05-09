@@ -5,7 +5,7 @@
 package mesh
 
 import (
-	"github.com/jamiec7919/vermeer/internal/core"
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/qbvh"
 )
@@ -134,7 +134,7 @@ type MeshFile struct {
 	Filename    string
 	RayBias     float32
 	CalcNormals bool
-	IsVisible bool
+	IsVisible   bool
 	Loader      Loader
 	mesh        *Mesh
 }
@@ -339,7 +339,7 @@ func RegisterLoader(name string, open func(rc *core.RenderContext, filename stri
 }
 
 func create(rc *core.RenderContext, params core.Params) (interface{}, error) {
-	mfile := MeshFile{IsVisible:true}
+	mfile := MeshFile{IsVisible: true}
 
 	params.Unmarshal(&mfile)
 
