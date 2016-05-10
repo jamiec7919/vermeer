@@ -10,10 +10,13 @@ import (
 )
 
 type Primitive interface {
-	TraceRay(*RayData)
+	TraceRay(*RayData, *ShaderGlobals) int32
 	VisRay(*RayData)
 	WorldBounds() m.BoundingBox
 	Visible() bool
+
+	// UVCoord returns the UV coordinate for the given set, given the element id and surface params.
+	// UVCoord(set int, elem uint32, su,sv float32) m.Vec3
 }
 
 //go:nosplit
@@ -21,11 +24,12 @@ type Primitive interface {
 func rayNodeIntersectAll_asm(ray *Ray, node *qbvh.Node, hit *[4]int32, tNear *[4]float32)
 
 //go:nosplit
-func (scene *Scene) traceRayAccel(ray *RayData) {
+func (scene *Scene) traceRayAccel(ray *RayData, sg *ShaderGlobals) (mtlid int32) {
 	// Push root node on stack:
 	stackTop := 0
 	ray.Supp.TopLevelStack[stackTop].Node = 0
 	ray.Supp.TopLevelStack[stackTop].T = ray.Ray.Tclosest
+	mtlid = -1
 
 	for stackTop >= 0 {
 
@@ -98,11 +102,16 @@ func (scene *Scene) traceRayAccel(ray *RayData) {
 			leaf_count := qbvh.LEAF_COUNT(node)
 			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
 			for i := leaf_base; i < leaf_base+leaf_count; i++ {
-				scene.prims[i].TraceRay(ray)
+				_mtlid := scene.prims[i].TraceRay(ray, sg)
+
+				if _mtlid > -1 {
+					ray.Result.Prim = scene.prims[i]
+					mtlid = _mtlid
+				}
 			}
 		}
 	}
-
+	return
 }
 
 //go:nosplit

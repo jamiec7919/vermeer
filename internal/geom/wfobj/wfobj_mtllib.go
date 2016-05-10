@@ -7,6 +7,7 @@ package wfobj
 import (
 	"bufio"
 	"bytes"
+	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/material"
 	"os"
@@ -118,7 +119,11 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 			g, err := strconv.ParseFloat(lscan.Token(), 32)
 			b, err := strconv.ParseFloat(lscan.Token(), 32)
 
-			mtl.E = &material.ConstantMap{[3]float32{float32(r), float32(g), float32(b)}}
+			// Stupidly some .mtls have Ke but set to 0
+			if r > 0.0 || g > 0.0 || b > 0.0 {
+
+				mtl.E = &core.ConstantMap{[3]float32{float32(r), float32(g), float32(b)}}
+			}
 			// log.Printf("%v",mesh.Verts)
 			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
 			if err != nil {
@@ -131,16 +136,32 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 			b, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			mtl.Diffuse = "Lambert"
-			mtl.Kd = &material.ConstantMap{[3]float32{float32(r), float32(g), float32(b)}}
+			mtl.Kd = &core.ConstantMap{[3]float32{float32(r), float32(g), float32(b)}}
 			// log.Printf("%v",mesh.Verts)
 			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
 			if err != nil {
 				return err
 			}
+		case "Ks":
+			r, err := strconv.ParseFloat(lscan.Token(), 32)
+			g, err := strconv.ParseFloat(lscan.Token(), 32)
+			b, err := strconv.ParseFloat(lscan.Token(), 32)
+
+			mtl.Specular = "Specular"
+
+			rgb := colour.RGB{float32(r), float32(g), float32(b)}
+			rgb.Normalize()
+			mtl.Ks = &core.ConstantMap{[3]float32(rgb)}
+			// log.Printf("%v",mesh.Verts)
+			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
+			if err != nil {
+				return err
+			}
+
 		case "map_Kd":
 
 			mtl.Diffuse = "Lambert"
-			mtl.Kd = &material.TextureMap{lscan.Rest()}
+			mtl.Kd = &core.TextureMap{lscan.Rest()}
 			//mtl.BSDF.Diffuse = TextureFile(toks[1])
 		case "map_bump":
 			i := 1
@@ -155,12 +176,15 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 					return err
 				}
 				i++
-				mtl.BumpMap = &material.BumpMap{&material.TextureMap{lscan.Rest()}, scale}
+				mtl.BumpMap = &core.TextureMap{lscan.Rest()}
+				mtl.BumpMapScale = scale
 			} else {
 
-				mtl.BumpMap = &material.BumpMap{&material.TextureMap{rest}, scale}
+				mtl.BumpMap = &core.TextureMap{rest}
+				mtl.BumpMapScale = scale
 
 			}
+
 			//if i < len(toks) {
 			//}
 		}

@@ -86,12 +86,12 @@ func (i *Instance) WorldBounds() (out m.BoundingBox) {
 	return
 }
 
-func (i *Instance) TraceRay(ray *core.RayData) {
+func (i *Instance) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) (mtlid int32) {
 	ray.SavedRay = ray.Ray
 
-	ray.InitRay(m.Matrix4MulPoint(i.invTransform, ray.Ray.P), m.Matrix4MulVec(i.invTransform, ray.Ray.D))
+	//	ray.InitRay(m.Matrix4MulPoint(i.invTransform, ray.Ray.P), m.Matrix4MulVec(i.invTransform, ray.Ray.D))
 
-	i.prim.TraceRay(ray)
+	mtlid = i.prim.TraceRay(ray, sg)
 
 	if ray.Ray.Tclosest < ray.SavedRay.Tclosest {
 		t := ray.Ray.Tclosest
@@ -100,10 +100,8 @@ func (i *Instance) TraceRay(ray *core.RayData) {
 
 		ray.Result.P = m.Matrix4MulPoint(i.Transform, ray.Result.P)
 		ray.Result.POffset = m.Matrix4MulVec(i.Transform, ray.Result.POffset)
-		for k := range ray.Result.UV {
-			ray.Result.Pu[k] = m.Matrix4MulVec(i.invTransTransform, ray.Result.Pu[k])
-			ray.Result.Pv[k] = m.Matrix4MulVec(i.invTransTransform, ray.Result.Pv[k])
-		}
+		ray.Result.Pu = m.Matrix4MulVec(i.invTransTransform, ray.Result.Pu)
+		ray.Result.Pv = m.Matrix4MulVec(i.invTransTransform, ray.Result.Pv)
 		ray.Result.Ng = m.Matrix4MulVec(i.invTransTransform, ray.Result.Ng)
 		ray.Result.B = m.Matrix4MulVec(i.invTransTransform, ray.Result.B)
 		ray.Result.T = m.Matrix4MulVec(i.invTransTransform, ray.Result.T)
@@ -111,15 +109,17 @@ func (i *Instance) TraceRay(ray *core.RayData) {
 	} else {
 		ray.Ray = ray.SavedRay
 	}
+
+	return
 }
 
 func (i *Instance) VisRay(ray *core.RayData) {
 	ray.SavedRay = ray.Ray
 
-	ray.InitRay(m.Matrix4MulPoint(i.invTransform, ray.Ray.P), m.Matrix4MulVec(i.invTransform, ray.Ray.D))
+	ray.Init(core.RAY_SHADOW, m.Matrix4MulPoint(i.invTransform, ray.Ray.P), m.Matrix4MulVec(i.invTransform, ray.Ray.D), 1, &core.ShaderGlobals{})
 
-	i.prim.VisRay(ray)
-
+	//i.prim.VisRay(ray)
+	core.TraceProbe(ray, &core.ShaderGlobals{})
 	if ray.Ray.Tclosest < ray.SavedRay.Tclosest {
 		t := ray.Ray.Tclosest
 		ray.Ray = ray.SavedRay

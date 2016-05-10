@@ -5,6 +5,7 @@
 package core
 
 import (
+	"github.com/jamiec7919/vermeer/colour"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/qbvh"
 )
@@ -17,27 +18,85 @@ type Scene struct {
 	lights []Light
 }
 
-func (s *Scene) VisRay(ray *RayData) {
-	s.visRayAccel(ray)
+var grc *RenderContext
 
+type ScreenSample struct {
+	Colour  colour.RGB
+	Opacity colour.RGB
+	Alpha   float32
+	Point   m.Vec3
+	Z       float64
+	ElemId  uint32
+	Prim    Primitive
 }
 
-func (s *Scene) TraceRay(ray *RayData) {
-	s.traceRayAccel(ray)
+func TraceProbe(ray *RayData, sg *ShaderGlobals) bool {
 
+	if ray.Type&RAY_SHADOW != 0 {
+		grc.scene.visRayAccel(ray)
+		shadowRays++
+		return !ray.IsVis()
+	}
+
+	mtlid := grc.scene.traceRayAccel(ray, sg)
+
+	if mtlid != -1 {
+
+		mtl := GetMaterial(mtlid)
+
+		sg.Shader = mtl
+		sg.N = m.Vec3Normalize(sg.N)
+		sg.Ns = m.Vec3Normalize(sg.Ns)
+		return true
+	}
+
+	return false
+}
+
+func Trace(ray *RayData, samp *ScreenSample) bool {
+	rayCount++
+	sg := &ShaderGlobals{
+		Ro:     ray.Ray.P,
+		Rd:     ray.Ray.D,
+		Prim:   ray.Result.Prim,
+		ElemId: ray.Result.ElemId,
+		Depth:  ray.Level,
+		rnd:    ray.rnd,
+		Lambda: ray.Lambda,
+	}
+
+	if TraceProbe(ray, sg) {
+		if sg.Shader == nil { // can't do much with no material
+			return false
+		}
+
+		sg.Shader.Eval(sg)
+
+		if samp != nil {
+			samp.Colour = sg.OutRGB
+			samp.Point = sg.Ro
+			samp.ElemId = sg.ElemId
+			samp.Prim = sg.Prim
+		}
+
+		return true
+	}
+	return false
 }
 
 func (scene *Scene) initAccel() error {
-	boxes := make([]m.BoundingBox,0, len(scene.prims))
-	indices := make([]int32, 0,len(scene.prims))
-	centroids := make([]m.Vec3,0, len(scene.prims))
+	boxes := make([]m.BoundingBox, 0, len(scene.prims))
+	indices := make([]int32, 0, len(scene.prims))
+	centroids := make([]m.Vec3, 0, len(scene.prims))
 
 	for i := range scene.prims {
-		if !scene.prims[i].Visible() {continue}
-		box :=scene.prims[i].WorldBounds()
-		boxes = append(boxes,box)
-		indices = append(indices,int32(i))
-		centroids = append(centroids,box.Centroid())
+		if !scene.prims[i].Visible() {
+			continue
+		}
+		box := scene.prims[i].WorldBounds()
+		boxes = append(boxes, box)
+		indices = append(indices, int32(i))
+		centroids = append(centroids, box.Centroid())
 	}
 
 	nodes, bounds := qbvh.BuildAccel(boxes, centroids, indices, 1)

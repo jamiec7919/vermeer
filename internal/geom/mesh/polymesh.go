@@ -64,8 +64,8 @@ func (mesh *PolyMesh) Visible() bool {
 	return true
 }
 
-func (mesh *PolyMesh) TraceRay(ray *core.RayData) {
-	mesh.mesh.TraceRay(ray)
+func (mesh *PolyMesh) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) int32 {
+	return mesh.mesh.TraceRay(ray, sg)
 }
 
 func (mesh *PolyMesh) triangulateFace(base, count int32, mtlid int32) {

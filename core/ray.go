@@ -9,6 +9,12 @@ import (
 	//"unsafe"
 	"errors"
 	m "github.com/jamiec7919/vermeer/math"
+	"math/rand"
+)
+
+const (
+	RAY_CAMERA = (1 << iota)
+	RAY_SHADOW
 )
 
 const CHECK_EMPTY_LEAF = true
@@ -34,14 +40,15 @@ type TraceSupport struct {
 // We store the error offset in the result as we may want to move the point to either side depending
 // on the material (e.g. refraction will need point on other side)
 type RayResult struct {
-	P        m.Vec3    // 12
-	POffset  m.Vec3    // 12 Offset to make sure any intersection point is outside face
-	Ng, T, B m.Vec3    // 36 Tangent space, Tg & Bg not normalized, Ng is normalized (as stored with face)
-	Ns       m.Vec3    // 12 Not normalized
-	MtlId    int32     // 4   64 bytes (first line)
-	UV       [4]m.Vec2 // 8 floats (48 bytes)
-	Pu, Pv   [4]m.Vec3 // 12 float32
-	Extra    map[string]interface{}
+	P        m.Vec3 // 12
+	POffset  m.Vec3 // 12 Offset to make sure any intersection point is outside face
+	Ng, T, B m.Vec3 // 36 Tangent space, Tg & Bg not normalized, Ng is normalized (as stored with face)
+	Ns       m.Vec3 // 12 Not normalized
+	MtlId    int32  // 4   64 bytes (first line)
+	UV       m.Vec2 // 8 floats (48 bytes)
+	Pu, Pv   m.Vec3 // 12 float32
+	Prim     Primitive
+	ElemId   uint32
 }
 
 // 64bytes (one cache line)
@@ -67,13 +74,32 @@ type RayData struct {
 	LocalToWorld m.Matrix4 // Local to world transform
 	Result       RayResult
 	Stats        RayStats
+	Level        uint8 // recursion level
+	rnd          *rand.Rand
+	Lambda       float32
+	Type         uint32
 }
 
-func (r *RayData) InitRay(P, D m.Vec3) {
+func (r *RayData) Init(ty uint32, P, D m.Vec3, maxdist float32, sg *ShaderGlobals) {
+	r.Ray.P = P
+	r.Ray.D = D
+	r.Ray.Tclosest = maxdist
+	r.Type = ty
+	r.Ray.setup()
+	r.Level = sg.Depth
+	r.rnd = sg.rnd
+	r.Lambda = sg.Lambda
+}
+
+/*
+func (r *RayData) InitRay(P, D m.Vec3, sg *ShaderGlobals) {
 	r.Ray.P = P
 	r.Ray.D = D
 	r.Ray.Tclosest = m.Inf(1)
 	r.Ray.setup()
+	r.Level = sg.Depth
+	r.rnd = sg.rnd
+	r.Lambda = sg.Lambda
 }
 
 func (r *RayData) InitVisRay(P0, P1 m.Vec3) {
@@ -82,7 +108,7 @@ func (r *RayData) InitVisRay(P0, P1 m.Vec3) {
 	r.Ray.Tclosest = 1 - VisRayEpsilon
 	r.Ray.setup()
 }
-
+*/
 var ErrNoHit = errors.New("No hit")
 
 // r is initialized as vis ray, returns true if P1 is visible from P0.
@@ -92,33 +118,6 @@ func (r *RayData) IsVis() bool {
 	} else {
 		return true
 	}
-}
-
-func (r *RayData) GetHitSurface(surface *SurfacePoint) error {
-	if r.Ray.Tclosest < m.Inf(1) {
-		surface.P = r.Result.P
-		surface.N = r.Result.Ng
-		//		surface.B = r.Result.Bg
-		//		surface.T = r.Result.Tg
-		for k := range surface.UV {
-			surface.UV[k] = r.Result.UV[k]
-			surface.Pu[k] = r.Result.Pu[k]
-			surface.Pv[k] = r.Result.Pv[k]
-		}
-
-		surface.SetupTangentSpace(r.Result.Ns)
-		//		surface.Ns = m.Vec3Normalize(r.Result.Ns)
-		//		surface.B = m.Vec3Normalize(m.Vec3Cross(surface.Ns, surface.Pu[0]))
-		//		surface.T = m.Vec3Normalize(m.Vec3Cross(surface.Ns, surface.B))
-
-		//log.Printf("%v %v", surface.T, surface.B)
-		surface.POffset = r.Result.POffset
-		surface.MtlId = r.Result.MtlId
-		//surface.Extra = copy(r.Result.Extra)
-		return nil
-	}
-
-	return ErrNoHit
 }
 
 func (r *Ray) setup() {

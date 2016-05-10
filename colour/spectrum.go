@@ -33,6 +33,13 @@ func (wv *Spectrum) SetZero() {
 
 }
 
+func (wv *Spectrum) Set(v float32) {
+	for k := 0; k < 4; k++ {
+		wv.C[k] = v
+	}
+
+}
+
 func (wv *Spectrum) FromRGB(r, g, b float32) error {
 	for k := 0; k < 4; k++ {
 		wv.C[k] = RGBToSpectrumSmits99(r, g, b, wv.Wavelength(k))

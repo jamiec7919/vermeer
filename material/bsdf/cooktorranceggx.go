@@ -10,32 +10,37 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 	"log"
 	"math"
-	"math/rand"
 )
 
-type CookTorranceGGX struct {
-	Ks        core.MapSampler
-	IOR       core.MapSampler // n_i/n_t  (n_i = air)
-	Roughness core.MapSampler
+// Instanced for each point
+type CookTorranceGGX2 struct {
+	Lambda    float32
+	OmegaI    m.Vec3
+	IOR       float32 // n_i/n_t  (n_i = air)
+	Roughness float32
 }
 
-func sqr(x float64) float64   { return x * x }
-func sqr32(x float32) float32 { return x * x }
+func NewCookTorranceGGX(sg *core.ShaderGlobals, IOR, roughness float32) *CookTorranceGGX2 {
+	return &CookTorranceGGX2{sg.Lambda, sg.ViewDirection(), IOR, roughness}
+}
 
-func (b *CookTorranceGGX) IsDelta(shade *core.SurfacePoint) bool {
-	alpha := sqr32(b.Roughness.SampleScalar(shade.UV[0][0], shade.UV[0][1], 1, 1))
-	if alpha < 0.2 {
-		return true
+func (b *CookTorranceGGX2) Sample(r0, r1 float64) m.Vec3 {
+	alpha := sqr32(b.Roughness)
+
+	if alpha == 0.0 {
+		alpha = 0.001
 	}
-	return false
+	omega_i := b.OmegaI
+	omega_m := b.sample(m.Vec3Normalize(omega_i), float64(alpha), float64(alpha), r0, r1)
+
+	omega_o := m.Vec3Normalize(m.Vec3Sub(m.Vec3Scale(2.0*m.Vec3DotAbs(omega_i, omega_m), omega_m), omega_i))
+
+	//	log.Printf("omega_o: %v", omega_o)
+	return omega_o
 }
 
-func (b *CookTorranceGGX) ContinuationProb(shade *core.SurfacePoint) float64 {
-	return 1.0
-}
-
-func (b *CookTorranceGGX) PDF(shade *core.SurfacePoint, omega_i, omega_o m.Vec3) float64 {
-	alpha := sqr32(b.Roughness.SampleScalar(shade.UV[0][0], shade.UV[0][1], 1, 1))
+func (b *CookTorranceGGX2) PDF(omega_o m.Vec3) float64 {
+	alpha := sqr32(b.Roughness)
 
 	if alpha == 0.0 {
 		alpha = 0.001
@@ -43,69 +48,36 @@ func (b *CookTorranceGGX) PDF(shade *core.SurfacePoint, omega_i, omega_o m.Vec3)
 
 	D := func(h m.Vec3, alpha float64) float64 {
 		h_dot_n := float64(h[2])
-		return sqr(alpha) / (math.Pi * sqr((h_dot_n*h_dot_n)*(sqr(alpha)-1)+1))
+		return sqr(alpha) / (math.Pi * sqr((h_dot_n*h_dot_n)*(sqr(alpha)-1.0)+1.0))
 	}
-
-	i_dot_n := float64(omega_i[2])
+	omega_i := b.OmegaI
+	//i_dot_n := float64(omega_i[2])
+	o_dot_n := float64(omega_o[2])
 
 	omega_m := m.Vec3Normalize(m.Vec3Add(omega_i, omega_o))
+	pdf := float64(b.G1(omega_o, alpha)*m.Vec3DotAbs(omega_o, omega_m)) * D(omega_m, float64(alpha)) / math.Abs(o_dot_n)
 
-	return float64(b.G1(omega_i, alpha)*m.Vec3DotAbs(omega_i, omega_m)) * D(omega_m, float64(alpha)) / math.Abs(i_dot_n)
-
+	//	log.Printf("%v", pdf)
+	return pdf
 }
 
-func (b *CookTorranceGGX) G1(omega m.Vec3, alpha float32) float32 {
-	o_dot_n := omega[2]
-	denom := o_dot_n + m.Sqrt((alpha*alpha)+(1-(alpha*alpha))*(o_dot_n*o_dot_n))
-
-	if denom == 0.0 {
-		// log.Printf("denom %v %v", n, v)
-	}
-	return 2 * o_dot_n / denom
-}
-
-func (b *CookTorranceGGX) Sample(shade *core.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *colour.Spectrum, pdf *float64) error {
-	alpha := sqr32(b.Roughness.SampleScalar(shade.UV[0][0], shade.UV[0][1], 1, 1))
+func (b *CookTorranceGGX2) Eval(omega_o m.Vec3) (rho colour.Spectrum) {
+	alpha := sqr32(b.Roughness)
 
 	if alpha == 0.0 {
 		alpha = 0.001
 	}
 
-	omega_m := b.sample(m.Vec3Normalize(omega_i), float64(alpha), float64(alpha), rnd.Float64(), rnd.Float64())
-
-	*omega_o = m.Vec3Normalize(m.Vec3Sub(m.Vec3Scale(2.0*m.Vec3DotAbs(omega_i, omega_m), omega_m), omega_i))
-
-	*pdf = b.PDF(shade, omega_i, *omega_o)
-
-	//w := b.G1(*omega_o, alpha)
-	/*
-		if m.IsNaN(w) {
-			log.Printf("bsdf.CookTorranceGGX.Sample: NaN %v %v %v", omega_i, omega_m, *omega_o)
-		}
-	*/
-	return b.Eval(shade, omega_i, *omega_o, rho)
-	//Ks := b.Ks.SampleRGB(shade.UV[0][0], shade.UV[0][1], 1, 1)
-	//rho.FromRGB(Ks[0], Ks[1], Ks[2])
-	//rho.Scale(w)
-
-	return nil
-}
-
-func (b *CookTorranceGGX) Eval(shade *core.SurfacePoint, omega_i, omega_o m.Vec3, rho *colour.Spectrum) error {
-	alpha := sqr32(b.Roughness.SampleScalar(shade.UV[0][0], shade.UV[0][1], 1, 1))
-
-	if alpha == 0.0 {
-		alpha = 0.001
-	}
-
+	omega_i := b.OmegaI
 	D := func(h m.Vec3, alpha float32) float32 {
 		h_dot_n := h[2]
-		return sqr32(alpha) / (m.Pi * sqr32((h_dot_n*h_dot_n)*(sqr32(alpha)-1)+1))
+
+		return sqr32(alpha) / (m.Pi * sqr32(float32(float64(h_dot_n*h_dot_n)*(float64(alpha)*float64(alpha)-1)+1)))
 	}
 
 	F := func(i, h m.Vec3) float32 {
 		c := m.Abs(m.Vec3Dot(i, h))
-		IOR := b.IOR.SampleScalar(shade.UV[0][0], shade.UV[0][1], 1, 1)
+		IOR := b.IOR
 		g := m.Sqrt(sqr32((IOR) - 1 + c*c))
 
 		return 0.5 * (sqr32(g-c) / sqr32(g+c)) * (1 + (sqr32(c*(g+c)-1) / sqr32(c*(g-c)+1)))
@@ -116,16 +88,35 @@ func (b *CookTorranceGGX) Eval(shade *core.SurfacePoint, omega_i, omega_o m.Vec3
 
 	omega_m := m.Vec3Normalize(m.Vec3Add(omega_i, omega_o))
 
-	spec := D(omega_m, alpha) * F(omega_i, omega_m) * b.G1(omega_i, alpha) * b.G1(omega_o, alpha) / (4 * i_dot_n * o_dot_n)
+	spec := D(omega_m, alpha) * F(omega_o, omega_m) * b.G1(omega_i, alpha) * b.G1(omega_o, alpha) / (4.0 * i_dot_n * o_dot_n)
 
-	Ks := b.Ks.SampleRGB(shade.UV[0][0], shade.UV[0][1], 1, 1)
-	rho.FromRGB(Ks[0], Ks[1], Ks[2])
+	rho.Lambda = b.Lambda
+	rho.FromRGB(1, 1, 1)
 	rho.Scale(spec)
-
-	return nil
+	return
 }
 
-func (b *CookTorranceGGX) sample(omega_i m.Vec3, alpha_x, alpha_y, r0, r1 float64) (omega_m m.Vec3) {
+func sqr(x float64) float64   { return x * x }
+func sqr32(x float32) float32 { return x * x }
+
+func (b *CookTorranceGGX2) G1(omega m.Vec3, alpha float32) float32 {
+
+	// 2 / (1+sqrt(1+alpha^2*tan^2 theta_v))
+	// tan^2(x) + 1 = sec^2(x)
+	// sec(x) = 1/cos(x)
+	// sec^2(x) = 1/cos_2(x)
+	// tan^2(x) = 1/cos_2(x) - 1
+
+	o_dot_n := omega[2]
+	denom := 1 + m.Sqrt(1+(alpha*alpha)*((1.0/(o_dot_n*o_dot_n))-1))
+
+	if denom == 0.0 {
+		log.Printf("denom %v %v", omega, alpha)
+	}
+	return 2 / denom
+}
+
+func (b *CookTorranceGGX2) sample(omega_i m.Vec3, alpha_x, alpha_y, r0, r1 float64) (omega_m m.Vec3) {
 	omega_i64 := [3]float64{
 		alpha_x * float64(omega_i[0]),
 		alpha_y * float64(omega_i[1]),
@@ -175,7 +166,7 @@ func (b *CookTorranceGGX) sample(omega_i m.Vec3, alpha_x, alpha_y, r0, r1 float6
 	return
 }
 
-func (b *CookTorranceGGX) sample11(theta_i, r0, r1 float64) (slope_x, slope_y float64) {
+func (b *CookTorranceGGX2) sample11(theta_i, r0, r1 float64) (slope_x, slope_y float64) {
 	if theta_i < 0.0001 {
 		r := math.Sqrt(r0 / (1 - r0))
 		phi := 6.28318530718 * r1

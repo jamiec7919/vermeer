@@ -5,14 +5,11 @@
 package material
 
 import (
-	"errors"
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
-	"github.com/jamiec7919/vermeer/material/edf"
-	"github.com/jamiec7919/vermeer/material/texture"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/nodes"
-	"math/rand"
+	//"log"
 )
 
 type Id int32
@@ -26,33 +23,22 @@ type Material struct {
 	Sides             int
 	Specular          string
 	Diffuse           string
-	Ks, Kd            core.MapSampler
-	Roughness         core.MapSampler
-	SpecularRoughness core.MapSampler
-	IOR               core.MapSampler
-	E                 core.MapSampler
+	Ks, Kd            core.RGBParam     // should be RGBParam
+	Roughness         core.Float32Param // .. FloatParam
+	SpecularRoughness core.Float32Param
+	IOR               core.Float32Param
+	E                 core.RGBParam
 
-	BSDF [2]BSDF // bsdf for sides
 	//Medium [2]Medium  // medium material
-	EDF EDF // Emission distribution for light materials (nil is not a light)
+	BumpMapScale float32
+	BumpMap      core.Float32Param
 
-	BumpMap *BumpMap
+	//	BumpMap *BumpMap
 }
 
 // core.Node methods
 func (m *Material) Name() string { return m.MtlName }
 func (m *Material) PreRender(rc *core.RenderContext) error {
-	bsdf := makeBSDF(m)
-
-	if bsdf == nil {
-		return errors.New("BSDF " + m.Diffuse + " " + m.Specular + " not found")
-	}
-	m.BSDF[0] = bsdf
-
-	if m.E != nil {
-		edf := &edf.Diffuse{E: m.E.SampleRGB(0, 0, 0, 0)}
-		m.EDF = edf
-	}
 	return nil
 }
 func (m *Material) PostRender(rc *core.RenderContext) error { return nil }
@@ -67,73 +53,64 @@ func (m *Material) SetId(id int32) {
 }
 
 func (m *Material) HasEDF() bool {
-	return m.EDF != nil
+	return m.E != nil
 }
 
 func (m *Material) HasBumpMap() bool {
 	return m.BumpMap != nil
 }
 
-func (m *Material) IsDelta(surf *core.SurfacePoint) bool {
-	return m.BSDF[0].IsDelta(surf)
-}
-
+/*
 func (m *Material) EvalEDF(surf *core.SurfacePoint, omega_o m.Vec3, Le *colour.Spectrum) error {
-	return m.EDF.Eval(surf, omega_o, Le)
+	return nil
 }
 
 func (m *Material) EvalBSDF(surf *core.SurfacePoint, omega_i, omega_o m.Vec3, rho *colour.Spectrum) error {
-	return m.BSDF[0].Eval(surf, omega_i, omega_o, rho)
+	return nil
 }
 
 func (m *Material) SampleBSDF(surf *core.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *colour.Spectrum, pdf *float64) error {
-	return m.BSDF[0].Sample(surf, omega_i, rnd, omega_o, rho, pdf)
+	return nil
+}
+*/
+func (m *Material) Emission(sg *core.ShaderGlobals, omega_o m.Vec3) colour.RGB {
+	return m.E.RGB(sg)
 }
 
 type BumpMap struct {
-	Map   core.MapSampler
+	Map   core.Float32Param
 	Scale float32
 }
 
-func (mtl *Material) ApplyBumpMap(surf *core.SurfacePoint) {
+func (mtl *Material) ApplyBumpMap(sg *core.ShaderGlobals) {
+	u := sg.U
+	v := sg.V
+
 	delta := float32(1) / float32(6000)
+
+	sg.V -= delta
+	tv0 := mtl.BumpMap.Float32(sg)
+	sg.V = v + delta
+	tv1 := mtl.BumpMap.Float32(sg)
+	sg.V = v
+	sg.U -= delta
+	tu0 := mtl.BumpMap.Float32(sg)
+	sg.U = u + delta
+	tu1 := mtl.BumpMap.Float32(sg)
+	sg.U = u
+
 	//log.Printf("Bump %v %v %v %v", mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]-delta, surf.UV[0][1], delta, delta)[0], mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]+delta, surf.UV[0][1], delta, delta)[0], surf.UV[0][0]-delta, surf.UV[0][0]+delta)
-	Bu := (1.0 / (2.0 * delta)) * mtl.BumpMap.Scale * (mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]-delta, surf.UV[0][1], delta, delta)[0] - mtl.BumpMap.Map.SampleRGB(surf.UV[0][0]+delta, surf.UV[0][1], delta, delta)[0])
-	Bv := (1.0 / (2.0 * delta)) * mtl.BumpMap.Scale * (mtl.BumpMap.Map.SampleRGB(surf.UV[0][0], surf.UV[0][1]-delta, delta, delta)[0] - mtl.BumpMap.Map.SampleRGB(surf.UV[0][0], surf.UV[0][1]+delta, delta, delta)[0])
+	Bu := (1.0 / (2.0 * delta)) * mtl.BumpMapScale * (tu0 - tu1)
+	Bv := (1.0 / (2.0 * delta)) * mtl.BumpMapScale * (tv0 - tv1)
 	//log.Printf("Bump %v %v %v", Bu, Bv, surf.Ns)
-	surf.Ns = m.Vec3Add(surf.Ns, m.Vec3Sub(m.Vec3Scale(Bu, m.Vec3Cross(surf.Ns, surf.Pv[0])), m.Vec3Scale(Bv, m.Vec3Cross(surf.Ns, surf.Pu[0]))))
-	//log.Printf("%v", surf.Ns)
-	surf.SetupTangentSpace(surf.Ns)
+	//Q := sg.N
+	V := m.Vec3Normalize(m.Vec3Cross(sg.N, sg.DdPdu))
+	U := m.Vec3Cross(sg.N, V)
 
-}
-
-type ConstantMap struct {
-	C [3]float32
-}
-
-func (c *ConstantMap) SampleRGB(s, t, ds, dt float32) (out [3]float32) {
-	out[0] = c.C[0]
-	out[1] = c.C[1]
-	out[2] = c.C[2]
-	return
-}
-
-func (c *ConstantMap) SampleScalar(s, t, ds, dt float32) (out float32) {
-	out = c.C[0]
-	return
-}
-
-type TextureMap struct {
-	Filename string
-}
-
-func (c *TextureMap) SampleRGB(s, t, ds, dt float32) (out [3]float32) {
-	return texture.SampleRGB(c.Filename, s, t, ds, dt)
-}
-
-func (c *TextureMap) SampleScalar(s, t, ds, dt float32) (out float32) {
-	q := texture.SampleRGB(c.Filename, s, t, ds, dt)
-	return q[0]
+	sg.N = m.Vec3Add(sg.N, m.Vec3Sub(m.Vec3Scale(Bu, m.Vec3Cross(sg.N, U)), m.Vec3Scale(Bv, m.Vec3Cross(sg.N, V))))
+	sg.N = m.Vec3Normalize(sg.N)
+	//log.Printf("%v %v", sg.N, Q)
+	//sg.SetupTangentSpace(sg.N)
 
 }
 

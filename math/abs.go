@@ -11,7 +11,7 @@ package math
 //	Abs(NaN) = NaN
 //
 func Abs(x float32) float32 {
-	return xorf(x, sign_mask(x))
+	return andf(x, ^uint32(1<<31)) //xorf(x, sign_mask(x))
 }
 
 func abs(x float32) float32 {

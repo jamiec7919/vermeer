@@ -6,7 +6,6 @@ package core
 
 import (
 	"github.com/cheggaaa/pb"
-	"github.com/jamiec7919/vermeer/colour"
 	// "github.com/jamiec7919/vermeer/material"
 	m "github.com/jamiec7919/vermeer/math"
 	"log"
@@ -18,6 +17,8 @@ import (
 const TILESIZE = 64
 const MAXGOROUTINES = 5
 const NSAMP = 16
+
+var rayCount int
 
 type RenderFuncStats struct {
 	RayCount, ShadowRayCount int
@@ -79,6 +80,7 @@ func NewRenderContext() *RenderContext {
 	rc.globals.YRes = 256
 	rc.globals.MaxGoRoutines = MAXGOROUTINES
 	rc.finish = make(chan bool, 1)
+	grc = rc
 	return rc
 }
 
@@ -123,6 +125,13 @@ type WorkItem struct {
 
 /* This should return an rgb sample to be accumulated for the pixel */
 func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *RenderFuncStats) (r, g, b float32) {
+	/*
+	  .. Trace AA_count rays around pixel, for each ray that hits different surface/triangle
+	    shade that and weight accordingly.
+
+	    Need to get the primitive & face id out of ray intersection. Time needs consideration
+	*/
+
 	//log.Printf("Pix %v %v", x, y)
 	r0 := rnd.Float32()
 	r1 := rnd.Float32()
@@ -133,141 +142,21 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 	lambda := (float32(720-450) * rnd.Float32()) + 450
 
 	P, D := frame.camera.ComputeRay(-1+u, 1-v, rnd)
-	fullsample := colour.Spectrum{Lambda: lambda}
-	contrib := colour.Spectrum{Lambda: fullsample.Lambda}
-	contrib.FromRGB(1, 1, 1)
 
-	direct := true
-
-	for depth := 0; depth < 4; depth++ {
-
-		ray.InitRay(P, D)
-
-		frame.scene.TraceRay(ray)
-		stats.RayCount++
-
-		var surf SurfacePoint
-
-		if ray.GetHitSurface(&surf) == nil {
-
-			mtl := frame.rc.GetMaterial(surf.MtlId)
-
-			if mtl == nil { // can't do much with no material
-				return
-			}
-
-			if mtl.HasBumpMap() {
-				mtl.ApplyBumpMap(&surf)
-			}
-
-			Vout := m.Vec3Neg(D)
-
-			//			d := m.Vec3Dot(surf.N, Vout)
-
-			//if d < 0.0 { // backface hit
-			//	return
-			//}
-
-			//surf.Ns = surf.WorldToTangent(m.Vec3Normalize(surf.Ns))
-
-			//if m.Vec3Dot(surf.Ns, surf.N) < 0 {
-			//		Ns := vm.Vec3Add(shade.Ns, vm.Vec3Scale(2*vm.Vec3Dot(shade.Ns, shade.Ng), shade.Ng))
-
-			//	surf.Ns = m.Vec3Neg(surf.Ns) // Should mirror in Ng really instead of -ve?
-			//}
-
-			omega_i := surf.WorldToTangent(Vout)
-
-			if (true || direct) && mtl.HasEDF() {
-				Le := colour.Spectrum{Lambda: contrib.Lambda}
-				mtl.EvalEDF(&surf, omega_i, &Le)
-				Le.Mul(contrib)
-				//Le.Scale(1.0 / (float32(m.Vec3Dot(Vout, surf.N))))
-				fullsample.Add(Le)
-			}
-
-			//var samp_pdf float64
-			//var omega_o m.Vec3
-
-			// Assume that no transmission, so offset surface point out from surface
-			surf.OffsetP(1)
-
-			if !mtl.IsDelta(&surf) {
-				if len(frame.scene.lights) > 0 {
-					nls := 1
-					lightsamples := 0
-					if depth > 0 {
-						nls = 1
-					}
-					for i := 0; i < nls; i++ {
-						var P SurfacePoint
-						var pdf float64
-
-						if frame.scene.lights[0].SampleArea(&surf, rnd, &P, &pdf) == nil {
-							V := m.Vec3Sub(P.P, surf.P)
-
-							if m.Vec3Dot(V, surf.Ns) > 0.0 && m.Vec3Dot(V, surf.N) > 0.0 && m.Vec3Dot(V, P.N) < 0.0 {
-								ray.InitVisRay(surf.P, P.P)
-								frame.scene.VisRay(ray)
-								stats.ShadowRayCount++
-
-								if ray.IsVis() {
-									lightsamples++
-									Vnorm := m.Vec3Normalize(V)
-
-									lightm := frame.rc.GetMaterial(P.MtlId)
-
-									Le := colour.Spectrum{Lambda: contrib.Lambda}
-									lightm.EvalEDF(&P, P.WorldToTangent(m.Vec3Neg(Vnorm)), &Le)
-
-									rho := colour.Spectrum{Lambda: contrib.Lambda}
-
-									mtl.EvalBSDF(&surf, omega_i, surf.WorldToTangent(Vnorm), &rho)
-									geom := m.Abs(m.Vec3Dot(Vnorm, surf.Ns)) * m.Abs(m.Vec3Dot(Vnorm, P.N)) / m.Vec3Length2(V)
-									Le.Mul(rho)
-									Le.Mul(contrib)
-									Le.Scale(geom / (float32(pdf) * float32(nls)))
-
-									fullsample.Add(Le)
-									//log.Printf("contrib:", contrib)
-								}
-							}
-						}
-					}
-
-					direct = false
-				}
-			} else {
-				direct = true
-			}
-
-			var omega_o m.Vec3
-			var pdf float64
-
-			rho := colour.Spectrum{Lambda: fullsample.Lambda}
-			mtl.SampleBSDF(&surf, omega_i, rnd, &omega_o, &rho, &pdf)
-
-			D = surf.TangentToWorld(omega_o)
-
-			if m.Vec3Dot(D, surf.N) < 0 {
-				// Discard this path as sampled direction is inside geometric surface
-				return
-			}
-
-			contrib.Mul(rho)
-			contrib.Scale(omega_o[2] / float32(pdf))
-
-			P = surf.P
-			//log.Printf("%v %v", x, y)
-			//return contrib.ToRGB()
-			//r = m.Vec3Dot(surf.N, m.Vec3Neg(D))
-			//g = m.Vec3Dot(surf.N, m.Vec3Neg(D))
-			//b = m.Vec3Dot(surf.N, m.Vec3Neg(D))
-		} else { // Escaped scene
-			break
-		}
+	sg := &ShaderGlobals{
+		Lambda: lambda,
+		rnd:    rnd,
 	}
-	return fullsample.ToRGB()
+
+	ray.Init(RAY_CAMERA, P, D, m.Inf(1), sg) // Maybe ray types
+	stats.RayCount++
+	var samp ScreenSample
+
+	if Trace(ray, &samp) {
+		return samp.Colour[0], samp.Colour[1], samp.Colour[2]
+	}
+
+	return
 }
 
 // NOTE: we return the raydata here even though it is ignored in order to ensure that ray is
@@ -411,13 +300,14 @@ L:
 			}
 			duration := time.Since(startTime)
 			totalRays := 0
-			shadowRays := 0
+			_shadowRays := 0
 
 			for i := range stats {
 				totalRays += stats[i].RayCount
-				shadowRays += stats[i].ShadowRayCount
+				_shadowRays += stats[i].ShadowRayCount
 			}
-			log.Printf("%v iterations, %v (%v rays, %v shadow) %v Mr/sec", k+1, duration, totalRays, shadowRays, float64(totalRays+shadowRays)/(1000000.0*duration.Seconds()))
+			totalRays = rayCount
+			log.Printf("%v iterations, %v (%v rays, %v shadow) %v %v Mr/sec", k+1, duration, totalRays, shadowRays, rayCount, float64(totalRays+shadowRays)/(1000000.0*duration.Seconds()))
 			break L
 		default:
 		}

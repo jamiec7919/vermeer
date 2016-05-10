@@ -22,6 +22,11 @@ func xorf(v float32, i uint32) float32 {
 
 }
 
+func andf(v float32, i uint32) float32 {
+	return math.Float32frombits(*(*uint32)(unsafe.Pointer(&v)) & i)
+
+}
+
 func Xorf(v float32, i uint32) float32 {
 	return math.Float32frombits(*(*uint32)(unsafe.Pointer(&v)) ^ i)
 

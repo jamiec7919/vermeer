@@ -8,81 +8,46 @@ import (
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
-	//"log"
-	"math/rand"
 )
-
-type Specular struct {
-	Ks core.MapSampler
-}
-
-func (b *Specular) IsDelta(shade *core.SurfacePoint) bool { return true }
-
-func (b *Specular) ContinuationProb(shade *core.SurfacePoint) float64 {
-	return 1.0
-}
 
 func reflect(omega_in, N m.Vec3) (omega_out m.Vec3) {
 	omega_out = m.Vec3Add(m.Vec3Neg(omega_in), m.Vec3Scale(2*m.Vec3Dot(omega_in, N), N))
 	return
 }
 
-func (b *Specular) PDF(shade *core.SurfacePoint, omega_i, omega_o m.Vec3) float64 {
-
-	R := reflect(omega_i, m.Vec3{0, 0, 1})
-	if d := m.Vec3Dot(R, m.Vec3{0, 0, 1}); d <= 0.0 {
-		//log.Printf("Err dot %v", d)
-		R = m.Vec3Neg(R)
-	}
-	//d := m.Vec3Dot(R, omega_o)
-	//	if d < 1.0-0.99999 || d > 1.0+0.99999 {
-	//		return 0
-	//	}
-
-	return 1
+// Instanced for each point
+type Specular2 struct {
+	Lambda float32
+	OmegaI m.Vec3
 }
 
-func (b *Specular) Sample(shade *core.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *colour.Spectrum, pdf *float64) error {
+func NewSpecular(sg *core.ShaderGlobals) *Specular2 {
+	return &Specular2{sg.Lambda, sg.ViewDirection()}
+}
+
+func (b *Specular2) Sample(r0, r1 float64) m.Vec3 {
+	omega_i := b.OmegaI
 
 	if omega_i[2] < 0 {
 		//log.Printf("Specular.Sample: %v", omega_i)
 	}
 	//out.Omega = reflect(shade.Omega, m.Vec3{0, 0, 1})
-	*omega_o = reflect(omega_i, m.Vec3{0, 0, 1})
+	omega_o := reflect(omega_i, m.Vec3{0, 0, 1})
 
-	if d := m.Vec3Dot(*omega_o, m.Vec3{0, 0, 1}); d <= 0.0 {
-		*omega_o = reflect(omega_i, m.Vec3{0, 0, -1})
+	if d := m.Vec3Dot(omega_o, m.Vec3{0, 0, 1}); d <= 0.0 {
+		return reflect(omega_i, m.Vec3{0, 0, -1})
 		//log.Printf("Err dot %v", d)
 		//	*omega_o = m.Vec3Add(m.Vec3Neg(*omega_o), m.Vec3Scale(2*m.Vec3Dot(*omega_o, m.Vec3{0, 0, 1}), m.Vec3{0, 0, 1}))
 	}
-	*pdf = b.PDF(shade, omega_i, *omega_o)
-
-	col := b.Ks.SampleRGB(shade.UV[0][0], shade.UV[0][1], 1, 1)
-	//colour.RGBToSpectrumSmits99(col[0], col[1], col[2], out)
-
-	rho.FromRGB(col[0], col[1], col[2])
-	//*out = b.Kd
-	//b.Diffuse.SampleRGB(float32(shade.UVSet[0].uv[0]), float32(shade.UVSet[0].uv[1]), shade.UVSet[0].dTd0, shade.UVSet[0].dTd1, 1, 1)
-	return nil
+	return omega_o
 }
 
-func (b *Specular) Eval(shade *core.SurfacePoint, omega_i, omega_o m.Vec3, rho *colour.Spectrum) error {
-	//R := reflect(shade.Omega, m.Vec3{0, 0, 1})
-	//R := reflect(omega_i, shade.Ns)
+func (b *Specular2) PDF(omega_o m.Vec3) float64 {
+	return 1
+}
 
-	//if d := m.Vec3Dot(R, omega_o); d != 1.0 {
-	//log.Printf("Err dot %v", d)
-	//	R = m.Vec3Neg(R)
-	//	}
-	//d := m.Vec3Dot(R, omega_o)
-	//	if d < 1.0-0.99999 || d > 1.0+0.99999 {
-	//		out.SetZero()
-	//		return nil
-	//	}
-	//ColourScale(1.0*o_dot_n/math.Pi, b.Diffuse.SampleRGB(float32(shade.UVSet[0].uv[0]), float32(shade.UVSet[0].uv[1]), shade.UVSet[0].dTd0, shade.UVSet[0].dTd1, 1, 1))
-	col := b.Ks.SampleRGB(shade.UV[0][0], shade.UV[0][1], 1, 1)
-	//colour.RGBToSpectrumSmits99(col[0], col[1], col[2], out)
-
-	rho.FromRGB(col[0], col[1], col[2])
-	return nil
+func (b *Specular2) Eval(omega_o m.Vec3) (rho colour.Spectrum) {
+	rho.Lambda = b.Lambda
+	rho.FromRGB(1, 1, 1)
+	return
 }

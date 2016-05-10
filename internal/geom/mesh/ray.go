@@ -284,7 +284,7 @@ func (mesh *Mesh) visIntersectTris(ray *core.RayData, base, count int) bool {
 }
 
 //go:noslit
-func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon float32) {
+func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon float32) bool {
 	A_Kz := face.V[0][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
 	B_Kz := face.V[1][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
 	C_Kz := face.V[2][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
@@ -321,14 +321,14 @@ func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon flo
 	}
 
 	if (U < 0.0 || V < 0.0 || W < 0.0) && (U > 0.0 || V > 0.0 || W > 0.0) {
-		return
+		return false
 	}
 
 	// Calculate determinant
 	det := U + V + W
 
 	if det == 0.0 {
-		return
+		return false
 	}
 
 	// Calc scaled z-coords of verts and calc the hit dis
@@ -341,7 +341,7 @@ func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon flo
 	det_sign := m.SignMask(det)
 
 	if m.Xorf(T, det_sign) < epsilon*m.Xorf(det, det_sign) || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
-		return
+		return false
 	}
 
 	rcpDet := 1.0 / det
@@ -357,7 +357,7 @@ func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon flo
 
 	// These try to fix the 'flat surface at origin' problem, if it is indeed a problem and not
 	// just something stupid I'm doing.
-	if xAbsSum == 0.0 {
+	/*if xAbsSum == 0.0 {
 		xAbsSum = 0.08
 	}
 	if yAbsSum == 0.0 {
@@ -365,12 +365,16 @@ func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon flo
 	}
 	if zAbsSum == 0.0 {
 		zAbsSum = 0.08
-	}
+	}*/
+	xAbsSum = m.Max(xAbsSum, 0.08)
+	yAbsSum = m.Max(yAbsSum, 0.08)
+	zAbsSum = m.Max(zAbsSum, 0.08)
 
-	pError := m.Vec3Scale(m.Gamma(7), m.Vec3{xAbsSum, yAbsSum, zAbsSum})
+	//pError := m.Vec3Scale(m.Gamma(7), m.Vec3{xAbsSum, yAbsSum, zAbsSum})
 
-	nAbs := m.Vec3{m.Abs(face.N[0]), m.Abs(face.N[1]), m.Abs(face.N[2])}
-	d := m.Vec3Dot(nAbs, pError)
+	//nAbs := m.Vec3{m.Abs(face.N[0]), m.Abs(face.N[1]), m.Abs(face.N[2])}
+	//d := m.Vec3Dot(nAbs, pError)
+	d := m.Gamma(7)*xAbsSum*m.Abs(face.N[0]) + m.Gamma(7)*yAbsSum*m.Abs(face.N[1]) + m.Gamma(7)*zAbsSum*m.Abs(face.N[2])
 
 	offset := m.Vec3Scale(d, face.N)
 
@@ -404,34 +408,30 @@ func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon flo
 		ray.Result.Ns = ray.Result.Ng
 	}
 
-	for k := range mesh.Vuv {
-		if k >= len(ray.Result.UV) { // Would need to allocate.., could swap to a different allocated set if this occurs
-			// panic("ray->tri intersect: not implemented UV count > " + string(len(ray.Result.UV)))
-			break
-		}
+	if mesh.Vuv != nil {
 
-		if mesh.Vuv[k] != nil {
-			ray.Result.UV[k][0] = U*mesh.Vuv[k][face.Vi[0]][0] + V*mesh.Vuv[k][face.Vi[1]][0] + W*mesh.Vuv[k][face.Vi[2]][0]
-			ray.Result.UV[k][1] = U*mesh.Vuv[k][face.Vi[0]][1] + V*mesh.Vuv[k][face.Vi[1]][1] + W*mesh.Vuv[k][face.Vi[2]][1]
+		if mesh.Vuv[0] != nil {
+			ray.Result.UV[0] = U*mesh.Vuv[0][face.Vi[0]][0] + V*mesh.Vuv[0][face.Vi[1]][0] + W*mesh.Vuv[0][face.Vi[2]][0]
+			ray.Result.UV[1] = U*mesh.Vuv[0][face.Vi[0]][1] + V*mesh.Vuv[0][face.Vi[1]][1] + W*mesh.Vuv[0][face.Vi[2]][1]
 
-			s1 := mesh.Vuv[k][face.Vi[1]][0] - mesh.Vuv[k][face.Vi[0]][0]
-			t1 := mesh.Vuv[k][face.Vi[1]][1] - mesh.Vuv[k][face.Vi[0]][1]
-			s2 := mesh.Vuv[k][face.Vi[2]][0] - mesh.Vuv[k][face.Vi[0]][0]
-			t2 := mesh.Vuv[k][face.Vi[2]][1] - mesh.Vuv[k][face.Vi[0]][1]
+			s1 := mesh.Vuv[0][face.Vi[1]][0] - mesh.Vuv[0][face.Vi[0]][0]
+			t1 := mesh.Vuv[0][face.Vi[1]][1] - mesh.Vuv[0][face.Vi[0]][1]
+			s2 := mesh.Vuv[0][face.Vi[2]][0] - mesh.Vuv[0][face.Vi[0]][0]
+			t2 := mesh.Vuv[0][face.Vi[2]][1] - mesh.Vuv[0][face.Vi[0]][1]
 
 			det := 1.0 / (s1*t2 - s2*t1)
-			ray.Result.Pu[k][0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
-			ray.Result.Pu[k][1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
-			ray.Result.Pu[k][2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))
-			ray.Result.Pv[k][0] = det * (-s2*(face.V[1][0]-face.V[0][0]) + s1*(face.V[2][0]-face.V[0][0]))
-			ray.Result.Pv[k][1] = det * (-s2*(face.V[1][1]-face.V[0][1]) + s1*(face.V[2][1]-face.V[0][1]))
-			ray.Result.Pv[k][2] = det * (-s2*(face.V[1][2]-face.V[0][2]) + s1*(face.V[2][2]-face.V[0][2]))
+			ray.Result.Pu[0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
+			ray.Result.Pu[1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
+			ray.Result.Pu[2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))
+			ray.Result.Pv[0] = det * (-s2*(face.V[1][0]-face.V[0][0]) + s1*(face.V[2][0]-face.V[0][0]))
+			ray.Result.Pv[1] = det * (-s2*(face.V[1][1]-face.V[0][1]) + s1*(face.V[2][1]-face.V[0][1]))
+			ray.Result.Pv[2] = det * (-s2*(face.V[1][2]-face.V[0][2]) + s1*(face.V[2][2]-face.V[0][2]))
 		}
 	}
 
 	if mesh.Vuv == nil {
-		ray.Result.UV[0][0] = U*0 + V*1 + W*0
-		ray.Result.UV[0][1] = U*0 + V*0 + W*1
+		ray.Result.UV[0] = U*0 + V*1 + W*0
+		ray.Result.UV[1] = U*0 + V*0 + W*1
 
 		s1 := float32(1 - 0)
 		t1 := float32(0 - 0)
@@ -439,21 +439,21 @@ func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon flo
 		t2 := float32(1 - 0)
 
 		det := 1.0 / (s1*t2 - s2*t1)
-		ray.Result.Pu[0][0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
-		ray.Result.Pu[0][1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
-		ray.Result.Pu[0][2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))
-		ray.Result.Pv[0][0] = det * (-s2*(face.V[1][0]-face.V[0][0]) + s1*(face.V[2][0]-face.V[0][0]))
-		ray.Result.Pv[0][1] = det * (-s2*(face.V[1][1]-face.V[0][1]) + s1*(face.V[2][1]-face.V[0][1]))
-		ray.Result.Pv[0][2] = det * (-s2*(face.V[1][2]-face.V[0][2]) + s1*(face.V[2][2]-face.V[0][2]))
+		ray.Result.Pu[0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
+		ray.Result.Pu[1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
+		ray.Result.Pu[2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))
+		ray.Result.Pv[0] = det * (-s2*(face.V[1][0]-face.V[0][0]) + s1*(face.V[2][0]-face.V[0][0]))
+		ray.Result.Pv[1] = det * (-s2*(face.V[1][1]-face.V[0][1]) + s1*(face.V[2][1]-face.V[0][1]))
+		ray.Result.Pv[2] = det * (-s2*(face.V[1][2]-face.V[0][2]) + s1*(face.V[2][2]-face.V[0][2]))
 
 	}
 
 	ray.Result.MtlId = face.MtlId
-
+	return true
 }
 
 //go:noslit
-func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
+func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) bool {
 	A_Kz := face.V[0][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
 	B_Kz := face.V[1][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
 	C_Kz := face.V[2][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
@@ -490,14 +490,14 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 	}
 
 	if (U < 0.0 || V < 0.0 || W < 0.0) && (U > 0.0 || V > 0.0 || W > 0.0) {
-		return
+		return false
 	}
 
 	// Calculate determinant
 	det := U + V + W
 
 	if det == 0.0 {
-		return
+		return false
 	}
 
 	// Calc scaled z-coords of verts and calc the hit dis
@@ -510,7 +510,7 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 	det_sign := m.SignMask(det)
 
 	if m.Xorf(T, det_sign) < 0.0 || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
-		return
+		return false
 	}
 
 	rcpDet := 1.0 / det
@@ -526,21 +526,25 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 
 	// These try to fix the 'flat surface at origin' problem, if it is indeed a problem and not
 	// just something stupid I'm doing.
-	if xAbsSum == 0.0 {
-		xAbsSum = 0.08
-	}
-	if yAbsSum == 0.0 {
-		yAbsSum = 0.08 // empirically discovered constant that seems to work
-	}
-	if zAbsSum == 0.0 {
-		zAbsSum = 0.08
-	}
+	/*	if xAbsSum == 0.0 {
+			xAbsSum = 0.08
+		}
+		if yAbsSum == 0.0 {
+			yAbsSum = 0.08 // empirically discovered constant that seems to work
+		}
+		if zAbsSum == 0.0 {
+			zAbsSum = 0.08
+		}*/
+	xAbsSum = m.Max(xAbsSum, 0.08)
+	yAbsSum = m.Max(yAbsSum, 0.08)
+	zAbsSum = m.Max(zAbsSum, 0.08)
 
-	pError := m.Vec3Scale(m.Gamma(7), m.Vec3{xAbsSum, yAbsSum, zAbsSum})
+	//	pError := m.Vec3Scale(m.Gamma(7), m.Vec3{xAbsSum, yAbsSum, zAbsSum})
 
-	nAbs := m.Vec3{m.Abs(face.N[0]), m.Abs(face.N[1]), m.Abs(face.N[2])}
-	d := m.Vec3Dot(nAbs, pError)
-
+	//nAbs := m.Vec3{m.Abs(face.N[0]), m.Abs(face.N[1]), m.Abs(face.N[2])}
+	//d := m.Vec3Dot(nAbs, pError)
+	//	d := pError[0]*m.Abs(face.N[0]) + pError[1]*m.Abs(face.N[1]) + pError[2]*m.Abs(face.N[2])
+	d := m.Gamma(7)*xAbsSum*m.Abs(face.N[0]) + m.Gamma(7)*yAbsSum*m.Abs(face.N[1]) + m.Gamma(7)*zAbsSum*m.Abs(face.N[2])
 	offset := m.Vec3Scale(d, face.N)
 
 	if m.Vec3Dot(ray.Ray.D, face.N) > 0 { // Is it a back face hit?
@@ -575,20 +579,16 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 
 	//log.Printf("%v %v", ray.Result.Ng, ray.Result.Ns)
 
-	for k := range mesh.Vuv {
-		if k >= len(ray.Result.UV) { // Would need to allocate.., could swap to a different allocated set if this occurs
-			// panic("ray->tri intersect: not implemented UV count > " + string(len(ray.Result.UV)))
-			break
-		}
+	if mesh.Vuv != nil {
 
-		if mesh.Vuv[k] != nil {
-			ray.Result.UV[k][0] = U*mesh.Vuv[k][face.Vi[0]][0] + V*mesh.Vuv[k][face.Vi[1]][0] + W*mesh.Vuv[k][face.Vi[2]][0]
-			ray.Result.UV[k][1] = U*mesh.Vuv[k][face.Vi[0]][1] + V*mesh.Vuv[k][face.Vi[1]][1] + W*mesh.Vuv[k][face.Vi[2]][1]
+		if mesh.Vuv[0] != nil {
+			ray.Result.UV[0] = U*mesh.Vuv[0][face.Vi[0]][0] + V*mesh.Vuv[0][face.Vi[1]][0] + W*mesh.Vuv[0][face.Vi[2]][0]
+			ray.Result.UV[1] = U*mesh.Vuv[0][face.Vi[0]][1] + V*mesh.Vuv[0][face.Vi[1]][1] + W*mesh.Vuv[0][face.Vi[2]][1]
 
-			s1 := mesh.Vuv[k][face.Vi[1]][0] - mesh.Vuv[k][face.Vi[0]][0]
-			t1 := mesh.Vuv[k][face.Vi[1]][1] - mesh.Vuv[k][face.Vi[0]][1]
-			s2 := mesh.Vuv[k][face.Vi[2]][0] - mesh.Vuv[k][face.Vi[0]][0]
-			t2 := mesh.Vuv[k][face.Vi[2]][1] - mesh.Vuv[k][face.Vi[0]][1]
+			s1 := mesh.Vuv[0][face.Vi[1]][0] - mesh.Vuv[0][face.Vi[0]][0]
+			t1 := mesh.Vuv[0][face.Vi[1]][1] - mesh.Vuv[0][face.Vi[0]][1]
+			s2 := mesh.Vuv[0][face.Vi[2]][0] - mesh.Vuv[0][face.Vi[0]][0]
+			t2 := mesh.Vuv[0][face.Vi[2]][1] - mesh.Vuv[0][face.Vi[0]][1]
 
 			invDet := (s1*t2 - s2*t1)
 
@@ -601,18 +601,18 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 				t2 = 1.0
 			}
 			det := 1.0 / invDet
-			ray.Result.Pu[k][0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
-			ray.Result.Pu[k][1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
-			ray.Result.Pu[k][2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))
-			ray.Result.Pv[k][0] = det * (-s2*(face.V[1][0]-face.V[0][0]) + s1*(face.V[2][0]-face.V[0][0]))
-			ray.Result.Pv[k][1] = det * (-s2*(face.V[1][1]-face.V[0][1]) + s1*(face.V[2][1]-face.V[0][1]))
-			ray.Result.Pv[k][2] = det * (-s2*(face.V[1][2]-face.V[0][2]) + s1*(face.V[2][2]-face.V[0][2]))
+			ray.Result.Pu[0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
+			ray.Result.Pu[1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
+			ray.Result.Pu[2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))
+			ray.Result.Pv[0] = det * (-s2*(face.V[1][0]-face.V[0][0]) + s1*(face.V[2][0]-face.V[0][0]))
+			ray.Result.Pv[1] = det * (-s2*(face.V[1][1]-face.V[0][1]) + s1*(face.V[2][1]-face.V[0][1]))
+			ray.Result.Pv[2] = det * (-s2*(face.V[1][2]-face.V[0][2]) + s1*(face.V[2][2]-face.V[0][2]))
 		}
 	}
 
 	if mesh.Vuv == nil {
-		ray.Result.UV[0][0] = U*0 + V*1 + W*0
-		ray.Result.UV[0][1] = U*0 + V*0 + W*1
+		ray.Result.UV[0] = U*0 + V*1 + W*0
+		ray.Result.UV[1] = U*0 + V*0 + W*1
 
 		s1 := float32(1 - 0)
 		t1 := float32(0 - 0)
@@ -620,26 +620,26 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) {
 		t2 := float32(1 - 0)
 
 		det := 1.0 / (s1*t2 - s2*t1)
-		ray.Result.Pu[0][0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
-		ray.Result.Pu[0][1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
-		ray.Result.Pu[0][2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))
-		ray.Result.Pv[0][0] = det * (-s2*(face.V[1][0]-face.V[0][0]) + s1*(face.V[2][0]-face.V[0][0]))
-		ray.Result.Pv[0][1] = det * (-s2*(face.V[1][1]-face.V[0][1]) + s1*(face.V[2][1]-face.V[0][1]))
-		ray.Result.Pv[0][2] = det * (-s2*(face.V[1][2]-face.V[0][2]) + s1*(face.V[2][2]-face.V[0][2]))
+		ray.Result.Pu[0] = det * (t2*(face.V[1][0]-face.V[0][0]) - t1*(face.V[2][0]-face.V[0][0]))
+		ray.Result.Pu[1] = det * (t2*(face.V[1][1]-face.V[0][1]) - t1*(face.V[2][1]-face.V[0][1]))
+		ray.Result.Pu[2] = det * (t2*(face.V[1][2]-face.V[0][2]) - t1*(face.V[2][2]-face.V[0][2]))
+		ray.Result.Pv[0] = det * (-s2*(face.V[1][0]-face.V[0][0]) + s1*(face.V[2][0]-face.V[0][0]))
+		ray.Result.Pv[1] = det * (-s2*(face.V[1][1]-face.V[0][1]) + s1*(face.V[2][1]-face.V[0][1]))
+		ray.Result.Pv[2] = det * (-s2*(face.V[1][2]-face.V[0][2]) + s1*(face.V[2][2]-face.V[0][2]))
 
 	}
 
 	ray.Result.MtlId = face.MtlId
-
+	return true
 }
 
 //go:nosplit
-func (mesh *Mesh) traceRayAccelIndexed(ray *core.RayData) {
+func (mesh *Mesh) traceRayAccelIndexed(ray *core.RayData, sg *core.ShaderGlobals) int32 {
 	// Push root node on stack:
 	stackTop := 0
 	ray.Supp.Stack[stackTop].Node = 0
 	ray.Supp.Stack[stackTop].T = ray.Ray.Tclosest
-
+	hit := false
 	for stackTop >= 0 {
 
 		node := ray.Supp.Stack[stackTop].Node
@@ -693,20 +693,39 @@ func (mesh *Mesh) traceRayAccelIndexed(ray *core.RayData) {
 			for i := leaf_base; i < leaf_base+leaf_count; i++ {
 				face := &mesh.Faces[mesh.faceindex[i]]
 
-				traceFace(mesh, ray, face)
+				if traceFace(mesh, ray, face) {
+					ray.Result.ElemId = uint32(mesh.faceindex[i])
+					hit = true
+				}
 			}
 		}
 	}
 
+	if hit {
+		sg.Poffset = ray.Result.POffset
+		sg.P = ray.Result.P
+		sg.N = ray.Result.Ns
+		sg.Ns = ray.Result.Ns
+
+		sg.Ng = ray.Result.Ng
+		sg.U = ray.Result.UV[0]
+		sg.V = ray.Result.UV[1]
+		sg.DdPdu = ray.Result.Pu
+		sg.DdPdv = ray.Result.Pv
+
+		return ray.Result.MtlId
+	}
+
+	return -1
 }
 
 //go:nosplit
-func (mesh *Mesh) traceRayAccelIndexedEpsilon(ray *core.RayData) {
+func (mesh *Mesh) traceRayAccelIndexedEpsilon(ray *core.RayData, sg *core.ShaderGlobals) int32 {
 	// Push root node on stack:
 	stackTop := 0
 	ray.Supp.Stack[stackTop].Node = 0
 	ray.Supp.Stack[stackTop].T = ray.Ray.Tclosest
-
+	hit := false
 	for stackTop >= 0 {
 
 		node := ray.Supp.Stack[stackTop].Node
@@ -779,12 +798,29 @@ func (mesh *Mesh) traceRayAccelIndexedEpsilon(ray *core.RayData) {
 			for i := leaf_base; i < leaf_base+leaf_count; i++ {
 				face := &mesh.Faces[mesh.faceindex[i]]
 
-				traceFaceEpsilon(mesh, ray, face, mesh.RayBias)
+				if traceFaceEpsilon(mesh, ray, face, mesh.RayBias) {
+					ray.Result.ElemId = uint32(mesh.faceindex[i])
+					hit = true
+				}
 			}
 
 		}
 	}
 
+	if hit {
+		sg.Poffset = ray.Result.POffset
+		sg.P = ray.Result.P
+		sg.N = ray.Result.Ns
+		sg.Ns = ray.Result.Ns
+
+		sg.Ng = ray.Result.Ng
+		sg.U = ray.Result.UV[0]
+		sg.V = ray.Result.UV[1]
+		sg.DdPdu = ray.Result.Pu
+		sg.DdPdv = ray.Result.Pv
+		return ray.Result.MtlId
+	}
+	return -1
 }
 
 //go:nosplit
@@ -884,12 +920,12 @@ func (mesh *Mesh) visRayAccelIndexedEpsilon(ray *core.RayData) {
 }
 
 //go:nosplit
-func (mesh *Mesh) traceRayAccel(ray *core.RayData) {
+func (mesh *Mesh) traceRayAccel(ray *core.RayData, sg *core.ShaderGlobals) int32 {
 	// Push root node on stack:
 	stackTop := 0
 	ray.Supp.Stack[stackTop].Node = 0
 	ray.Supp.Stack[stackTop].T = ray.Ray.Tclosest
-
+	hit := false
 	for stackTop >= 0 {
 
 		node := ray.Supp.Stack[stackTop].Node
@@ -943,19 +979,37 @@ func (mesh *Mesh) traceRayAccel(ray *core.RayData) {
 			for i := leaf_base; i < leaf_base+leaf_count; i++ {
 				face := &mesh.Faces[i]
 
-				traceFace(mesh, ray, face)
+				if traceFace(mesh, ray, face) {
+					ray.Result.ElemId = uint32(i)
+					hit = true
+				}
 			}
 		}
 	}
+	if hit {
+		sg.Poffset = ray.Result.POffset
+		sg.P = ray.Result.P
+		sg.N = ray.Result.Ns
+		sg.Ns = ray.Result.Ns
 
+		sg.Ng = ray.Result.Ng
+		sg.U = ray.Result.UV[0]
+		sg.V = ray.Result.UV[1]
+		sg.DdPdu = ray.Result.Pu
+		sg.DdPdv = ray.Result.Pv
+		return ray.Result.MtlId
+	}
+
+	return -1
 }
 
 //go:nosplit
-func (mesh *Mesh) traceRayAccelEpsilon(ray *core.RayData) {
+func (mesh *Mesh) traceRayAccelEpsilon(ray *core.RayData, sg *core.ShaderGlobals) int32 {
 	// Push root node on stack:
 	stackTop := 0
 	ray.Supp.Stack[stackTop].Node = 0
 	ray.Supp.Stack[stackTop].T = ray.Ray.Tclosest
+	hit := false
 
 	for stackTop >= 0 {
 
@@ -1029,12 +1083,29 @@ func (mesh *Mesh) traceRayAccelEpsilon(ray *core.RayData) {
 			for i := leaf_base; i < leaf_base+leaf_count; i++ {
 				face := &mesh.Faces[i]
 
-				traceFaceEpsilon(mesh, ray, face, mesh.RayBias)
+				if traceFaceEpsilon(mesh, ray, face, mesh.RayBias) {
+					ray.Result.ElemId = uint32(i)
+					hit = true
+				}
 			}
 
 		}
 	}
 
+	if hit {
+		sg.Poffset = ray.Result.POffset
+		sg.P = ray.Result.P
+		sg.N = ray.Result.Ns
+		sg.Ns = ray.Result.Ns
+		sg.Ng = ray.Result.Ng
+		sg.U = ray.Result.UV[0]
+		sg.V = ray.Result.UV[1]
+		sg.DdPdu = ray.Result.Pu
+		sg.DdPdv = ray.Result.Pv
+		return ray.Result.MtlId
+	}
+
+	return -1
 }
 
 //go:nosplit

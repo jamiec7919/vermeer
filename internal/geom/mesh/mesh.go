@@ -5,6 +5,7 @@
 package mesh
 
 import (
+	"errors"
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/nodes"
@@ -72,18 +73,18 @@ func (mesh *Mesh) calcVertexNormals() error {
 	return nil
 }
 
-func (mesh *Mesh) TraceRay(ray *core.RayData) {
+func (mesh *Mesh) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) int32 {
 	if mesh.faceindex != nil {
 		if mesh.RayBias == 0.0 {
-			mesh.traceRayAccelIndexed(ray)
+			return mesh.traceRayAccelIndexed(ray, sg)
 		} else {
-			mesh.traceRayAccelIndexedEpsilon(ray)
+			return mesh.traceRayAccelIndexedEpsilon(ray, sg)
 		}
 	} else {
 		if mesh.RayBias == 0.0 {
-			mesh.traceRayAccel(ray)
+			return mesh.traceRayAccel(ray, sg)
 		} else {
-			mesh.traceRayAccelEpsilon(ray)
+			return mesh.traceRayAccelEpsilon(ray, sg)
 		}
 	}
 }
@@ -123,8 +124,8 @@ func (mesh *StaticMesh) WorldBounds() (out m.BoundingBox) {
 }
 
 func (mesh *StaticMesh) Visible() bool { return true }
-func (mesh *StaticMesh) TraceRay(ray *core.RayData) {
-	mesh.Mesh.TraceRay(ray)
+func (mesh *StaticMesh) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) int32 {
+	return mesh.Mesh.TraceRay(ray, sg)
 }
 
 func (mesh *StaticMesh) VisRay(ray *core.RayData) {
@@ -155,6 +156,9 @@ func (mesh *MeshFile) PreRender(rc *core.RenderContext) error {
 		}
 	}
 
+	if mesh.Loader == nil {
+		return errors.New("No loader for mesh " + mesh.Filename)
+	}
 	mesh.Loader.SetOption("MergeVertPos", mesh.MergeVertPos)
 	mesh.Loader.SetOption("MergeTexVert", mesh.MergeTexVert)
 
@@ -191,8 +195,8 @@ func (mesh *MeshFile) PreRender(rc *core.RenderContext) error {
 }
 func (mesh *MeshFile) PostRender(rc *core.RenderContext) error { return nil }
 
-func (mesh *MeshFile) TraceRay(ray *core.RayData) {
-	mesh.mesh.TraceRay(ray)
+func (mesh *MeshFile) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) int32 {
+	return mesh.mesh.TraceRay(ray, sg)
 }
 
 func (mesh *MeshFile) Visible() bool { return mesh.IsVisible }

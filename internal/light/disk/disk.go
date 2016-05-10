@@ -6,12 +6,10 @@ package light
 
 import (
 	"errors"
-	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/internal/geom/mesh"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/nodes"
-	"math/rand"
 )
 
 type Disk struct {
@@ -23,6 +21,11 @@ type Disk struct {
 	MtlId         int32
 }
 
+var ErrNoSample = errors.New("No smaple")
+
+func (d *Disk) DiffuseShadeMult() float32 {
+	return 1.0
+}
 func (d *Disk) Name() string { return d.NodeName }
 func (d *Disk) PreRender(rc *core.RenderContext) error {
 	mtlid := rc.GetMaterialId(d.Material)
@@ -38,6 +41,7 @@ func (d *Disk) PreRender(rc *core.RenderContext) error {
 }
 func (d *Disk) PostRender(rc *core.RenderContext) error { return nil }
 
+/*
 func (d *Disk) SamplePoint(rnd *rand.Rand, surf *core.SurfacePoint, pdf *float64) error {
 	r0 := rnd.Float32()
 	r1 := rnd.Float32()
@@ -58,31 +62,49 @@ func (d *Disk) SamplePoint(rnd *rand.Rand, surf *core.SurfacePoint, pdf *float64
 
 	return nil
 }
-func (d *Disk) SampleArea(from *core.SurfacePoint, rnd *rand.Rand, surf *core.SurfacePoint, pdf *float64) error {
-	r0 := rnd.Float32()
-	r1 := rnd.Float32()
+*/
+func (d *Disk) SampleArea(sg *core.ShaderGlobals) error {
+	r0 := sg.Rand().Float32()
+	r1 := sg.Rand().Float32()
 
 	u := d.Radius * m.Sqrt(r0) * m.Cos(2*m.Pi*r1)
 	v := d.Radius * m.Sqrt(r0) * m.Sin(2*m.Pi*r1)
 
-	*pdf = float64(1.0 / (m.Pi * d.Radius * d.Radius))
+	pdf := float64(1.0 / (m.Pi * d.Radius * d.Radius))
 
 	P := m.Vec3Add3(d.P, m.Vec3Scale(u, d.B), m.Vec3Scale(v, d.T))
 
-	surf.P = P
-	surf.N = d.N
-	surf.B = d.B
-	surf.T = d.T
-	surf.Ns = d.N
-	surf.MtlId = int32(d.MtlId)
+	V := m.Vec3Sub(P, sg.P)
 
-	return nil
+	if m.Vec3Dot(V, sg.Ng) > 0.0 && m.Vec3Dot(V, d.N) < 0.0 {
+		sg.Ldist = m.Vec3Length(V)
+		sg.Ld = m.Vec3Normalize(V)
+
+		lightm := core.GetMaterial(d.MtlId)
+
+		sg.Liu.Lambda = sg.Lambda
+		//lightm.EvalEDF(&P, P.WorldToTangent(m.Vec3Neg(sg.Ld)), &sg.Liu)
+		omega_o := m.Vec3BasisProject(d.B, d.T, d.N, m.Vec3Neg(sg.Ld))
+		dot_n := omega_o[2]
+		E := lightm.Emission(sg, omega_o)
+		sg.Liu.FromRGB(E[0]*dot_n, E[1]*dot_n, E[2]*dot_n)
+
+		// geometry term / pdf
+		sg.Weight = m.Abs(m.Vec3Dot(sg.Ld, sg.N)) * m.Abs(m.Vec3Dot(sg.Ld, d.N)) / (sg.Ldist * sg.Ldist)
+		sg.Weight /= float32(pdf)
+
+		return nil
+	} else {
+		return ErrNoSample
+
+	}
 }
 
+/*
 func (d *Disk) SampleDirection(surf *core.SurfacePoint, rnd *rand.Rand, omega_o *m.Vec3, Le *colour.Spectrum, pdf *float64) error {
 	return nil
 }
-
+*/
 /*
 // shade is in space of point to need to project
 func (d *Disk) Sample(shade *core.ShadePoint, rnd *rand.Rand, sample *core.DirectionalSample) error {
