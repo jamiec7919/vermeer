@@ -14,7 +14,7 @@ import (
 )
 
 var w, h int
-var textures []gl.Texture
+var textures []uint32
 var window *glfw.Window
 
 type Preview struct {
@@ -39,21 +39,22 @@ func (p *Preview) Close() {
 }
 
 func initGL() error {
+	gl.Init()
 	gl.ClearColor(0, 0, 0, 0)
 	gl.ClearDepth(1)
 	gl.Enable(gl.TEXTURE_2D)
 	gl.Disable(gl.DEPTH_TEST)
 
-	textures = make([]gl.Texture, 1)
+	textures = make([]uint32, 1)
 
-	gl.GenTextures(textures)
+	gl.GenTextures(1, &textures[0])
 
 	if gl.GetError() != gl.NO_ERROR {
 		return errors.New(fmt.Sprintf("Error glGenTextures %v %v", len(textures), gl.GetError()))
 	}
 
 	// Texture 1
-	textures[0].Bind(gl.TEXTURE_2D)
+	gl.BindTexture(gl.TEXTURE_2D, textures[0])
 
 	buf := make([]uint8, 3*256*256)
 	for i := range buf {
@@ -64,11 +65,11 @@ func initGL() error {
 }
 
 func updateTexture(w, h int, buf []uint8) error {
-	textures[0].Bind(gl.TEXTURE_2D)
+	gl.BindTexture(gl.TEXTURE_2D, textures[0])
 
 	gl.TexParameterf(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 	gl.TexParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, w, h, 0, gl.RGB, gl.UNSIGNED_BYTE, buf)
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, int32(w), int32(h), 0, gl.RGB, gl.UNSIGNED_BYTE, gl.Ptr(buf))
 
 	if gl.GetError() != gl.NO_ERROR {
 		return errors.New(fmt.Sprintf("Error glTexImage2D %v %v %v", w, h, gl.GetError()))
@@ -80,7 +81,7 @@ func updateTexture(w, h int, buf []uint8) error {
 func redraw() {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	gl.Enable(gl.TEXTURE_2D)
-	textures[0].Bind(gl.TEXTURE_2D)
+	gl.BindTexture(gl.TEXTURE_2D, textures[0])
 
 	gl.Begin(gl.QUADS)
 	gl.TexCoord2f(0, 0)
@@ -153,5 +154,5 @@ func onResize(window *glfw.Window, iw, ih int) {
 	w = iw
 	h = ih
 	//log.Printf("resized: %dx%d\n", w, h)
-	gl.Viewport(0, 0, w, h)
+	gl.Viewport(0, 0, int32(w), int32(h))
 }
