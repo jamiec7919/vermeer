@@ -176,13 +176,18 @@ func ParseMtlLib(rc *core.RenderContext, filename string) error {
 					return err
 				}
 				i++
-				mtl.BumpMap = &core.TextureMap{lscan.Rest()}
-				mtl.BumpMapScale = scale
+
+				filename := lscan.Rest()
+
+				if filename != "" {
+					mtl.BumpMap = &core.TextureMap{filename}
+					mtl.BumpMapScale = scale
+				}
 			} else {
-
-				mtl.BumpMap = &core.TextureMap{rest}
-				mtl.BumpMapScale = scale
-
+				if rest != "" {
+					mtl.BumpMap = &core.TextureMap{rest}
+					mtl.BumpMapScale = scale
+				}
 			}
 
 			//if i < len(toks) {

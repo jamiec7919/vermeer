@@ -27,6 +27,13 @@ func Vec2Scale(s float32, a Vec2) (v Vec2) {
 	return
 }
 
+func Vec2Lerp(a, b Vec2, t float32) (v Vec2) {
+	v[0] = (1.0-t)*a[0] + t*b[0]
+	v[1] = (1.0-t)*a[1] + t*b[1]
+
+	return
+}
+
 func Vec2Dot(a, b Vec2) float32 {
 	return a[0]*b[0] + a[1]*b[1]
 }

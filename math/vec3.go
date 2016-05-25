@@ -45,6 +45,14 @@ func Vec3Sub(a, b Vec3) (v Vec3) {
 	return
 }
 
+func Vec3Lerp(a, b Vec3, t float32) (v Vec3) {
+	v[0] = (1.0-t)*a[0] + t*b[0]
+	v[1] = (1.0-t)*a[1] + t*b[1]
+	v[2] = (1.0-t)*a[2] + t*b[2]
+
+	return
+}
+
 func Vec3Scale(s float32, a Vec3) (v Vec3) {
 	v[0] = a[0] * s
 	v[1] = a[1] * s

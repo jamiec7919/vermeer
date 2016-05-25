@@ -11,12 +11,12 @@
 // func Floor(x float32) float32
 TEXT ·Floor(SB),NOSPLIT,$0
 	ROUNDSS $1, x+0(FP), X0
-	MOVD X0, ret+4(FP)
+	MOVD X0, ret+8(FP)
 	RET
 
 // func Ceil(x float64) float64
 TEXT ·Ceil(SB),NOSPLIT,$0
 	ROUNDSS $2, x+0(FP), X0
-	MOVD X0, ret+4(FP)
+	MOVSS X0, ret+8(FP)
 	RET
 
