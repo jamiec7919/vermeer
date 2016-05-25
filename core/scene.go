@@ -63,6 +63,7 @@ func Trace(ray *RayData, samp *ScreenSample) bool {
 		Depth:  ray.Level,
 		rnd:    ray.rnd,
 		Lambda: ray.Lambda,
+		Time:   ray.Time,
 	}
 
 	if TraceProbe(ray, sg) {

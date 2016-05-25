@@ -31,6 +31,7 @@ type TraverseElem struct {
 type TraceSupport struct {
 	T             [4]float32
 	Hits          [4]int32
+	Boxes         [4 * 3 * 2]float32
 	Stack         [60]TraverseElem // Traverse Elem is 8 bytes
 	TopLevelStack [32]TraverseElem
 }
@@ -40,13 +41,14 @@ type TraceSupport struct {
 // We store the error offset in the result as we may want to move the point to either side depending
 // on the material (e.g. refraction will need point on other side)
 type RayResult struct {
-	P        m.Vec3 // 12
-	POffset  m.Vec3 // 12 Offset to make sure any intersection point is outside face
-	Ng, T, B m.Vec3 // 36 Tangent space, Tg & Bg not normalized, Ng is normalized (as stored with face)
-	Ns       m.Vec3 // 12 Not normalized
-	MtlId    int32  // 4   64 bytes (first line)
-	UV       m.Vec2 // 8 floats (48 bytes)
-	Pu, Pv   m.Vec3 // 12 float32
+	P        m.Vec3  // 12
+	POffset  m.Vec3  // 12 Offset to make sure any intersection point is outside face
+	Ng, T, B m.Vec3  // 36 Tangent space, Tg & Bg not normalized, Ng is normalized (as stored with face)
+	Ns       m.Vec3  // 12 Not normalized
+	MtlId    int32   // 4   64 bytes (first line)
+	UV       m.Vec2  // 8 floats (48 bytes)
+	Pu, Pv   m.Vec3  // 12 float32
+	Bu, Bv   float32 // Barycentric coords
 	Prim     Primitive
 	ElemId   uint32
 }
@@ -77,6 +79,7 @@ type RayData struct {
 	Level        uint8 // recursion level
 	rnd          *rand.Rand
 	Lambda       float32
+	Time         float32
 	Type         uint32
 }
 
@@ -89,6 +92,8 @@ func (r *RayData) Init(ty uint32, P, D m.Vec3, maxdist float32, sg *ShaderGlobal
 	r.Level = sg.Depth
 	r.rnd = sg.rnd
 	r.Lambda = sg.Lambda
+	r.Time = sg.Time
+
 }
 
 /*

@@ -33,7 +33,8 @@ var type_Vec3 = reflect.TypeOf(m.Vec3{})
 var type_Vec2 = reflect.TypeOf(m.Vec2{})
 var type_Matrix = reflect.TypeOf(m.Matrix4{})
 var type_PointArray = reflect.TypeOf(core.PointArray{})
-var type_Vec2Array = reflect.TypeOf(core.MatrixArray{})
+var type_Vec2Array = reflect.TypeOf(core.Vec2Array{})
+var type_Vec3Array = reflect.TypeOf(core.Vec3Array{})
 var type_MatrixArray = reflect.TypeOf(core.MatrixArray{})
 
 type SymType struct {
@@ -206,6 +207,162 @@ func (p *parser) vec3(field reflect.Value) error {
 	return nil
 }
 
+func (p *parser) pointarray(field reflect.Value) error {
+
+	var sym SymType
+
+	v := core.PointArray{}
+
+	if t := p.lex.Lex(&sym); t != TOK_INT {
+		return errors.New("Expected number of motion keys.")
+	}
+
+	v.MotionKeys = int(sym.numInt)
+
+	if t := p.lex.Lex(&sym); t != TOK_INT {
+		return errors.New("Expected number of elements.")
+	}
+
+	v.ElemsPerKey = int(sym.numInt)
+
+	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "point" {
+		return errors.New("Expected array type.")
+	}
+
+	k := v.MotionKeys
+
+	if k == 0 {
+		k = 1
+	}
+
+	v.Elems = make([]m.Vec3, 0, k*v.ElemsPerKey)
+
+	for j := 0; j < k*v.ElemsPerKey; j++ {
+		el := m.Vec3{}
+
+		for i := range el {
+			switch t := p.lex.Lex(&sym); t {
+			case TOK_INT:
+				el[i] = float32(sym.numInt)
+			case TOK_FLOAT:
+				el[i] = float32(sym.numFloat)
+			default:
+				return errors.New("Expected point component.")
+			}
+
+		}
+		v.Elems = append(v.Elems, el)
+	}
+
+	field.Set(reflect.ValueOf(v))
+
+	return nil
+}
+
+func (p *parser) vec3array(field reflect.Value) error {
+
+	var sym SymType
+
+	v := core.Vec3Array{}
+
+	if t := p.lex.Lex(&sym); t != TOK_INT {
+		return errors.New("Expected number of motion keys.")
+	}
+
+	v.MotionKeys = int(sym.numInt)
+
+	if t := p.lex.Lex(&sym); t != TOK_INT {
+		return errors.New("Expected number of elements.")
+	}
+
+	v.ElemsPerKey = int(sym.numInt)
+
+	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "vec3" {
+		return errors.New("Expected array type.")
+	}
+
+	k := v.MotionKeys
+
+	if k == 0 {
+		k = 1
+	}
+
+	v.Elems = make([]m.Vec3, 0, k*v.ElemsPerKey)
+
+	for j := 0; j < k*v.ElemsPerKey; j++ {
+		el := m.Vec3{}
+
+		for i := range el {
+			switch t := p.lex.Lex(&sym); t {
+			case TOK_INT:
+				el[i] = float32(sym.numInt)
+			case TOK_FLOAT:
+				el[i] = float32(sym.numFloat)
+			default:
+				return errors.New("Expected vec3 component.")
+			}
+
+		}
+		v.Elems = append(v.Elems, el)
+	}
+
+	field.Set(reflect.ValueOf(v))
+
+	return nil
+}
+
+func (p *parser) vec2array(field reflect.Value) error {
+
+	var sym SymType
+
+	v := core.Vec2Array{}
+
+	if t := p.lex.Lex(&sym); t != TOK_INT {
+		return errors.New("Expected number of motion keys.")
+	}
+
+	v.MotionKeys = int(sym.numInt)
+
+	if t := p.lex.Lex(&sym); t != TOK_INT {
+		return errors.New("Expected number of elements.")
+	}
+
+	v.ElemsPerKey = int(sym.numInt)
+
+	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "vec2" {
+		return errors.New("Expected array type.")
+	}
+
+	k := v.MotionKeys
+
+	if k == 0 {
+		k = 1
+	}
+
+	v.Elems = make([]m.Vec2, 0, k*v.ElemsPerKey)
+
+	for j := 0; j < k*v.ElemsPerKey; j++ {
+		el := m.Vec2{}
+
+		for i := range el {
+			switch t := p.lex.Lex(&sym); t {
+			case TOK_INT:
+				el[i] = float32(sym.numInt)
+			case TOK_FLOAT:
+				el[i] = float32(sym.numFloat)
+			default:
+				return errors.New("Expected vec2 component.")
+			}
+
+		}
+		v.Elems = append(v.Elems, el)
+	}
+
+	field.Set(reflect.ValueOf(v))
+
+	return nil
+}
+
 func (p *parser) matrixarray(field reflect.Value) error {
 
 	var sym SymType
@@ -350,8 +507,14 @@ func (p *parser) param(field reflect.Value) error {
 			return p.vec3(field)
 		case type_MatrixArray:
 			return p.matrixarray(field)
+		case type_PointArray:
+			return p.pointarray(field)
+		case type_Vec3Array:
+			return p.vec3array(field)
+		case type_Vec2Array:
+			return p.vec2array(field)
 		default:
-			p.error("Invalid type for param")
+			p.error("Invalid type for param (%v)", field.Type())
 			p.lex.Skip()
 		}
 

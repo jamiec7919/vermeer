@@ -13,6 +13,7 @@ import (
 	_ "github.com/jamiec7919/vermeer/internal/camera"
 	_ "github.com/jamiec7919/vermeer/internal/driver"
 	_ "github.com/jamiec7919/vermeer/internal/geom/instance"
+	_ "github.com/jamiec7919/vermeer/internal/geom/polymesh"
 	_ "github.com/jamiec7919/vermeer/internal/geom/wfobj"
 	_ "github.com/jamiec7919/vermeer/internal/light/disk"
 )

@@ -20,10 +20,31 @@ type PointArray struct {
 	Elems       []m.Vec3
 }
 
+// Key returns the slice of elements for the given key
+func (a *PointArray) Key(key int) []m.Vec3 {
+	return a.Elems[key*a.ElemsPerKey : (key+1)*a.ElemsPerKey]
+}
+
+type Vec3Array struct {
+	MotionKeys  int // Number of motion keys
+	ElemsPerKey int // Number of elements per key
+	Elems       []m.Vec3
+}
+
+// Key returns the slice of elements for the given key
+func (a *Vec3Array) Key(key int) []m.Vec3 {
+	return a.Elems[key*a.ElemsPerKey : (key+1)*a.ElemsPerKey]
+}
+
 type Vec2Array struct {
 	MotionKeys  int // Number of motion keys
 	ElemsPerKey int // Number of elements per key
 	Elems       []m.Vec2
+}
+
+// Key returns the slice of elements for the given key
+func (a *Vec2Array) Key(key int) []m.Vec2 {
+	return a.Elems[key*a.ElemsPerKey : (key+1)*a.ElemsPerKey]
 }
 
 type MatrixArray struct {

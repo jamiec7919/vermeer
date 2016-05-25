@@ -140,11 +140,13 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 	v := (float32(y) + r1) * frame.dv
 
 	lambda := (float32(720-450) * rnd.Float32()) + 450
+	time := rnd.Float32()
 
 	P, D := frame.camera.ComputeRay(-1+u, 1-v, rnd)
 
 	sg := &ShaderGlobals{
 		Lambda: lambda,
+		Time:   time,
 		rnd:    rnd,
 	}
 
@@ -329,6 +331,9 @@ func (rc *RenderContext) PostRender() error {
 	}
 
 	return nil
+}
+func GetMaterialId(name string) int32 {
+	return grc.GetMaterialId(name)
 }
 
 func (rc *RenderContext) GetMaterialId(name string) int32 {
