@@ -5,6 +5,7 @@
 package camera
 
 import (
+	"fmt"
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/sample"
@@ -41,26 +42,50 @@ lens.  However this should mean that light paths can contribute to
 there is a multi-pixel filter)
 */
 type Camera struct {
-	Eye           m.Vec3
-	U, V, W       m.Vec3
-	L, R, T, B, D float32
-	Radius        float32
+	NodeName string `node:"Name"`
+
+	Type   string // 'lookat' 'matrix'
+	From   m.Vec3 // eye point
+	Target m.Vec3 `node:"To"`
+	Up     m.Vec3
+
+	U, V, W m.Vec3 // orthonormal basis
+
+	Aspect float32 // aspect ratio
+	Fov    float32 // field of view (X), Y is calculated from aspect
+	Focal  float32 // focal length
+
+	WorldToLocal core.MatrixArray
+	LocalToWorld core.MatrixArray
+
+	TanThetaFocal float32 // = tan(Fov/2)*Focal
+
+	L, R, T, B float32
+	Radius     float32
 }
 
-func (c *Camera) PreRender(*core.RenderContext) error  { return nil }
+func degToRad(deg float32) float32 { return deg * m.Pi / 180.0 }
+
+func (c *Camera) PreRender(rc *core.RenderContext) error {
+	if c.Aspect == 0.0 {
+		c.Aspect = rc.FrameAspect()
+	}
+
+	c.CalcBasisLookat()
+
+	c.TanThetaFocal = m.Tan(degToRad(c.Fov/2)) * c.Focal
+
+	return nil
+}
+
 func (c *Camera) PostRender(*core.RenderContext) error { return nil }
-func (c *Camera) Name() string                         { return "camera" }
+func (c *Camera) Name() string                         { return c.NodeName }
 
-func (c *Camera) Lookat(e, t, u m.Vec3) {
-	c.Eye = e
+func (c *Camera) CalcBasisLookat() {
 
-	c.W = m.Vec3Normalize(m.Vec3Sub(e, t)) // Note W points away from target
-	c.U = m.Vec3Normalize(m.Vec3Cross(u, c.W))
+	c.W = m.Vec3Normalize(m.Vec3Sub(c.From, c.Target)) // Note W points away from target
+	c.U = m.Vec3Normalize(m.Vec3Cross(c.Up, c.W))
 	c.V = m.Vec3Normalize(m.Vec3Cross(c.U, c.W))
-	//c.D = 1.5
-	//c.D = 2.5
-	//c.D = 3.5
-	// log.Printf("Lookat: %v %v %v", c.U, c.V, c.W)
 }
 
 /*
@@ -73,7 +98,7 @@ func (c *Camera) Lookat(e, t, u m.Vec3) {
 */
 
 func (c *Camera) SampleLensArea(rnd *rand.Rand, P *m.Vec3, We *float32, pdf *float32) error {
-	*P = c.Eye
+	*P = c.From
 
 	if c.Radius > 0.0 {
 		x, y := sample.UniformDisk2D(c.Radius, rnd.Float32(), rnd.Float32())
@@ -91,21 +116,27 @@ func (c *Camera) SampleLensArea(rnd *rand.Rand, P *m.Vec3, We *float32, pdf *flo
 }
 
 func (c *Camera) SampleImagePlaneDir(u, v float32, P m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, We *float32, pdf *float32) error {
-	s := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(u, c.U), m.Vec3Scale(v, c.V)), m.Vec3Scale(c.D, c.W))
-	*omega_o = m.Vec3Normalize(m.Vec3Sub(m.Vec3Add(c.Eye, s), P))
+
+	camu := u * c.TanThetaFocal
+	camv := v * (c.TanThetaFocal / c.Aspect)
+
+	s := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(camu, c.U), m.Vec3Scale(camv, c.V)), m.Vec3Scale(c.Focal, c.W))
+	*omega_o = m.Vec3Normalize(m.Vec3Sub(m.Vec3Add(c.From, s), P))
 
 	cos_omega_o := m.Vec3Dot(*omega_o, m.Vec3Neg(c.W))
 	A_p := float32(1.0) // pixel density WRT image size
-	*We = (c.D * c.D) / (A_p * cos_omega_o * cos_omega_o * cos_omega_o)
-	*pdf = (c.D * c.D) / (A_p * cos_omega_o * cos_omega_o * cos_omega_o)
+	*We = (c.Focal * c.Focal) / (A_p * cos_omega_o * cos_omega_o * cos_omega_o)
+	*pdf = (c.Focal * c.Focal) / (A_p * cos_omega_o * cos_omega_o * cos_omega_o)
 	return nil
 }
 
 func (c *Camera) ComputeRay(u, v float32, rnd *rand.Rand) (P, D m.Vec3) {
-	P = c.Eye
+	P = c.From
 	// D = || u*U + v*V - d*W  ||
 
-	s := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(u, c.U), m.Vec3Scale(v, c.V)), m.Vec3Scale(c.D, c.W))
+	camu := u * c.TanThetaFocal
+	camv := v * (c.TanThetaFocal / c.Aspect)
+	s := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(camu, c.U), m.Vec3Scale(camv, c.V)), m.Vec3Scale(c.Focal, c.W))
 
 	if c.Radius > 0.0 {
 		x, y := sample.UniformDisk2D(c.Radius, rnd.Float32(), rnd.Float32())
@@ -121,18 +152,14 @@ func (c *Camera) ComputeRay(u, v float32, rnd *rand.Rand) (P, D m.Vec3) {
 	return
 }
 
-type Lookat struct {
-	From, To, Up m.Vec3
-	D, Radius    float32
-}
+var cameraCount = 0
 
 func init() {
 	nodes.Register("Camera", func() (core.Node, error) {
-		l := Lookat{D: 2.5}
+		cam := Camera{Focal: 12, Fov: 90, NodeName: fmt.Sprintf("camera<%v>", cameraCount)}
 
-		cam := &Camera{D: l.D, Radius: l.Radius}
-		cam.Lookat(l.From, l.To, l.Up)
-		//rc.AddNode(cam)
-		return cam, nil
+		cameraCount++
+
+		return &cam, nil
 	})
 }
