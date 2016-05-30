@@ -19,6 +19,7 @@ import (
 	"unicode/utf8"
 )
 
+// Lex represents a lexical analyser for the vnf parser. (shouldn't be public)
 type Lex struct {
 	line []byte
 	peek rune

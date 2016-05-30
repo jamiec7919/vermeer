@@ -5,6 +5,8 @@ import (
 	"math/rand"
 )
 
+// Deprecated: MultiJitter returns k multijittered 2D samples in [0,1).  len(samples) = k*2, laid out
+// as { x_0,y_0,x_1,y_1,x_2,y_2,... }
 func MultiJitter(k int) (samples []float64) {
 	samples = make([]float64, 0, k*2)
 	n := int(math.Sqrt(float64(k)))

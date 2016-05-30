@@ -11,10 +11,12 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 )
 
+// Max leaf size supported by data structure.  Users of QBVH may request smaller leafs.
 const MaxLeafCount = 16
 
 type Index int32 // Type of a triangle/prim index
 
+// Node represenets a QBVH node.
 // 128 byte struct
 type Node struct {
 	Boxes               [4 * 3 * 2]float32
@@ -23,6 +25,7 @@ type Node struct {
 	Parent              int32
 }
 
+// SetBounds sets the node bounding box for the given child index.
 func (n *Node) SetBounds(idx int, bounds m.BoundingBox) {
 	//log.Printf("SetBounds %v %v", idx, bounds)
 	for i := 0; i < 2; i++ {
@@ -33,6 +36,7 @@ func (n *Node) SetBounds(idx int, bounds m.BoundingBox) {
 	//log.Printf("SetBounds %v %v", idx, n.boxes)
 }
 
+// Bounds returns the bounds for the given child.
 func (n *Node) Bounds(idx int) (bounds m.BoundingBox) {
 	for i := 0; i < 2; i++ {
 		for k := 0; k < 3; k++ {
@@ -42,10 +46,14 @@ func (n *Node) Bounds(idx int) (bounds m.BoundingBox) {
 
 	return
 }
+
+// LEAF_COUNT returns the number of elements stored in leaf node l.
 func LEAF_COUNT(l int32) int { return int((((l) & 0xf) + 1)) }
 
+// LEAF_BASE returns the first index of thw elements stored in leaf node l.
 func LEAF_BASE(l int32) int { return int(((l) & 0x7ffffff) >> 4) }
 
+// SetEmptyLeaf sets the given child index to an empty leaf.
 func (n *Node) SetEmptyLeaf(idx int) {
 	n.Children[idx] = -1
 	b := m.InfBox
@@ -60,7 +68,7 @@ func (n *Node) SetEmptyLeaf(idx int) {
 	n.SetBounds(idx, b)
 }
 
-// count <= 16
+// SetLeaf sets the given child index.  count must be <= MaxLeafCount (16).
 func (n *Node) SetLeaf(idx int, first, count uint32) {
 	if count == 0 {
 		n.SetEmptyLeaf(idx)
@@ -74,22 +82,27 @@ func (n *Node) SetLeaf(idx int, first, count uint32) {
 	//log.Printf("%v %v", n.children[idx]&0xf, v&0xf)
 }
 
+// SetChild sets the child node.
 func (n *Node) SetChild(idx int, ch int32) {
 	n.Children[idx] = ch
 }
 
+// SetAxis0 sets the split axis for first split.
 func (n *Node) SetAxis0(axis int32) {
 	n.Axis0 = axis
 }
 
+// SetAxis1 sets the split axis for left most split.
 func (n *Node) SetAxis1(axis int32) {
 	n.Axis1 = axis
 }
 
+// SetAxis2 sets the split axis for right most split.
 func (n *Node) SetAxis2(axis int32) {
 	n.Axis2 = axis
 }
 
+// Walk will recursively walk the tree and call the functions nodef and leaf for each node/leaf.
 func Walk(nodes []Node, node int, nodef func(i int, bounds m.BoundingBox), leaf func(bounds m.BoundingBox, base, count int, empty bool)) {
 	for i := range nodes[node].Children {
 		if nodes[node].Children[i] < 0 {

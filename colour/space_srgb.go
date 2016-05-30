@@ -4,6 +4,7 @@
 
 package colour
 
+// ColourSpace_sRGB is a concrete ColourSpace for the sRGB space.
 var ColourSpace_sRGB = ColourSpace{
 	m: [9]float32{
 		3.2404542, -1.5371385, -0.4985314,

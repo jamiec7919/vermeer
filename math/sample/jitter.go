@@ -4,7 +4,8 @@ import (
 	"math/rand"
 )
 
-// k * k samples * 2
+// Jitter2D returns k*k jittered samples in [0,1).
+// len(samples) = k * k * 2, laid out as { x_00,y_00, x_01,y_01, .. x_0(k-1), y_0(k-1), .. x_(k-1)(k-1), y_(k-1)(k-1) }
 func Jitter2D(k int) (samples []float64) {
 	d := 1.0 / float64(k)
 	u := float64(0)

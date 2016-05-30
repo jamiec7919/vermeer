@@ -9,7 +9,10 @@ import (
 	"math/rand"
 )
 
+// Camera represents a 3D camera.
 type Camera interface {
 	Name() string
+
+	// ComputeRay should return a world-space ray.
 	ComputeRay(u, v float32, rnd *rand.Rand) (P, D m.Vec3)
 }

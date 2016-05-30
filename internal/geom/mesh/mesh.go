@@ -269,9 +269,9 @@ func trisplit(verts []m.Vec3, idx int32, indexes *[]int32, boxes *[]m.BoundingBo
 			d := box.Centroid()[axis]
 
 			//log.Printf("SA: %v %v %v", box.SurfaceArea(), axis, d)
-			primng := qbvh.Clipleft(d, axis, top)
+			primng := qbvh.ClipLeft(d, axis, top)
 			//log.Printf("%v", primng)
-			primpv := qbvh.Clipright(d, axis, top)
+			primpv := qbvh.ClipRight(d, axis, top)
 			stack = append(stack, primng)
 			//log.Printf("%v", primpv)
 			stack = append(stack, primpv)

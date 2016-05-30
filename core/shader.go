@@ -10,12 +10,19 @@ import (
 	"math/rand"
 )
 
+// BRDF represents a BRDF that can be sampled.  The core API only considers the incoming direction
+// so all other parameters should be stored in the concrete instance of the individual BRDFs.
+// This is used for Multiple Importance Sampling with light sources.
 type BRDF interface {
+	// Sample returns a direction given two (quasi)random numbers.
 	Sample(r0, r1 float64) m.Vec3
+	// Eval evaluates the BRDF given the incoming direction.
 	Eval(omega_o m.Vec3) colour.Spectrum
+	// PDF returns the probability density function for the given sample.
 	PDF(omega_o m.Vec3) float64
 }
 
+// ShaderGlobals encapsulates all of the data needed for evaluating shaders.
 type ShaderGlobals struct {
 	X, Y        int     // raster positions
 	Sx, Sy      float32 // screen space [-1,1]x[-1,1]
@@ -53,12 +60,13 @@ type ShaderGlobals struct {
 	rnd *rand.Rand
 }
 
+//Deprecated: Rand returns the rng in use
 func (sg *ShaderGlobals) Rand() *rand.Rand {
 	return sg.rnd
 }
 
-// Offset the surface point out from surface by about 1ulp
-// Pass -ve value to push point 'into' surface (for transmission)
+// OffsetP returns the intersection point pushed out from surface by about 1 ulp.
+// Pass -ve value to push point 'into' surface (for transmission).
 func (r *ShaderGlobals) OffsetP(dir int) m.Vec3 {
 	if dir < 0 {
 		r.Poffset = m.Vec3Neg(r.Poffset)
@@ -80,30 +88,28 @@ func (r *ShaderGlobals) OffsetP(dir int) m.Vec3 {
 	return po
 }
 
-// The texture derivatives Pu & Pv should already be computed.
-func (sg *ShaderGlobals) SetupTangentSpace_(Ns m.Vec3) {
-	sg.N = m.Vec3Normalize(Ns)
-	sg.DdPdu = m.Vec3Normalize(m.Vec3Cross(sg.N, sg.DdPdu))
-	sg.DdPdv = m.Vec3Normalize(m.Vec3Cross(sg.N, sg.DdPdu))
-
-}
-
+// WorldToTangent projects the direction v into the tangent space
+// formed from the shading normal N and texture derivative tangents.
 func (sg *ShaderGlobals) WorldToTangent(v m.Vec3) m.Vec3 {
 	V := m.Vec3Normalize(m.Vec3Cross(sg.N, sg.DdPdu))
 	U := m.Vec3Cross(sg.N, V)
 	return m.Vec3BasisProject(U, V, sg.N, v)
 }
 
+// TangentToWorld projects the direction v into world space
+// based on the tangent space formed from the shading normal N and texture derivative tangents.
 func (sg *ShaderGlobals) TangentToWorld(v m.Vec3) m.Vec3 {
 	V := m.Vec3Normalize(m.Vec3Cross(sg.N, sg.DdPdu))
 	U := m.Vec3Cross(sg.N, V)
 	return m.Vec3BasisExpand(U, V, sg.N, v)
 }
 
+// ViewDirection returns the view direction (-ve ray direction projected into tangent space).
 func (sg *ShaderGlobals) ViewDirection() m.Vec3 {
 	return sg.WorldToTangent(m.Vec3Neg(sg.Rd))
 }
 
+// LightsPrepare initialises the lighting loop.
 func (sg *ShaderGlobals) LightsPrepare() {
 	sg.I = 0
 
@@ -115,10 +121,13 @@ func (sg *ShaderGlobals) LightsPrepare() {
 
 }
 
+// GetMaterial returns the shader for the given id.
 func GetMaterial(id int32) Material {
 	return grc.GetMaterial(id)
 }
 
+// LightsGetSample should be called in a loop and will setup the globals for the next light
+// sample and return true.  False will be returned when no more samples are available.
 func (sg *ShaderGlobals) LightsGetSample() bool {
 
 retry:
@@ -139,6 +148,7 @@ retry:
 
 var shadowRays int
 
+// EvaluateLightSample will evaluate the MIS sample for the current light sample and given BRDF.
 func (sg *ShaderGlobals) EvaluateLightSample(brdf BRDF) colour.RGB {
 	// The brdf returns directions in the tangent space
 	ray := new(RayData)
@@ -161,6 +171,7 @@ func (sg *ShaderGlobals) EvaluateLightSample(brdf BRDF) colour.RGB {
 
 }
 
+// GlossySample generates a sample from the BRDF and sets the globals weight.
 func (sg *ShaderGlobals) GlossySample(brdf BRDF) m.Vec3 {
 	omega_o := brdf.Sample(sg.rnd.Float64(), sg.rnd.Float64())
 

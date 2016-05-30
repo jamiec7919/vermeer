@@ -14,6 +14,8 @@ import (
  where that makes sense).
 */
 
+// PointArray represents an set of motion keys, with ElemsPerKey points per key.
+// Points are represented by Vec3.
 type PointArray struct {
 	MotionKeys  int // Number of motion keys
 	ElemsPerKey int // Number of elements per key
@@ -25,6 +27,7 @@ func (a *PointArray) Key(key int) []m.Vec3 {
 	return a.Elems[key*a.ElemsPerKey : (key+1)*a.ElemsPerKey]
 }
 
+// Vec3Array represents an set of motion keys, with ElemsPerKey vec3s per key.
 type Vec3Array struct {
 	MotionKeys  int // Number of motion keys
 	ElemsPerKey int // Number of elements per key
@@ -36,6 +39,7 @@ func (a *Vec3Array) Key(key int) []m.Vec3 {
 	return a.Elems[key*a.ElemsPerKey : (key+1)*a.ElemsPerKey]
 }
 
+// Vec2Array represents an set of motion keys, with ElemsPerKey vec2 per key.
 type Vec2Array struct {
 	MotionKeys  int // Number of motion keys
 	ElemsPerKey int // Number of elements per key
@@ -47,6 +51,7 @@ func (a *Vec2Array) Key(key int) []m.Vec2 {
 	return a.Elems[key*a.ElemsPerKey : (key+1)*a.ElemsPerKey]
 }
 
+// MatrixArray represents an set of motion keys, one Matrix4 per key.
 type MatrixArray struct {
 	MotionKeys int // Number of motion keys
 	Elems      []m.Matrix4

@@ -15,6 +15,7 @@ import (
 
 var ErrFailedEval = errors.New("Failed Eval")
 
+// OrenNayar2 implements the Oren-Nayar diffuse microfacet model.
 // Instanced for each point
 type OrenNayar2 struct {
 	Lambda    float32
@@ -22,20 +23,24 @@ type OrenNayar2 struct {
 	Roughness float32
 }
 
+// NewOrenNayar returns a new instance of the model for the given parameters.
 func NewOrenNayar(sg *core.ShaderGlobals, roughness float32) *OrenNayar2 {
 	return &OrenNayar2{sg.Lambda, sg.ViewDirection(), roughness * roughness}
 }
 
+// Sample implements core.BSDF.
 func (b *OrenNayar2) Sample(r0, r1 float64) m.Vec3 {
 	return sample.CosineHemisphere(r0, r1)
 }
 
+// PDF implements core.BSDF.
 func (b *OrenNayar2) PDF(omega_o m.Vec3) float64 {
 	o_dot_n := float64(m.Abs(omega_o[2]))
 
 	return o_dot_n / math.Pi
 }
 
+// Eval implements core.BSDF.
 func (b *OrenNayar2) Eval(omega_o m.Vec3) (rho colour.Spectrum) {
 
 	sigma := b.Roughness

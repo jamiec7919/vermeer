@@ -15,16 +15,19 @@ func reflect(omega_in, N m.Vec3) (omega_out m.Vec3) {
 	return
 }
 
+// Specular2 implements perfect mirror specular reflection.
 // Instanced for each point
 type Specular2 struct {
 	Lambda float32
 	OmegaI m.Vec3
 }
 
+// NewSpecular returns a new instance of the model.
 func NewSpecular(sg *core.ShaderGlobals) *Specular2 {
 	return &Specular2{sg.Lambda, sg.ViewDirection()}
 }
 
+// Sample implements core.BSDF.
 func (b *Specular2) Sample(r0, r1 float64) m.Vec3 {
 	omega_i := b.OmegaI
 
@@ -42,10 +45,12 @@ func (b *Specular2) Sample(r0, r1 float64) m.Vec3 {
 	return omega_o
 }
 
+// PDF implements core.BSDF.
 func (b *Specular2) PDF(omega_o m.Vec3) float64 {
 	return 1
 }
 
+// Eval implements core.BSDF.
 func (b *Specular2) Eval(omega_o m.Vec3) (rho colour.Spectrum) {
 	rho.Lambda = b.Lambda
 	rho.FromRGB(1, 1, 1)

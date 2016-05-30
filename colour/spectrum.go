@@ -13,6 +13,8 @@ package colour
   make input RGB values 'reasonable'
 */
 
+// Constants for min and maximum wavelength and number of wavelength samples in use for the
+// hero-wavelength.
 const (
 	LAMBDA_MIN = 450
 	LAMBDA_MAX = 750
@@ -21,11 +23,13 @@ const (
 
 const lambda_bar = LAMBDA_MAX - LAMBDA_MIN
 
+// Spectrum represents a line spectrum using the hero-wavelength idea.
 type Spectrum struct {
 	C      [LAMBDA_N]float32
 	Lambda float32
 }
 
+// SetZero sets the spectrum to 0.
 func (wv *Spectrum) SetZero() {
 	for k := 0; k < 4; k++ {
 		wv.C[k] = 0
@@ -33,6 +37,7 @@ func (wv *Spectrum) SetZero() {
 
 }
 
+// Set sets the spectrum to a constant value.
 func (wv *Spectrum) Set(v float32) {
 	for k := 0; k < 4; k++ {
 		wv.C[k] = v
@@ -40,6 +45,7 @@ func (wv *Spectrum) Set(v float32) {
 
 }
 
+// FromRGB ses the spectrum from the RGB values.
 func (wv *Spectrum) FromRGB(r, g, b float32) error {
 	for k := 0; k < 4; k++ {
 		wv.C[k] = RGBToSpectrumSmits99(r, g, b, wv.Wavelength(k))
@@ -47,6 +53,7 @@ func (wv *Spectrum) FromRGB(r, g, b float32) error {
 	return nil
 }
 
+// ToRGB converts the spectrum to RGB.
 func (wv *Spectrum) ToRGB() (r, g, b float32) {
 	var x, y, z float32
 
@@ -64,6 +71,7 @@ func (wv *Spectrum) ToRGB() (r, g, b float32) {
 	return
 }
 
+// Mul multiplies the spectrum by other.  Both spectra must represent the same wavelength.
 func (wv *Spectrum) Mul(other Spectrum) {
 	// if wv.Lambda != other.Lambda IS ERROR
 	wv.C[0] *= other.C[0]
@@ -72,14 +80,15 @@ func (wv *Spectrum) Mul(other Spectrum) {
 	wv.C[3] *= other.C[3]
 }
 
+// Scale scales the spectrum by s.
 func (wv *Spectrum) Scale(s float32) {
-	// if wv.Lambda != other.Lambda IS ERROR
 	wv.C[0] *= s
 	wv.C[1] *= s
 	wv.C[2] *= s
 	wv.C[3] *= s
 }
 
+// Add adds other to the spectrum.  Both spectra must represent the same wavelength.
 func (wv *Spectrum) Add(other Spectrum) {
 	// if wv.Lambda != other.Lambda IS ERROR
 	wv.C[0] += other.C[0]
@@ -88,6 +97,7 @@ func (wv *Spectrum) Add(other Spectrum) {
 	wv.C[3] += other.C[3]
 }
 
+// Wavelength returns the wavelength for index j (see hero-wavelength paper).
 // j = 0..LAMBDA_N
 func (wv *Spectrum) Wavelength(j int) (v float32) {
 

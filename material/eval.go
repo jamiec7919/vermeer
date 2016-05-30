@@ -12,6 +12,8 @@ import (
 	//"log"
 )
 
+// Eval implements core.Material.  Performs all shading for the surface point in sg.  May trace
+// rays and shadow rays.
 func (m *Material) Eval(sg *core.ShaderGlobals) {
 	if sg.Depth > 3 {
 		return

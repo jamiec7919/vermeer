@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+/*
+  Package material provides the default shader(s) for Vermeer.  (should rename).
+
+  This package is in heavy development so documentation somewhat sketchy.
+*/
 package material
 
 import (
@@ -12,50 +17,60 @@ import (
 	//"log"
 )
 
+//Deprecated: should be in core.
 type Id int32
 
+//Deprecated: should be in core.
 const ID_NONE Id = -1
 
+// Material is the default surface shader.
 type Material struct {
 	MtlName string `node:"Name"`
 	id      int32  // This should only be assinged by RenderContext
 
-	Sides             int
-	Specular          string
-	Diffuse           string
-	Ks, Kd            core.RGBParam     // should be RGBParam
-	Roughness         core.Float32Param // .. FloatParam
-	SpecularRoughness core.Float32Param
-	IOR               core.Float32Param
-	E                 core.RGBParam
+	Sides             int               // One or two sided
+	Specular          string            // Model to use for specular
+	Diffuse           string            // Model to use for diffuse
+	Ks, Kd            core.RGBParam     // Colour parameter for diffuse and specular
+	Roughness         core.Float32Param // Diffuse roughness
+	SpecularRoughness core.Float32Param // Specular roughness
+	IOR               core.Float32Param // Index-of-refraction
+	E                 core.RGBParam     // Emission value
 
 	//Medium [2]Medium  // medium material
-	BumpMapScale float32
-	BumpMap      core.Float32Param
+	BumpMapScale float32           // Scale to use for bump map values
+	BumpMap      core.Float32Param // Bump map
 
 	//	BumpMap *BumpMap
 }
 
-// core.Node methods
+// Name is a core.Node method.
 func (m *Material) Name() string { return m.MtlName }
+
+// PreRender is a core.Node method.
 func (m *Material) PreRender(rc *core.RenderContext) error {
 	return nil
 }
+
+// PostRender is a core.Node method.
 func (m *Material) PostRender(rc *core.RenderContext) error { return nil }
 
-// core.Material methods
+//Deprecated?: core.Material methods
 func (m *Material) Id() int32 {
 	return m.id
 }
 
+//Deprecated?: core.Material methods
 func (m *Material) SetId(id int32) {
 	m.id = id
 }
 
+// HasEDF returns true if the material is emissive.
 func (m *Material) HasEDF() bool {
 	return m.E != nil
 }
 
+// HasBumpMap returns true if the material has a bump map associated with it.
 func (m *Material) HasBumpMap() bool {
 	return m.BumpMap != nil
 }
@@ -73,15 +88,19 @@ func (m *Material) SampleBSDF(surf *core.SurfacePoint, omega_i m.Vec3, rnd *rand
 	return nil
 }
 */
+
+// Emission returns the RGB emission for the given direction.
 func (m *Material) Emission(sg *core.ShaderGlobals, omega_o m.Vec3) colour.RGB {
 	return m.E.RGB(sg)
 }
 
+//Deprecated:
 type BumpMap struct {
 	Map   core.Float32Param
 	Scale float32
 }
 
+// ApplyBumpMap will update the bump shading normal (sg.N) with the perturbation from the bump map.
 func (mtl *Material) ApplyBumpMap(sg *core.ShaderGlobals) {
 	u := sg.U
 	v := sg.V

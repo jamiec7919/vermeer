@@ -9,10 +9,21 @@ import (
 	"github.com/jamiec7919/vermeer/qbvh"
 )
 
+// Primitive represents a renderable object in Vermeer.
 type Primitive interface {
+
+	// TraceRay will attempt to intersect ray with the primitive and update the shader globals with any hit information.
+	// Will return either the shader id or -1 for no hit.
 	TraceRay(*RayData, *ShaderGlobals) int32
+
+	// VisRay will attempt to intersect ray with primitive and update the ray if hit.  No information
+	// other than whether ray hits is returned.
 	VisRay(*RayData)
+
+	// WorldBounds returns the BoundingBox of the primitive in world-space.
 	WorldBounds() m.BoundingBox
+
+	// Visible returns whether Primitive should be treated as visible.
 	Visible() bool
 
 	// UVCoord returns the UV coordinate for the given set, given the element id and surface params.

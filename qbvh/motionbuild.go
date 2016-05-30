@@ -99,8 +99,12 @@ func buildAccelMotionRec(nodes *[]MotionNode, boxes []m.BoundingBox, centroids [
 	return nodei
 }
 
+// BuildAccelMotion constructs a MQBVH tree for the given elements.  Elements are described by
+// bounding boxes, centroids (which may be different from the box centroid) and an index array.
 // This returns a slice of allocated nodes (node 0 is root) and ALSO sorts the indxs slice to match the leaf structure
-// of the node tree. leafMax must be <= 16
+// of the node tree. leafMax must be <= 16.
+// Note that the bounding boxes for internal nodes must be recalculated for each key as only the
+// tree node topology is constructed by BuildAccelMotion.
 func BuildAccelMotion(boxes []m.BoundingBox, centroids []m.Vec3, indxs []int32, leafMax int) (nodes []MotionNode, bounds m.BoundingBox) {
 	if leafMax > 16 {
 		leafMax = 16

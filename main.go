@@ -3,7 +3,11 @@
 // license that can be found in the LICENSE file.
 
 /*
-	The vermeer command
+	The vermeer command.
+
+	Execute as:
+
+	  vermeer [-maxiter=n] [-cpuprofile=filename.prof] <file.vnf>
 */
 package main
 

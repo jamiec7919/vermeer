@@ -15,8 +15,9 @@ This is silly, should split both sides at once since we know we're definitely sp
 want both sides!!!!
 */
 
-// keep the bits to the left of the plane
-func Clipleft(d float32, axis int, verts []m.Vec3) (outverts []m.Vec3) {
+// ClipLeft clips the polygon represented by verts by the axis-aligned plane described by d and axis.
+// Keep the bits to the left of the plane.
+func ClipLeft(d float32, axis int, verts []m.Vec3) (outverts []m.Vec3) {
 	outverts = make([]m.Vec3, 0, len(verts))
 
 	for i := range verts {
@@ -57,8 +58,9 @@ func Clipleft(d float32, axis int, verts []m.Vec3) (outverts []m.Vec3) {
 	return
 }
 
-// keep the bits to the left of the plane
-func Clipright(d float32, axis int, verts []m.Vec3) (outverts []m.Vec3) {
+// ClipLeft clips the polygon represented by verts by the axis-aligned plane described by d and axis.
+// Keep the bits to the right of the plane.
+func ClipRight(d float32, axis int, verts []m.Vec3) (outverts []m.Vec3) {
 	outverts = make([]m.Vec3, 0, len(verts))
 
 	for i := range verts {

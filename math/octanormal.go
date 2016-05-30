@@ -30,6 +30,7 @@ func octWrap(v OctaNormal) (on OctaNormal) {
 	return
 }
 
+// EncodeOctahedralNormal converts the (unit) vector n to the Octahedral normal representation.
 func EncodeOctahedralNormal(n Vec3) (on OctaNormal) {
 	nf := Abs(n[0]) + Abs(n[1]) + Abs(n[2])
 
@@ -50,6 +51,7 @@ func EncodeOctahedralNormal(n Vec3) (on OctaNormal) {
 	return
 }
 
+// DecodeOctahedralNormal converts the octahedral normal into a unit vector.
 func DecodeOctahedralNormal(on OctaNormal) Vec3 {
 	on[0] = on[0]*2.0 - 1.0
 	on[1] = on[1]*2.0 - 1.0

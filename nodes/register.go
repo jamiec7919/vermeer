@@ -22,11 +22,12 @@ func createNode(name string) (core.Node, error) {
 	return nil, errors.New("Node type " + name + " not registered.")
 }
 
+// Register is called by library nodes to register their names.
 func Register(name string, create func() (core.Node, error)) error {
 	if nodeTypes[name] == nil {
 		nodeTypes[name] = create
 		return nil
 	}
 
-	return errors.New("Already registered node type " + name)
+	return errors.New("Node type " + name + " already registered.")
 }

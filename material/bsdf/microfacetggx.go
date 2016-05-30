@@ -12,6 +12,7 @@ import (
 	"math"
 )
 
+// MicrofacetGGX implements the GGX specular microfacet model.
 // Instanced for each point
 type MicrofacetGGX struct {
 	Lambda    float32
@@ -44,10 +45,12 @@ func ggx_D(omega_m m.Vec3, alpha float32) float32 {
 	return numer / denom
 }
 
+// NewMicrofacetGGX returns a new instance of the model for the given parameters.
 func NewMicrofacetGGX(sg *core.ShaderGlobals, IOR, roughness float32) *MicrofacetGGX {
 	return &MicrofacetGGX{sg.Lambda, sg.ViewDirection(), IOR, roughness * roughness}
 }
 
+// Sample implements core.BSDF.
 func (b *MicrofacetGGX) Sample(r0, r1 float64) m.Vec3 {
 	alpha := sqr32(b.Roughness)
 
@@ -68,6 +71,7 @@ func (b *MicrofacetGGX) Sample(r0, r1 float64) m.Vec3 {
 	return m.Vec3Normalize(omega_i)
 }
 
+// PDF implements core.BSDF.
 func (b *MicrofacetGGX) PDF(omega_i m.Vec3) float64 {
 	alpha := sqr32(b.Roughness)
 
@@ -76,6 +80,7 @@ func (b *MicrofacetGGX) PDF(omega_i m.Vec3) float64 {
 	return float64(ggx_D(m, alpha) * m[2])
 }
 
+// Eval implements core.BSDF.
 func (b *MicrofacetGGX) Eval(omega_i m.Vec3) (rho colour.Spectrum) {
 	alpha := sqr32(b.Roughness)
 	omega_m := m.Vec3Normalize(m.Vec3Add(b.OmegaR, omega_i))

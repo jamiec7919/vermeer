@@ -284,8 +284,10 @@ func buildAccelRec(nodes *[]Node, boxes []m.BoundingBox, centroids []m.Vec3, ind
 	return nodei, nodebox
 }
 
+// BuildAccel constructs a QBVH tree for the given elements.  Elements are described by
+// bounding boxes, centroids (which may be different from the box centroid) and an index array.
 // This returns a slice of allocated nodes (node 0 is root) and ALSO sorts the indxs slice to match the leaf structure
-// of the node tree. leafMax must be <= 16
+// of the node tree. leafMax must be <= 16.
 func BuildAccel(boxes []m.BoundingBox, centroids []m.Vec3, indxs []int32, leafMax int) (nodes []Node, bounds m.BoundingBox) {
 	if leafMax > 16 {
 		leafMax = 16

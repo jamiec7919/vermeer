@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+/*
+  Package preview provides an OpenGL preview window for progressive rendering.
+*/
 package preview
 
 import (
@@ -17,11 +20,13 @@ var w, h int
 var textures []uint32
 var window *glfw.Window
 
+// Preview implements core.PreviewWindow.
 type Preview struct {
 	frameChan chan core.PreviewFrame
 	window    *glfw.Window
 }
 
+// UpdateFrame is called when there is a new progressive frame to render.  Implements core.PreviewWindow.
 func (p *Preview) UpdateFrame(frame core.PreviewFrame) {
 	if p.window != nil {
 		glfw.PostEmptyEvent()
@@ -29,7 +34,7 @@ func (p *Preview) UpdateFrame(frame core.PreviewFrame) {
 	}
 }
 
-// Close is called by RenderContext when rendering should end
+// Close is called by RenderContext when rendering should end. Implements core.PreviewWindow.
 func (p *Preview) Close() {
 	if p.window != nil {
 		p.window.SetShouldClose(true)
@@ -99,7 +104,8 @@ func redraw() {
 
 }
 
-// This needs to be run in the main thread (and locked to it)
+// Run is called to enter main render loop.
+// This needs to be run in the main thread (and locked to it).
 func (p *Preview) Run() error {
 	defer glfw.Terminate()
 
@@ -127,6 +133,7 @@ func (p *Preview) Run() error {
 	return nil
 }
 
+// Init is called to create the preview window.  Locks the OS thread that calls this.
 func Init() (preview *Preview, err error) {
 
 	runtime.LockOSThread()

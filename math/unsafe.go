@@ -9,6 +9,7 @@ import (
 	"unsafe"
 )
 
+// SignMask returns the bits of the float32 v as a uint32 with everything masked off except the sign bit.
 func SignMask(v float32) uint32 {
 	return sign_mask(v)
 }

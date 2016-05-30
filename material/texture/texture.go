@@ -2,6 +2,16 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+/*
+  Package texture implements an efficient texture cache.
+
+  At present it does virtually nothing other than thread-safe loading of texture files.  Doesn't
+  release memory or attempt to use tiled caching.
+
+  Textures are currently represented simply by a string which references into a hashmap.  Lookup sounds
+  inefficient but has never shown up as significant on profiling.  Expected to change as many more
+  textures are used in shaders.
+*/
 package texture
 
 import (
@@ -16,6 +26,7 @@ import (
 	"sync/atomic"
 )
 
+// Texture represents a texture image.  (shouldnt' be public)
 type Texture struct {
 	url  string
 	fmt  int
@@ -23,6 +34,7 @@ type Texture struct {
 	data []byte
 }
 
+// TexStore is the type of the cache.
 type TexStore map[string]*Texture
 
 var texStore atomic.Value
@@ -49,6 +61,8 @@ m := image.NewRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
 draw.Draw(m, m.Bounds(), src, b.Min, draw.Src)
 */
 
+// LoadTexture returns a texture object or an error if can't be openend.  Takes a url for
+// future network texture server. (shouldn't be public)
 func LoadTexture(url string) (*Texture, error) {
 
 	file, err := os.Open(url)
@@ -106,12 +120,14 @@ func LoadTexture(url string) (*Texture, error) {
 	return t, nil
 }
 
+// SetRGB sets a pixel in a Texture object. (shouldnt be public)
 func (tex *Texture) SetRGB(x, y int, r, g, b byte) {
 	tex.data[(x+(y*tex.w))*3+0] = r
 	tex.data[(x+(y*tex.w))*3+1] = g
 	tex.data[(x+(y*tex.w))*3+2] = b
 }
 
+// CreateRGBTexture creates an RGB texture of appropriate size.
 func CreateRGBTexture(w, h int) *Texture {
 	return &Texture{
 		w:    w,
@@ -151,6 +167,7 @@ func cacheMiss(filename string) (*Texture, error) {
 
 }
 
+// SampleRGB samples an RGB value from the given file using the coords s,t and footprint ds,dt.
 func SampleRGB(filename string, s, t, ds, dt float32) (out [3]float32) {
 	// This uses an atomic copy-on-write for the textures store
 

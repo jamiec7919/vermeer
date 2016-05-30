@@ -15,6 +15,7 @@ import "math"
 
 type Float16 uint16
 
+// Float32ToFloat16 converts from a 32 bit float to the IEEE binary16 representation (lossy)
 func Float32ToFloat16(xe float32) Float16 {
 	x := math.Float32bits(xe)
 
@@ -65,6 +66,7 @@ func Float32ToFloat16(xe float32) Float16 {
 	}
 }
 
+// Float16ToFloat32 converts a Float16 to 32bit IEEE float.
 func Float16ToFloat32(h Float16) float32 {
 	var x uint32
 

@@ -4,12 +4,18 @@
 
 package core
 
+// Globals is a node representing the global render settings.
 type Globals struct {
 	XRes, YRes    int
 	UseProgress   bool
 	MaxGoRoutines int
 }
 
-func (g *Globals) Name() string                    { return "<globals>" }
-func (g *Globals) PreRender(*RenderContext) error  { return nil }
+// Name is a node method.
+func (g *Globals) Name() string { return "<globals>" }
+
+// PreRender is a node method.
+func (g *Globals) PreRender(*RenderContext) error { return nil }
+
+// PostRender is a node method.
 func (g *Globals) PostRender(*RenderContext) error { return nil }

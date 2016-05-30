@@ -22,16 +22,20 @@ func Cos(x float32) float32 {
 	return float32(math.Cos(float64(x)))
 }
 
+// Acos returns the arccosine x.
+//
 func Acos(x float32) float32 {
 	return float32(math.Acos(float64(x)))
 
 }
 
+// Atan2 returns the arctangent x/y.
 func Atan2(x, y float32) float32 {
 	return float32(math.Atan2(float64(x), float64(y)))
 
 }
 
+// Tan returns the tangent of x.
 func Tan(x float32) float32 {
 	return float32(math.Tan(float64(x)))
 }

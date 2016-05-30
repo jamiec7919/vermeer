@@ -1,11 +1,5 @@
 package sample
 
-/*
-Correlated multi-jittering.
-
-Implementation of http://graphics.pixar.com/library/MultiJitteredSampling/paper.pdf
-*/
-
 import (
 	"math"
 	"math/rand"
@@ -48,6 +42,11 @@ func permute(i, l, p int) int {
 	return (i + p) % l
 }
 
+/*
+CMJ1 implements correlated multi-jittering.
+
+Implementation of http://graphics.pixar.com/library/MultiJitteredSampling/paper.pdf
+*/
 func CMJ1(s, m, n, p int) (x, y float64) {
 	sx := float64(permute(s%m, m, p*0xa511e9b3))
 	sy := float64(permute(s/m, n, p*0x63d83595))
@@ -60,6 +59,11 @@ func CMJ1(s, m, n, p int) (x, y float64) {
 	return
 }
 
+/*
+CMJ2 implements correlated multi-jittering.
+
+Implementation of http://graphics.pixar.com/library/MultiJitteredSampling/paper.pdf
+*/
 func CMJ2(s, N, p int) (x, y float64) {
 	a := 1.0
 	m := int(math.Sqrt(float64(N) * a))

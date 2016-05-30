@@ -44,7 +44,7 @@ var (
 	blue    = smitsSpectrum{1, 1, 0.8916, 0.3323, 0, 0, 0.0003, 0.0369, 0.0483, 0.0496}
 )
 
-// Convert an RGB triple to a spectrum at a given wavelength
+// RGBToSpectrumSmits99 converts an RGB triple to a spectrum at a given wavelength
 func RGBToSpectrumSmits99(r, g, b, lambda float32) (c float32) {
 	if r <= g && r <= b {
 

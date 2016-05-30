@@ -18,6 +18,7 @@ package math
 
 type Matrix4 [16]float32
 
+// Elt returns the matrix element at row i, column j.
 func (m *Matrix4) Elt(i, j int) float32 {
 	return m[(j*4)+i]
 }
@@ -32,6 +33,7 @@ var Matrix4Null = Matrix4{0.0, 0.0, 0.0, 0.0,
 	0.0, 0.0, 0.0, 0.0,
 	0.0, 0.0, 0.0, 0.0}
 
+// Matrix4Add returns the sum of 4x4 matrices a and b.
 func Matrix4Add(a, b Matrix4) (c Matrix4) {
 	for i := range c {
 		c[i] = a[i] + b[i]
@@ -40,6 +42,7 @@ func Matrix4Add(a, b Matrix4) (c Matrix4) {
 	return
 }
 
+// Matrix4Add returns the difference of 4x4 matrices a and b.
 func Matrix4Sub(a, b Matrix4) (c Matrix4) {
 	for i := range c {
 		c[i] = a[i] - b[i]
@@ -48,6 +51,7 @@ func Matrix4Sub(a, b Matrix4) (c Matrix4) {
 	return
 }
 
+// Matrix4Mul returns the matrix multiplication of 4x4 matrices a and b.
 func Matrix4Mul(a, b Matrix4) (c Matrix4) {
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
@@ -60,6 +64,7 @@ func Matrix4Mul(a, b Matrix4) (c Matrix4) {
 	return
 }
 
+// Matrix4Transpose returns the transpose of 4x4 matrix a.
 func Matrix4Transpose(a Matrix4) (c Matrix4) {
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
@@ -70,6 +75,7 @@ func Matrix4Transpose(a Matrix4) (c Matrix4) {
 	return
 }
 
+// Matrix4Inverse returns the matrix inverse of 4x4 matrix a.
 func Matrix4Inverse(m Matrix4) (c Matrix4, ok bool) {
 	var inv Matrix4
 
@@ -105,6 +111,8 @@ func Matrix4Inverse(m Matrix4) (c Matrix4, ok bool) {
 	return c, true
 }
 
+// Matix4MulPoint post multiplies point b by 4x4 matrix a.
+// b is represented as a Vec3 but is assumed to be homogeonous point [x,y,z,1]
 func Matrix4MulPoint(a Matrix4, b Vec3) (c Vec3) {
 	c[0] = a[0]*b[0] + a[4]*b[1] + a[8]*b[2] + a[12]
 	c[1] = a[1]*b[0] + a[5]*b[1] + a[9]*b[2] + a[13]
@@ -113,6 +121,9 @@ func Matrix4MulPoint(a Matrix4, b Vec3) (c Vec3) {
 	return
 }
 
+// _Matix4MulPoint2 post multiplies point b by 4x4 matrix a.
+// b is represented as a Vec3 but is assumed to be homogeonous point [x,y,z,1]
+// This is not inlined in Go1.6
 func _Matrix4MulPoint2(a Matrix4, b Vec3) (c Vec3) {
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
@@ -124,6 +135,8 @@ func _Matrix4MulPoint2(a Matrix4, b Vec3) (c Vec3) {
 	return
 }
 
+// Matix4MulHPoint post multiplies point b by 4x4 matrix a.
+// b is represented as a full homoegenous point and returns in same representation.
 func Matrix4MulHPoint(a Matrix4, b [4]float32) (c [4]float32) {
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
@@ -134,6 +147,8 @@ func Matrix4MulHPoint(a Matrix4, b [4]float32) (c [4]float32) {
 	return
 }
 
+// Matix4MulVec post multiplies 3 vector b by 4x4 matrix a.
+// b is represented as a Vec3 but is assumed to be homogeonous vector [x,y,z,0]
 func Matrix4MulVec(a Matrix4, b Vec3) (c Vec3) {
 	c[0] = a[0]*b[0] + a[4]*b[1] + a[8]*b[2]
 	c[1] = a[1]*b[0] + a[5]*b[1] + a[9]*b[2]
@@ -141,6 +156,9 @@ func Matrix4MulVec(a Matrix4, b Vec3) (c Vec3) {
 	return
 }
 
+// _Matix4MulVec2 post multiplies 3 vector b by 4x4 matrix a.
+// b is represented as a Vec3 but is assumed to be homogeonous vector [x,y,z,0]
+// This is not inlined in Go1.6
 func _Matrix4MulVec2(a Matrix4, b Vec3) (c Vec3) {
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
@@ -151,6 +169,7 @@ func _Matrix4MulVec2(a Matrix4, b Vec3) (c Vec3) {
 	return
 }
 
+// Matrix4Translate returns the matrix representing a translation by the given amount.
 func Matrix4Translate(X, Y, Z float32) (c Matrix4) {
 	c = Matrix4Identity
 	c[12] = -X
@@ -159,6 +178,7 @@ func Matrix4Translate(X, Y, Z float32) (c Matrix4) {
 	return
 }
 
+// Matrix4Scale returns the matrix representing a scaling by the given amount.
 func Matrix4Scale(X, Y, Z float32) (c Matrix4) {
 	c = Matrix4Identity
 	c[0] = X
@@ -167,6 +187,7 @@ func Matrix4Scale(X, Y, Z float32) (c Matrix4) {
 	return
 }
 
+// Matrix4Rotate returns the matrix representing a rotation by angle (radians) around axis [X,Y,Z].
 func Matrix4Rotate(angle, X, Y, Z float32) (c Matrix4) {
 	// Should normalize X,Y,Z
 	sl := X*X + Y*Y + Z*Z

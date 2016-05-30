@@ -12,6 +12,8 @@ import (
 	"math"
 )
 
+//Deprecated: CookTorranceGGX2 is deprecated pending a rewrite that actually works.  Use
+// MicrofacetGGX for now.
 // Instanced for each point
 type CookTorranceGGX2 struct {
 	Lambda    float32
@@ -20,10 +22,12 @@ type CookTorranceGGX2 struct {
 	Roughness float32
 }
 
+//Deprecated:
 func NewCookTorranceGGX(sg *core.ShaderGlobals, IOR, roughness float32) *CookTorranceGGX2 {
 	return &CookTorranceGGX2{sg.Lambda, sg.ViewDirection(), IOR, roughness}
 }
 
+//Deprecated:
 func (b *CookTorranceGGX2) Sample(r0, r1 float64) m.Vec3 {
 	alpha := sqr32(b.Roughness)
 
@@ -39,6 +43,7 @@ func (b *CookTorranceGGX2) Sample(r0, r1 float64) m.Vec3 {
 	return omega_o
 }
 
+//Deprecated:
 func (b *CookTorranceGGX2) PDF(omega_o m.Vec3) float64 {
 	alpha := sqr32(b.Roughness)
 
@@ -61,6 +66,7 @@ func (b *CookTorranceGGX2) PDF(omega_o m.Vec3) float64 {
 	return pdf
 }
 
+//Deprecated:
 func (b *CookTorranceGGX2) Eval(omega_o m.Vec3) (rho colour.Spectrum) {
 	alpha := sqr32(b.Roughness)
 

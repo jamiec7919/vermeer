@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package math
+/*
 
-// Clamp returns the value of x clamped to within [min,max]
-func Clamp(x, min, max float32) float32 {
-	return Max(min, Min(x, max))
-}
+Package core provides the core APIs in Vermeer.
+
+*/
+package core

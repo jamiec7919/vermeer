@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+/*
+  Package bsdf provides built-in B(R/S)DF (Bidirectional Reflectance/Scattering Distribution Function)
+  models for Vermeer.
+*/
 package bsdf
 
 import (
@@ -17,25 +21,31 @@ import (
 // f := rho / m.Pi
 
 // Instanced for each point
+
+// Lambert is basic lambertian diffuse.
 type Lambert struct {
 	Lambda float32
 	OmegaI m.Vec3
 }
 
+// NewLambert will return an instance of the model for the given point.
 func NewLambert(sg *core.ShaderGlobals) *Lambert {
 	return &Lambert{sg.Lambda, sg.ViewDirection()}
 }
 
+// Sample implements core.BSDF.
 func (b *Lambert) Sample(r0, r1 float64) m.Vec3 {
 	return sample.CosineHemisphere(r0, r1)
 }
 
+// PDF implements core.BSDF.
 func (b *Lambert) PDF(omega_o m.Vec3) float64 {
 	o_dot_n := float64(m.Abs(omega_o[2]))
 
 	return o_dot_n / math.Pi
 }
 
+// Eval implements core.BSDF.
 func (b *Lambert) Eval(omega_o m.Vec3) (rho colour.Spectrum) {
 	weight := omega_o[2]
 

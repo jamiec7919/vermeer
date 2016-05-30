@@ -14,6 +14,7 @@ const (
 	cie1931_LAMBDAMAX = 830
 )
 
+// Cie_x returns the x observer function for the given wavelength lambda.
 // Standard observer functions (CIE1931 2deg)
 func Cie_x(lambda float32) float32 {
 	if lambda < cie1931_LAMBDAMIN || lambda >= cie1931_LAMBDAMAX {
@@ -26,6 +27,8 @@ func Cie_x(lambda float32) float32 {
 
 }
 
+// Cie_y returns the y observer function for the given wavelength lambda.
+// Standard observer functions (CIE1931 2deg)
 func Cie_y(lambda float32) float32 {
 	if lambda < cie1931_LAMBDAMIN || lambda >= cie1931_LAMBDAMAX {
 		return -1
@@ -37,6 +40,8 @@ func Cie_y(lambda float32) float32 {
 
 }
 
+// Cie_z returns the z observer function for the given wavelength lambda.
+// Standard observer functions (CIE1931 2deg)
 func Cie_z(lambda float32) float32 {
 	if lambda < cie1931_LAMBDAMIN || lambda >= cie1931_LAMBDAMAX {
 		return -1

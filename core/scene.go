@@ -10,6 +10,8 @@ import (
 	"github.com/jamiec7919/vermeer/qbvh"
 )
 
+//Deprecated: Scene will become an interface.  Scene represents the set of primitives and lights and
+// world acceleration structure.
 type Scene struct {
 	prims  []Primitive
 	nodes  []qbvh.Node
@@ -20,6 +22,7 @@ type Scene struct {
 
 var grc *RenderContext
 
+// ScreenSample is returned by Trace.
 type ScreenSample struct {
 	Colour  colour.RGB
 	Opacity colour.RGB
@@ -30,6 +33,9 @@ type ScreenSample struct {
 	Prim    Primitive
 }
 
+// TraceProbe intersects ray with the scene and sets up the globals sg with the first intersection.
+// rays of type RAY_SHADOW will early-out and not necessarily return the first intersection.
+// Returns true if any intersection or false for none.
 func TraceProbe(ray *RayData, sg *ShaderGlobals) bool {
 
 	if ray.Type&RAY_SHADOW != 0 {
@@ -53,6 +59,9 @@ func TraceProbe(ray *RayData, sg *ShaderGlobals) bool {
 	return false
 }
 
+// Trace intersects ray with the scene and evaluates the shader at the first intersection. The
+// result is returned in the samp struct.
+// Returns true if any intersection or false for none.
 func Trace(ray *RayData, samp *ScreenSample) bool {
 	rayCount++
 	sg := &ShaderGlobals{

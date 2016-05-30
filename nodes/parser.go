@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+/*
+  Package nodes is used to parse vnf files and create the node structure.
+*/
 package nodes
 
 import (
@@ -37,6 +40,7 @@ var type_Vec2Array = reflect.TypeOf(core.Vec2Array{})
 var type_Vec3Array = reflect.TypeOf(core.Vec3Array{})
 var type_MatrixArray = reflect.TypeOf(core.MatrixArray{})
 
+// The type of symbols returned from lexer (shouldn't be public)
 type SymType struct {
 	numFloat float64
 	numInt   int64
@@ -56,6 +60,8 @@ func init() {
 	})
 }
 
+// Parse attempts to open filename and parse the contents, adding nodes to rc.  Returns
+// nil on success or an appropriate error.
 func Parse(rc *core.RenderContext, filename string) error {
 
 	f, err := os.Open(filename)

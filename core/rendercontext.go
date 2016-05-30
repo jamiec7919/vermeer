@@ -14,16 +14,23 @@ import (
 	"time"
 )
 
+// TILESIZE is the size (width and height) in pixels of a render tile.
 const TILESIZE = 64
+
+// MAXGOROUTINES is the default number of goroutines to run for rendering.
 const MAXGOROUTINES = 5
+
+//Deprecated: NSAMP is the number of samples to take (not used).
 const NSAMP = 16
 
 var rayCount int
 
+//Deprecated:
 type RenderFuncStats struct {
 	RayCount, ShadowRayCount int
 }
 
+//Deprecated: Frame represents a single frame.
 type Frame struct {
 	w, h   int
 	du, dv float32
@@ -33,26 +40,32 @@ type Frame struct {
 	bar    *pb.ProgressBar
 }
 
-// Preview windows should implement this
+// PreviewWindow is an interface that preview windows should implement.
 type PreviewWindow interface {
 	UpdateFrame(frame PreviewFrame)
 	Close()
 }
 
+// Aspect returns the aspect ratio W/H.
 func (f *Frame) Aspect() float32 { return float32(f.w) / float32(f.h) }
 
+// PreviewFrame is a buffer passed to the PreviewWindow that has been tonemapped to 24bit RGB.
 type PreviewFrame struct {
 	W, H int
 	Buf  []uint8
 }
 
+// OutputRes returns the output resolution.
 func (rc *RenderContext) OutputRes() (int, int) {
 	return rc.globals.XRes, rc.globals.YRes
 }
+
+// Image returns a float32 RGB slice of pixels.
 func (rc *RenderContext) Image() []float32 {
 	return rc.imgbuf
 }
 
+//Deprecated: RenderContext represents everything in the current core API instance.
 type RenderContext struct {
 	globals   Globals
 	imgbuf    []float32
@@ -67,6 +80,7 @@ type RenderContext struct {
 	finish      chan bool
 }
 
+// GetMaterial returns the shader for the given id.
 func (rc *RenderContext) GetMaterial(id int32) Material {
 	if rc.materials != nil && id != -1 && int(id) < len(rc.materials) {
 		return rc.materials[int(id)]
@@ -74,6 +88,9 @@ func (rc *RenderContext) GetMaterial(id int32) Material {
 	return nil
 }
 
+//Deprecated: NewRenderContext returns a new RenderContext set to defaults.
+// Core API is going to be changed to not need a render context as only one frame at
+// a time is to be rendered anyway.
 func NewRenderContext() *RenderContext {
 	rc := &RenderContext{}
 	rc.globals.XRes = 256
@@ -84,15 +101,19 @@ func NewRenderContext() *RenderContext {
 	return rc
 }
 
+// StartPreview is called to initialize the preview window.
 func (rc *RenderContext) StartPreview(preview PreviewWindow) error {
 	rc.preview = preview
 	return nil
 }
 
+// Finish is called to notify all listeners that all rendering should finish and exit.
 func (rc *RenderContext) Finish() {
 	rc.finish <- true
 }
 
+// PreRender is called after all nodes are loaded and calls PreRender on all nodes.
+// Nodes may add new nodes so PreRender iterates until no new nodes are created.
 func (rc *RenderContext) PreRender() error {
 	// pre and fixup nodes
 	// Note that nodes in PreRender may add new nodes, so we must backup and
@@ -118,6 +139,7 @@ func (rc *RenderContext) PreRender() error {
 	return rc.scene.initAccel()
 }
 
+// WorkItem represents a screen tile (note: shouldn't be public).
 type WorkItem struct {
 	x, y, w, h int
 	samples    []float32
@@ -200,10 +222,13 @@ func tonemap(w, h int, hdr_rgb []float32, buf []uint8) {
 
 }
 
+// FrameAspect returns the aspect ration of the global frame size (W/H).
 func (rc *RenderContext) FrameAspect() float32 {
 	return float32(rc.globals.XRes) / float32(rc.globals.YRes)
 }
 
+// Render is called to begin the render process. If maxIter >= 0 only that many iterations
+// will be performed before exiting.
 func (rc *RenderContext) Render(maxIter int) error {
 	// render frames as given in frames (could be progressive)
 	var frame Frame
@@ -322,6 +347,7 @@ L:
 	return nil
 }
 
+// PostRender is called on all nodes once Render has returned.
 func (rc *RenderContext) PostRender() error {
 	// post process image
 	for _, node := range rc.nodes {
@@ -332,10 +358,14 @@ func (rc *RenderContext) PostRender() error {
 
 	return nil
 }
+
+// GetMaterialId returns the shader id for the given node name.
 func GetMaterialId(name string) int32 {
 	return grc.GetMaterialId(name)
 }
 
+//Deprecated: GetMaterialId returns the shader id for the given node name.
+// Should use the core API global GetMaterialId.
 func (rc *RenderContext) GetMaterialId(name string) int32 {
 	for id, mtl := range rc.materials {
 		if mtl.Name() == name {
@@ -355,6 +385,7 @@ func (rc *RenderContext) addMaterial(mtl Material) {
 	mtl.SetId(int32(id))
 }
 
+// AddNode adds a node to the core.
 func (rc *RenderContext) AddNode(node Node) {
 	rc.nodes = append(rc.nodes, node)
 
@@ -372,6 +403,7 @@ func (rc *RenderContext) AddNode(node Node) {
 	}
 }
 
+// FindNode finds the node with the given name.
 func (rc *RenderContext) FindNode(name string) Node {
 	for _, node := range rc.nodes {
 		if node.Name() == name {
@@ -381,13 +413,22 @@ func (rc *RenderContext) FindNode(name string) Node {
 	return nil
 }
 
+// Error is called from the parser.
 func (rc *RenderContext) Error(err error) error {
 	log.Printf("Parse error: %v", err)
 	return nil
 }
 
+// Node represents a node in the core system.
 type Node interface {
+
+	// Name returns the name of the node.
 	Name() string
+
+	// PreRender is called after loading scene and before render starts.  Nodes should
+	// perform all init and may add other nodes in PreRender.
 	PreRender(*RenderContext) error
+
+	// PostRender is called after render is complete.
 	PostRender(*RenderContext) error
 }

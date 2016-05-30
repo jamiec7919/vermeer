@@ -31,12 +31,14 @@ const (
 	AutoStride = -1
 )
 
+// TypeDesc describes a type.
 // Defaults to UINT8, SCALAR
 type TypeDesc struct {
 	BaseType  BaseType
 	Aggregate Aggregate
 }
 
+// Spec describes an image.
 type Spec struct {
 	Width, Height, Depth             int
 	X, Y, Z                          int
@@ -52,6 +54,7 @@ type Spec struct {
 	ExtraAttribs                     map[string]interface{}
 }
 
+// Reader is implemented by image readers.
 type Reader interface {
 	Spec() (Spec, error)
 	Close()
@@ -63,6 +66,7 @@ type Reader interface {
 	Supports(tag string) bool
 }
 
+// Writer is implemented by image writers.
 type Writer interface {
 	Open(string, *Spec) error
 	OpenMode(string, *Spec, string) error
@@ -84,6 +88,8 @@ type Writer interface {
 var writers []func(filename string) (Writer, error)
 var readers []func(filename string) (Reader, error)
 
+// NewWriter will attempt to create a writer for the given filename.  Type of image is
+// deduced from the filename extension.
 func NewWriter(filename string) (Writer, error) {
 	for _, w := range writers {
 		writer, err := w(filename)
@@ -95,6 +101,9 @@ func NewWriter(filename string) (Writer, error) {
 
 	return nil, errors.New("No Writer")
 }
+
+// Open will attempt to open an image and returns a Reader capable of loading it.  Callers should
+// check the Reader for the capabilities of the image format.
 func Open(filename string) (Reader, error) {
 	for _, reader := range readers {
 
@@ -109,10 +118,12 @@ func Open(filename string) (Reader, error) {
 	return nil, errors.New("image.Open: no reader found for " + filename)
 }
 
+// RegisterReader is called by the image reader libraries.
 func RegisterReader(open func(filename string) (Reader, error)) {
 	readers = append(readers, open)
 }
 
+// RegisterWriter is called by the image writer libraries.
 func RegisterWriter(test func(filename string) (Writer, error)) {
 	writers = append(writers, test)
 }
