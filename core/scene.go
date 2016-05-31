@@ -10,8 +10,10 @@ import (
 	"github.com/jamiec7919/vermeer/qbvh"
 )
 
-//Deprecated: Scene will become an interface.  Scene represents the set of primitives and lights and
+// Scene represents the set of primitives and lights and
 // world acceleration structure.
+//
+// Deprecated: Scene will become an interface.
 type Scene struct {
 	prims  []Primitive
 	nodes  []qbvh.Node

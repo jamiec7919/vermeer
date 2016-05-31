@@ -3,12 +3,11 @@
 // license that can be found in the LICENSE file.
 
 /*
-  Package preview provides an OpenGL preview window for progressive rendering.
+Package preview provides an OpenGL preview window for progressive rendering.
 */
 package preview
 
 import (
-	"errors"
 	"fmt"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
@@ -55,7 +54,7 @@ func initGL() error {
 	gl.GenTextures(1, &textures[0])
 
 	if gl.GetError() != gl.NO_ERROR {
-		return errors.New(fmt.Sprintf("Error glGenTextures %v %v", len(textures), gl.GetError()))
+		return fmt.Errorf("Error glGenTextures %v %v", len(textures), gl.GetError())
 	}
 
 	// Texture 1
@@ -77,7 +76,7 @@ func updateTexture(w, h int, buf []uint8) error {
 	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, int32(w), int32(h), 0, gl.RGB, gl.UNSIGNED_BYTE, gl.Ptr(buf))
 
 	if gl.GetError() != gl.NO_ERROR {
-		return errors.New(fmt.Sprintf("Error glTexImage2D %v %v %v", w, h, gl.GetError()))
+		return fmt.Errorf("Error glTexImage2D %v %v %v", w, h, gl.GetError())
 	}
 
 	return nil

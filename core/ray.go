@@ -38,11 +38,12 @@ type TraceSupport struct {
 	TopLevelStack [32]TraverseElem
 }
 
-// RayResult
+// RayResult holds the data from a ray intersection.
+//
 // 2 cache lines currently, or would be if 64 byte aligned, as it is should be 32byte aligned by
 // Go allocator so still not too bad.
 // We store the error offset in the result as we may want to move the point to either side depending
-// on the material (e.g. refraction will need point on other side)
+// on the material (e.g. refraction will need point on other side).
 type RayResult struct {
 	P        m.Vec3  // 12
 	POffset  m.Vec3  // 12 Offset to make sure any intersection point is outside face
@@ -57,7 +58,8 @@ type RayResult struct {
 }
 
 // Ray represents a ray in world space plus precalculated intersection values.
-// 64bytes (one cache line)
+//
+// 64bytes (one cache line).
 type Ray struct {
 	P, D     m.Vec3  // 6
 	Dinv     m.Vec3  // 16
@@ -67,7 +69,9 @@ type Ray struct {
 	Kx, Ky, Kz int32      // 13
 }
 
-//Deprecated: RayStats is unused.
+// RayStats collects stats about the ray traversal.
+//
+// Deprecated: RayStats is unused.
 type RayStats struct {
 	Nnodes int
 }
@@ -105,14 +109,15 @@ func (r *RayData) Init(ty uint32, P, D m.Vec3, maxdist float32, sg *ShaderGlobal
 
 }
 
-// VisRay returns true if P1 is visible from P0.
+// IsVis returns true if P1 is visible from P0.
 // r is initialized as vis ray
 func (r *RayData) IsVis() bool {
 	if r.Ray.Tclosest < 1-VisRayEpsilon {
 		return false
-	} else {
-		return true
 	}
+
+	return true
+
 }
 
 func (r *Ray) setup() {

@@ -58,7 +58,7 @@ func ClipLeft(d float32, axis int, verts []m.Vec3) (outverts []m.Vec3) {
 	return
 }
 
-// ClipLeft clips the polygon represented by verts by the axis-aligned plane described by d and axis.
+// ClipRight clips the polygon represented by verts by the axis-aligned plane described by d and axis.
 // Keep the bits to the right of the plane.
 func ClipRight(d float32, axis int, verts []m.Vec3) (outverts []m.Vec3) {
 	outverts = make([]m.Vec3, 0, len(verts))

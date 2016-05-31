@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 /*
-  Package sample provides various sampling strategies and utilities.
+Package sample provides various sampling strategies and utilities.
 */
 package sample
 

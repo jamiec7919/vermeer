@@ -5,21 +5,20 @@
 package math
 
 /*
-	Octahedral normals.  Converts a 3 component direction vector (doesn't have to be
-	normalized as this is done on encoding) to a 2 component octahedral normal vector.
+The OctaNormal type represents octahedral normals.  Converts a 3 component direction vector (doesn't have to be
+normalized as this is done on encoding) to a 2 component octahedral normal vector.
 
-	Note that the reference paper allows for smaller lossy encodings but this just implements
-	the lossless conversion to two float32s.
+Note that the reference paper allows for smaller lossy encodings but this just implements
+the lossless conversion to two float32s.
 */
-
 type OctaNormal [2]float32
 
 func sign(v float32) float32 {
 	if v >= 0.0 {
 		return 1.0
-	} else {
-		return -1.0
 	}
+
+	return -1.0
 
 }
 

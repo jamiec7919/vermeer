@@ -3,9 +3,9 @@
 // license that can be found in the LICENSE file.
 
 /*
-  Package material provides the default shader(s) for Vermeer.  (should rename).
+Package material provides the default shader(s) for Vermeer.  (should rename).
 
-  This package is in heavy development so documentation somewhat sketchy.
+This package is in heavy development so documentation somewhat sketchy.
 */
 package material
 
@@ -17,10 +17,14 @@ import (
 	//"log"
 )
 
-//Deprecated: should be in core.
+// Id is the type of shader ids.
+//
+// Deprecated: should be in core.
 type Id int32
 
-//Deprecated: should be in core.
+// ID_NONE is the special shader id representing no shader.
+//
+// Deprecated: should be in core.
 const ID_NONE Id = -1
 
 // Material is the default surface shader.
@@ -45,34 +49,37 @@ type Material struct {
 }
 
 // Name is a core.Node method.
-func (m *Material) Name() string { return m.MtlName }
+func (mtl *Material) Name() string { return mtl.MtlName }
 
 // PreRender is a core.Node method.
-func (m *Material) PreRender(rc *core.RenderContext) error {
+func (mtl *Material) PreRender(rc *core.RenderContext) error {
 	return nil
 }
 
 // PostRender is a core.Node method.
-func (m *Material) PostRender(rc *core.RenderContext) error { return nil }
+func (mtl *Material) PostRender(rc *core.RenderContext) error { return nil }
 
-//Deprecated?: core.Material methods
-func (m *Material) Id() int32 {
-	return m.id
+// Id is a core.Material method.
+//
+// Deprecated?:
+func (mtl *Material) Id() int32 {
+	return mtl.id
 }
 
-//Deprecated?: core.Material methods
-func (m *Material) SetId(id int32) {
-	m.id = id
+// SetId is a core.Material method.
+// Deprecated?:
+func (mtl *Material) SetId(id int32) {
+	mtl.id = id
 }
 
 // HasEDF returns true if the material is emissive.
-func (m *Material) HasEDF() bool {
-	return m.E != nil
+func (mtl *Material) HasEDF() bool {
+	return mtl.E != nil
 }
 
 // HasBumpMap returns true if the material has a bump map associated with it.
-func (m *Material) HasBumpMap() bool {
-	return m.BumpMap != nil
+func (mtl *Material) HasBumpMap() bool {
+	return mtl.BumpMap != nil
 }
 
 /*
@@ -90,11 +97,12 @@ func (m *Material) SampleBSDF(surf *core.SurfacePoint, omega_i m.Vec3, rnd *rand
 */
 
 // Emission returns the RGB emission for the given direction.
-func (m *Material) Emission(sg *core.ShaderGlobals, omega_o m.Vec3) colour.RGB {
-	return m.E.RGB(sg)
+func (mtl *Material) Emission(sg *core.ShaderGlobals, omega_o m.Vec3) colour.RGB {
+	return mtl.E.RGB(sg)
 }
 
-//Deprecated:
+// BumpMap represents a bump map scale and float map.
+// Deprecated: has been split up and moved directly into shader parameters.
 type BumpMap struct {
 	Map   core.Float32Param
 	Scale float32

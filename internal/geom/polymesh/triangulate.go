@@ -10,20 +10,20 @@ func (mesh *PolyMesh) init() error {
 	if mesh.PolyCount != nil {
 		i := uint32(0)
 		for k := range mesh.PolyCount {
-			base_i := i
+			basei := i
 			for j := 0; j < int(mesh.PolyCount[k]-2); j++ {
 				i++
-				mesh.idxp = append(mesh.idxp, uint32(mesh.FaceIdx[base_i]))
+				mesh.idxp = append(mesh.idxp, uint32(mesh.FaceIdx[basei]))
 				mesh.idxp = append(mesh.idxp, uint32(mesh.FaceIdx[i]))
 				mesh.idxp = append(mesh.idxp, uint32(mesh.FaceIdx[i+1]))
 
 				if mesh.UV.Elems != nil {
 					if mesh.UVIdx != nil { // if UVIdx doesn't exist assume same as FaceIdx
-						mesh.uvtriidx = append(mesh.uvtriidx, uint32(mesh.UVIdx[base_i]))
+						mesh.uvtriidx = append(mesh.uvtriidx, uint32(mesh.UVIdx[basei]))
 						mesh.uvtriidx = append(mesh.uvtriidx, uint32(mesh.UVIdx[i]))
 						mesh.uvtriidx = append(mesh.uvtriidx, uint32(mesh.UVIdx[i+1]))
 					} else {
-						mesh.uvtriidx = append(mesh.uvtriidx, uint32(mesh.FaceIdx[base_i]))
+						mesh.uvtriidx = append(mesh.uvtriidx, uint32(mesh.FaceIdx[basei]))
 						mesh.uvtriidx = append(mesh.uvtriidx, uint32(mesh.FaceIdx[i]))
 						mesh.uvtriidx = append(mesh.uvtriidx, uint32(mesh.FaceIdx[i+1]))
 
@@ -32,11 +32,11 @@ func (mesh *PolyMesh) init() error {
 
 				if mesh.Normals.Elems != nil {
 					if mesh.NormalIdx != nil { // if NormalIdx doesn't exist assume same as FaceIdx
-						mesh.normalidx = append(mesh.normalidx, uint32(mesh.NormalIdx[base_i]))
+						mesh.normalidx = append(mesh.normalidx, uint32(mesh.NormalIdx[basei]))
 						mesh.normalidx = append(mesh.normalidx, uint32(mesh.NormalIdx[i]))
 						mesh.normalidx = append(mesh.normalidx, uint32(mesh.NormalIdx[i+1]))
 					} else {
-						mesh.normalidx = append(mesh.normalidx, uint32(mesh.FaceIdx[base_i]))
+						mesh.normalidx = append(mesh.normalidx, uint32(mesh.FaceIdx[basei]))
 						mesh.normalidx = append(mesh.normalidx, uint32(mesh.FaceIdx[i]))
 						mesh.normalidx = append(mesh.normalidx, uint32(mesh.FaceIdx[i+1]))
 

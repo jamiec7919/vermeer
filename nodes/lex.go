@@ -38,13 +38,13 @@ func isAlphaNumeric(r rune) bool {
 	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
-// Call this to skip the next token
+// Skip is called to skip the next token. (shouldn't be public)
 func (x *Lex) Skip() {
 	var sym SymType
 	x.Lex(&sym)
 }
 
-// Call this to peek ahead at next symbol, the next call to Lex will return same sym.
+// Peek is called to peek ahead at next symbol, the next call to Lex will return same sym. (shouldn't be public)
 func (x *Lex) Peek(yylval *SymType) int {
 	token := x.lex(yylval)
 	x.peekToken = true
@@ -54,7 +54,7 @@ func (x *Lex) Peek(yylval *SymType) int {
 	return token
 }
 
-// The parser calls this method to get each new token.
+// Lex is called by the parser to get each new token.
 func (x *Lex) Lex(yylval *SymType) int {
 	if x.peekToken {
 		x.peekToken = false
@@ -188,15 +188,17 @@ L:
 		}
 		yylval.numFloat = f
 		return TOK_FLOAT
-	} else {
-		f, err := strconv.ParseInt(b.String(), 10, 64)
-
-		if err != nil {
-			return eof
-		}
-		yylval.numInt = f
-		return TOK_INT
 	}
+
+	// not a float, must be int:
+
+	f, err := strconv.ParseInt(b.String(), 10, 64)
+
+	if err != nil {
+		return eof
+	}
+	yylval.numInt = f
+	return TOK_INT
 
 }
 

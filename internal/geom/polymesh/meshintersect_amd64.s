@@ -86,7 +86,7 @@ TEXT ·intersectBoxes(SB),NOSPLIT,$0
     XORPS   X0,X0    // X0 = 0.0
     MAXPS   X6,X0   // X0 = tNear = MAX(0,tmin)
 
-    MOVQ    tNear+24(FP),DX    // *tNear [4]float32 pointer
+    MOVQ    t+24(FP),DX    // *t [4]float32 pointer
     LEAQ    (DX),BP
     MOVAPS   X0,(BP)
 

@@ -49,7 +49,7 @@ func Vec2Length2(a Vec2) float32 {
 	return a[0]*a[0] + a[1]*a[1]
 }
 
-// Vec2Length2 returns the length of vector a.
+// Vec2Length returns the length of vector a.
 func Vec2Length(a Vec2) float32 {
 	return Sqrt(a[0]*a[0] + a[1]*a[1])
 }

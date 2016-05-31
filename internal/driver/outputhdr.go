@@ -10,13 +10,18 @@ import (
 	"github.com/jamiec7919/vermeer/nodes"
 )
 
+// OutputHDR is a node which saves the rendered image intoa Radiance HDR file.
 type OutputHDR struct {
 	Filename string
 }
 
-func (n *OutputHDR) Name() string                           { return "OutputHDR<>" }
+// Name is a core.Node method.
+func (n *OutputHDR) Name() string { return "OutputHDR<>" }
+
+// PreRender is a core.Node method.
 func (n *OutputHDR) PreRender(rc *core.RenderContext) error { return nil }
 
+// PostRender is a core.Node method.
 func (n *OutputHDR) PostRender(rc *core.RenderContext) error {
 	i, err := image.NewWriter(n.Filename)
 

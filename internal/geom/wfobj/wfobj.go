@@ -26,11 +26,11 @@ type texvert struct {
 }
 
 type reader struct {
-	v     []m.Vec3
-	vt    []m.Vec2
-	vn    []m.Vec3
-	vn_i  map[texvert]int32
-	Faces []mesh.FaceGeom
+	v      []m.Vec3
+	vt     []m.Vec2
+	vn     []m.Vec3
+	vniMap map[texvert]int32
+	Faces  []mesh.FaceGeom
 
 	mvt []m.Vec2
 	mvn []m.Vec3
@@ -47,7 +47,7 @@ type reader struct {
 func (r *reader) init(rc *core.RenderContext, filename string) {
 	r.rc = rc
 	r.filename = filename
-	r.vn_i = make(map[texvert]int32)
+	r.vniMap = make(map[texvert]int32)
 }
 
 //TODO: this is a bit of a mess
@@ -63,14 +63,14 @@ func (r *reader) triangulateFace(face []facevert, mtlid int32) {
 		f.V[1] = r.v[face[i].p]
 		f.V[2] = r.v[face[i2].p]
 
-		if tv, ok := r.vn_i[texvert{face[0].t, face[0].n}]; ok {
+		if tv, ok := r.vniMap[texvert{face[0].t, face[0].n}]; ok {
 			// We have a match for this tv, use that index
 			f.Vi[0] = int32(tv)
 		} else {
 			// alloc a new one
 			f.Vi[0] = int32(len(r.mvt))
 			texvert := texvert{face[0].t, face[0].n}
-			r.vn_i[texvert] = f.Vi[0]
+			r.vniMap[texvert] = f.Vi[0]
 
 			if r.vt != nil {
 				if face[0].t < len(r.vt) {
@@ -87,14 +87,14 @@ func (r *reader) triangulateFace(face []facevert, mtlid int32) {
 			}
 		}
 
-		if tv, ok := r.vn_i[texvert{face[i].t, face[i].n}]; ok {
+		if tv, ok := r.vniMap[texvert{face[i].t, face[i].n}]; ok {
 			// We have a match for this tv, use that index
 			f.Vi[1] = int32(tv)
 		} else {
 			// alloc a new one
 			f.Vi[1] = int32(len(r.mvt))
 			texvert := texvert{face[i].t, face[i].n}
-			r.vn_i[texvert] = f.Vi[1]
+			r.vniMap[texvert] = f.Vi[1]
 
 			if r.vt != nil {
 				if face[i].t < len(r.vt) {
@@ -111,14 +111,14 @@ func (r *reader) triangulateFace(face []facevert, mtlid int32) {
 			}
 		}
 
-		if tv, ok := r.vn_i[texvert{face[i2].t, face[i2].n}]; ok {
+		if tv, ok := r.vniMap[texvert{face[i2].t, face[i2].n}]; ok {
 			// We have a match for this tv, use that index
 			f.Vi[2] = int32(tv)
 		} else {
 			// alloc a new one
 			f.Vi[2] = int32(len(r.mvt))
 			texvert := texvert{face[i2].t, face[i2].n}
-			r.vn_i[texvert] = f.Vi[2]
+			r.vniMap[texvert] = f.Vi[2]
 			if r.vt != nil {
 				if face[i2].t < len(r.vt) {
 					r.mvt = append(r.mvt, r.vt[face[i2].t])
@@ -160,6 +160,7 @@ func (r *reader) printAreas() {
 
 }
 
+// Open attempts to open the filename and returns a mesh.Loader on success.
 func Open(rc *core.RenderContext, filename string) (mesh.Loader, error) {
 	fin, err := os.Open(filename)
 	if err != nil {
@@ -177,6 +178,7 @@ func Open(rc *core.RenderContext, filename string) (mesh.Loader, error) {
 	return &reader, nil
 }
 
+// SetOption implements mesh.Loader.
 func (r *reader) SetOption(opt string, v interface{}) error {
 	switch opt {
 	case "MergeVertPos":
@@ -235,7 +237,7 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 	//scanner := bufio.NewScanner(fin)
 
 	// We will use the vt indices as given and remap the vn's.
-	//vn_i := map[int]int{}
+	//vniMap := map[int]int{}
 
 	var mtlid int32 = -1
 	var vertmerge map[m.Vec3]int32
@@ -270,7 +272,7 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 
 		switch toks[0] {
 		case "mtllib":
-			err := ParseMtlLib(r.rc, toks[1])
+			err := parseMtlLib(r.rc, toks[1])
 
 			if err != nil {
 				return nil, err

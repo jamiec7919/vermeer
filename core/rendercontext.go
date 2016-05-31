@@ -20,17 +20,22 @@ const TILESIZE = 64
 // MAXGOROUTINES is the default number of goroutines to run for rendering.
 const MAXGOROUTINES = 5
 
-//Deprecated: NSAMP is the number of samples to take (not used).
+// NSAMP is the number of samples to take (not used).
+// Deprecated: progressive rendering takes as many samples as needed or use maxiter.
 const NSAMP = 16
 
 var rayCount int
 
-//Deprecated:
+// RenderFuncStats collects stats for a single goroutine.
+//
+// Deprecated: stats system will change.
 type RenderFuncStats struct {
 	RayCount, ShadowRayCount int
 }
 
-//Deprecated: Frame represents a single frame.
+// Frame represents a single frame.
+//
+// Deprecated: not needed.
 type Frame struct {
 	w, h   int
 	du, dv float32
@@ -65,7 +70,10 @@ func (rc *RenderContext) Image() []float32 {
 	return rc.imgbuf
 }
 
-//Deprecated: RenderContext represents everything in the current core API instance.
+// RenderContext represents everything in the current core API instance.
+//
+// Deprecated: will only ever be one of these so promote everything to top level and avoid
+// passing around the extra pointer.
 type RenderContext struct {
 	globals   Globals
 	imgbuf    []float32
@@ -88,8 +96,9 @@ func (rc *RenderContext) GetMaterial(id int32) Material {
 	return nil
 }
 
-//Deprecated: NewRenderContext returns a new RenderContext set to defaults.
-// Core API is going to be changed to not need a render context as only one frame at
+// NewRenderContext returns a new RenderContext set to defaults.
+//
+// Deprecated: Core API is going to be changed to not need a render context as only one frame at
 // a time is to be rendered anyway.
 func NewRenderContext() *RenderContext {
 	rc := &RenderContext{}
@@ -211,12 +220,12 @@ func renderFunc(n int, frame *Frame, c chan *WorkItem, done chan *WorkItem, wg *
 	return ray
 }
 
-func tonemap(w, h int, hdr_rgb []float32, buf []uint8) {
+func tonemap(w, h int, hdrRGB []float32, buf []uint8) {
 	// Tone map into buffer
 	for i := 0; i < w*h*3; i += 3 {
-		buf[i] = uint8(hdr_rgb[i])
-		buf[i+1] = uint8(hdr_rgb[i+1])
-		buf[i+2] = uint8(hdr_rgb[i+2])
+		buf[i] = uint8(hdrRGB[i])
+		buf[i+1] = uint8(hdrRGB[i+1])
+		buf[i+2] = uint8(hdrRGB[i+2])
 
 	}
 
@@ -327,11 +336,9 @@ L:
 			}
 			duration := time.Since(startTime)
 			totalRays := 0
-			_shadowRays := 0
 
 			for i := range stats {
 				totalRays += stats[i].RayCount
-				_shadowRays += stats[i].ShadowRayCount
 			}
 			totalRays = rayCount
 			log.Printf("%v iterations, %v (%v rays, %v shadow) %v %v Mr/sec", k+1, duration, totalRays, shadowRays, rayCount, float64(totalRays+shadowRays)/(1000000.0*duration.Seconds()))
@@ -364,8 +371,9 @@ func GetMaterialId(name string) int32 {
 	return grc.GetMaterialId(name)
 }
 
-//Deprecated: GetMaterialId returns the shader id for the given node name.
-// Should use the core API global GetMaterialId.
+// GetMaterialId returns the shader id for the given node name.
+//
+// Deprecated: Should use the core API global GetMaterialId.
 func (rc *RenderContext) GetMaterialId(name string) int32 {
 	for id, mtl := range rc.materials {
 		if mtl.Name() == name {

@@ -28,9 +28,9 @@ func (m *Material) Eval(sg *core.ShaderGlobals) {
 		roughness = m.Roughness.Float32(sg)
 	}
 
-	spec_roughness := float32(0.5)
+	specRoughness := float32(0.5)
 	if m.SpecularRoughness != nil {
-		spec_roughness = m.SpecularRoughness.Float32(sg)
+		specRoughness = m.SpecularRoughness.Float32(sg)
 	}
 	ior := float32(1.7)
 	if m.IOR != nil {
@@ -38,10 +38,10 @@ func (m *Material) Eval(sg *core.ShaderGlobals) {
 	}
 	var brdf2 core.BRDF
 
-	if spec_roughness == 0.0 {
+	if specRoughness == 0.0 {
 		brdf2 = bsdf.NewSpecular(sg)
 	} else {
-		brdf2 = bsdf.NewMicrofacetGGX(sg, ior, spec_roughness)
+		brdf2 = bsdf.NewMicrofacetGGX(sg, ior, specRoughness)
 	}
 
 	brdf := bsdf.NewOrenNayar(sg, roughness)

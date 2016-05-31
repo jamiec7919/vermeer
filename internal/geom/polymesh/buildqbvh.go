@@ -48,29 +48,29 @@ func (mesh *PolyMesh) initAccel() error {
 
 		return mesh.initMotionBoxes()
 
-	} else {
-		for i := 0; i < mesh.facecount; i++ {
-			var face Face
-
-			face.V[0] = mesh.Verts.Elems[int(mesh.idxp[i*3+0])]
-			face.V[1] = mesh.Verts.Elems[int(mesh.idxp[i*3+1])]
-			face.V[2] = mesh.Verts.Elems[int(mesh.idxp[i*3+2])]
-
-			boxes[i] = face.Bounds()
-			centroids[i] = face.Centroid()
-
-			idxs[i] = int32(i)
-		}
-
-		nodes, bounds := qbvh.BuildAccel(boxes, centroids, idxs, 16)
-		mesh.accel.qbvh = nodes
-		mesh.accel.idx = idxs
-		mesh.bounds = bounds
-		return nil
-
 	}
 
+	// Static mesh:
+
+	for i := 0; i < mesh.facecount; i++ {
+		var face Face
+
+		face.V[0] = mesh.Verts.Elems[int(mesh.idxp[i*3+0])]
+		face.V[1] = mesh.Verts.Elems[int(mesh.idxp[i*3+1])]
+		face.V[2] = mesh.Verts.Elems[int(mesh.idxp[i*3+2])]
+
+		boxes[i] = face.Bounds()
+		centroids[i] = face.Centroid()
+
+		idxs[i] = int32(i)
+	}
+
+	nodes, bounds := qbvh.BuildAccel(boxes, centroids, idxs, 16)
+	mesh.accel.qbvh = nodes
+	mesh.accel.idx = idxs
+	mesh.bounds = bounds
 	return nil
+
 }
 
 // assume the mesh.mqbvh nodes are already initialized with the tree topology
@@ -112,10 +112,10 @@ func (mesh *PolyMesh) initMotionBoxesRec(key int, node int32) (nodebox m.Boundin
 			box.Reset()
 
 			// calc box
-			leaf_base := qbvh.LEAF_BASE(mesh.accel.mqbvh.Nodes[node].Children[k])
-			leaf_count := qbvh.LEAF_COUNT(mesh.accel.mqbvh.Nodes[node].Children[k])
+			leafBase := qbvh.LEAF_BASE(mesh.accel.mqbvh.Nodes[node].Children[k])
+			leafCount := qbvh.LEAF_COUNT(mesh.accel.mqbvh.Nodes[node].Children[k])
 
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				faceidx := int(mesh.accel.idx[i])
 
 				box.GrowVec3(mesh.Verts.Elems[int(mesh.idxp[faceidx*3+0])+(mesh.Verts.ElemsPerKey*key)])

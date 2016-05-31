@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 /*
-  Package edf provides the built-in EDFs (Emission Distribution Functions) for Vermeer.
+Package edf provides the built-in EDFs (Emission Distribution Functions) for Vermeer.
 */
 package edf
 
@@ -20,13 +20,13 @@ type Diffuse struct {
 }
 
 // Eval evaluates the emission in the given direction.
-func (b *Diffuse) Eval(surf *core.SurfacePoint, omega_o m.Vec3, Le *colour.Spectrum) error {
-	d := omega_o[2]
+func (b *Diffuse) Eval(surf *core.SurfacePoint, omegaO m.Vec3, Le *colour.Spectrum) error {
+	d := omegaO[2]
 	Le.FromRGB(b.E[0]*d, b.E[1]*d, b.E[2]*d)
 	return nil
 }
 
 // Deprecated: Sample samples the emission distribution.
-func (b *Diffuse) Sample(surf *core.SurfacePoint, rnd *rand.Rand, omega_o *m.Vec3, Le *colour.Spectrum, pdf *float64) error {
+func (b *Diffuse) Sample(surf *core.SurfacePoint, rnd *rand.Rand, omegaO *m.Vec3, Le *colour.Spectrum, pdf *float64) error {
 	return nil
 }

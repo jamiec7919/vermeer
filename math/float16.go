@@ -12,7 +12,6 @@ import "math"
 	http://www.mathworks.com/matlabcentral/fileexchange/23173-ieee-754r-half-precision-floating-point-converter
 	(BSD License)
 */
-
 type Float16 uint16
 
 // Float32ToFloat16 converts from a 32 bit float to the IEEE binary16 representation (lossy)
@@ -21,49 +20,51 @@ func Float32ToFloat16(xe float32) Float16 {
 
 	if x&0x7FFFFFFF == 0 { // Signed zero
 		return Float16(x >> 16) // return the signed zero
-	} else {
-		xs := x & 0x80000000 // Pick off sign bit
-		xe := x & 0x7F800000 // Pick off exponent bits
-		xm := x & 0x007FFFFF // Pick off mantissa bits
+	}
 
-		if xe == 0 { // Denormal will underflow, return a signed zero
-			return Float16(xs >> 16)
-		} else if xe == 0x7F800000 { // Inf or NaN (all exponent bits are set)
-			if xm == 0 { // If mantissa is zero...
-				return Float16((xs >> 16) | 0x7C00) // Signed Inf
+	xs := x & 0x80000000   // Pick off sign bit
+	xexp := x & 0x7F800000 // Pick off exponent bits
+	xm := x & 0x007FFFFF   // Pick off mantissa bits
+
+	if xexp == 0 { // Denormal will underflow, return a signed zero
+		return Float16(xs >> 16)
+	} else if xexp == 0x7F800000 { // Inf or NaN (all exponent bits are set)
+		if xm == 0 { // If mantissa is zero...
+			return Float16((xs >> 16) | 0x7C00) // Signed Inf
+		}
+		return Float16(0xFE00) // NaN, only 1st mantissa bit set
+
+	} else { // Normalized number
+		hs := Float16(xs >> 16)                // Sign bit
+		hes := (uint32(xexp >> 23)) - 127 + 15 // Exponent unbias the single, then bias the halfp
+		if hes >= 0x1F {                       // Overflow
+			return Float16((xs >> 16) | 0x7C00) // Signed Inf
+		} else if hes <= 0 { // Underflow
+
+			var hm Float16
+
+			if (14 - hes) > 24 { // Mantissa shifted all the way off & no rounding possibility
+				hm = Float16(0) // Set mantissa to zero
 			} else {
-				return Float16(0xFE00) // NaN, only 1st mantissa bit set
-			}
-		} else { // Normalized number
-			hs := Float16(xs >> 16)              // Sign bit
-			hes := (uint32(xe >> 23)) - 127 + 15 // Exponent unbias the single, then bias the halfp
-			if hes >= 0x1F {                     // Overflow
-				return Float16((xs >> 16) | 0x7C00) // Signed Inf
-			} else if hes <= 0 { // Underflow
-
-				var hm Float16
-
-				if (14 - hes) > 24 { // Mantissa shifted all the way off & no rounding possibility
-					hm = Float16(0) // Set mantissa to zero
-				} else {
-					xm |= 0x00800000                    // Add the hidden leading bit
-					hm = Float16(xm >> (14 - hes))      // Mantissa
-					if (xm>>(13-hes))&0x00000001 != 0 { // Check for rounding
-						hm += Float16(1) // Round, might overflow into exp bit, but this is OK
-					}
-				}
-				return (hs | hm) // Combine sign bit and mantissa bits, biased exponent is zero
-			} else {
-				he := Float16(hes << 10) // Exponent
-				hm := Float16(xm >> 13)  // Mantissa
-				if xm&0x00001000 != 0 {  // Check for rounding
-					return (hs | he | hm) + Float16(1) // Round, might overflow to inf, this is OK
-				} else {
-					return (hs | he | hm) // No rounding
+				xm |= 0x00800000                    // Add the hidden leading bit
+				hm = Float16(xm >> (14 - hes))      // Mantissa
+				if (xm>>(13-hes))&0x00000001 != 0 { // Check for rounding
+					hm += Float16(1) // Round, might overflow into exp bit, but this is OK
 				}
 			}
+			return (hs | hm) // Combine sign bit and mantissa bits, biased exponent is zero
+		} else {
+			he := Float16(hes << 10) // Exponent
+			hm := Float16(xm >> 13)  // Mantissa
+			if xm&0x00001000 != 0 {  // Check for rounding
+				return (hs | he | hm) + Float16(1) // Round, might overflow to inf, this is OK
+			}
+
+			return (hs | he | hm) // No rounding
+
 		}
 	}
+
 }
 
 // Float16ToFloat32 converts a Float16 to 32bit IEEE float.

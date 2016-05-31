@@ -109,10 +109,10 @@ func (scene *Scene) traceRayAccel(ray *RayData, sg *ShaderGlobals) (mtlid int32)
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
-			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			leafBase := qbvh.LEAF_BASE(node)
+			leafCount := qbvh.LEAF_COUNT(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leafBase, leafCount)
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				_mtlid := scene.prims[i].TraceRay(ray, sg)
 
 				if _mtlid > -1 {
@@ -159,10 +159,10 @@ func (scene *Scene) visRayAccel(ray *RayData) {
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
-			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			leafBase := qbvh.LEAF_BASE(node)
+			leafCount := qbvh.LEAF_COUNT(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leafBase, leafCount)
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				scene.prims[i].VisRay(ray)
 
 				if !ray.IsVis() {

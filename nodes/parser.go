@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 /*
-  Package nodes is used to parse vnf files and create the node structure.
+Package nodes is used to parse vnf files and create the node structure.
 */
 package nodes
 
@@ -17,6 +17,7 @@ import (
 	"reflect"
 )
 
+// Token types returned by lexer.
 const (
 	eof = iota
 	TOK_TOKEN
@@ -30,17 +31,17 @@ const (
 	TOK_COMMA
 )
 
-var type_Int32 = reflect.TypeOf(int32(0))
-var type_UInt32 = reflect.TypeOf(uint32(0))
-var type_Vec3 = reflect.TypeOf(m.Vec3{})
-var type_Vec2 = reflect.TypeOf(m.Vec2{})
-var type_Matrix = reflect.TypeOf(m.Matrix4{})
-var type_PointArray = reflect.TypeOf(core.PointArray{})
-var type_Vec2Array = reflect.TypeOf(core.Vec2Array{})
-var type_Vec3Array = reflect.TypeOf(core.Vec3Array{})
-var type_MatrixArray = reflect.TypeOf(core.MatrixArray{})
+var typeInt32 = reflect.TypeOf(int32(0))
+var typeUInt32 = reflect.TypeOf(uint32(0))
+var typeVec3 = reflect.TypeOf(m.Vec3{})
+var typeVec2 = reflect.TypeOf(m.Vec2{})
+var typeMatrix = reflect.TypeOf(m.Matrix4{})
+var typePointArray = reflect.TypeOf(core.PointArray{})
+var typeVec2Array = reflect.TypeOf(core.Vec2Array{})
+var typeVec3Array = reflect.TypeOf(core.Vec3Array{})
+var typeMatrixArray = reflect.TypeOf(core.MatrixArray{})
 
-// The type of symbols returned from lexer (shouldn't be public)
+// SymType is the type of symbols returned from lexer (shouldn't be public)
 type SymType struct {
 	numFloat float64
 	numInt   int64
@@ -485,7 +486,7 @@ func (p *parser) param(field reflect.Value) error {
 
 	case reflect.Slice:
 		switch field.Type().Elem() {
-		case type_Int32:
+		case typeInt32:
 			switch t := p.lex.Peek(&v); t {
 			case TOK_INT:
 				p.int32slice(field)
@@ -509,15 +510,15 @@ func (p *parser) param(field reflect.Value) error {
 	default:
 
 		switch field.Type() {
-		case type_Vec3:
+		case typeVec3:
 			return p.vec3(field)
-		case type_MatrixArray:
+		case typeMatrixArray:
 			return p.matrixarray(field)
-		case type_PointArray:
+		case typePointArray:
 			return p.pointarray(field)
-		case type_Vec3Array:
+		case typeVec3Array:
 			return p.vec3array(field)
-		case type_Vec2Array:
+		case typeVec2Array:
 			return p.vec2array(field)
 		default:
 			p.error("Invalid type for param (%v)", field.Type())
@@ -529,7 +530,7 @@ func (p *parser) param(field reflect.Value) error {
 	return nil
 }
 
-func lookupParam(node core.Node, field_name string) (reflect.Value, error) {
+func lookupParam(node core.Node, fieldName string) (reflect.Value, error) {
 	rv := reflect.ValueOf(node)
 
 	relem := rv.Elem()
@@ -544,12 +545,12 @@ func lookupParam(node core.Node, field_name string) (reflect.Value, error) {
 	for i := 0; i < relem.NumField(); i++ {
 		f := ty.Field(i)
 		if tag := f.Tag.Get("node"); tag != "" {
-			if tag == field_name {
+			if tag == fieldName {
 				return relem.Field(i), nil
 
 			}
 		} else {
-			if f.Name == field_name {
+			if f.Name == fieldName {
 				return relem.Field(i), nil
 
 			}
@@ -558,7 +559,7 @@ func lookupParam(node core.Node, field_name string) (reflect.Value, error) {
 
 	}
 
-	return reflect.Value{}, errors.New("Field " + field_name + " not found.")
+	return reflect.Value{}, errors.New("Field " + fieldName + " not found.")
 }
 
 func (p *parser) node(name string) (core.Node, error) {
@@ -577,16 +578,16 @@ func (p *parser) node(name string) (core.Node, error) {
 		// log.Printf("%v", t)
 		switch t {
 		case TOK_TOKEN:
-			param_name := v.str
+			paramName := v.str
 
-			field, err := lookupParam(node, param_name)
+			field, err := lookupParam(node, paramName)
 
 			if err != nil {
 				return nil, err
 			}
 
 			if !field.IsValid() {
-				p.error("Field %v not found/invalid in %v", param_name, name)
+				p.error("Field %v not found/invalid in %v", paramName, name)
 				return nil, nil
 			}
 
@@ -607,7 +608,7 @@ func (p *parser) node(name string) (core.Node, error) {
 }
 
 func (p *parser) error(msg string, v ...interface{}) {
-	if err := p.rc.Error(errors.New(fmt.Sprintf(msg, v...))); err != nil {
+	if err := p.rc.Error(fmt.Errorf(msg, v...)); err != nil {
 		panic(err)
 	}
 }

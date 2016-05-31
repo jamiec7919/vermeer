@@ -20,11 +20,11 @@ We(y0) = 1
 P_A(y0) = 1
 
 Directional
-We(y0->y1) = d^2 / (A_p * cos^3	theta_o),
-P(y0->y1) = d^2 / (A_p * cos^3	theta_o),
+We(y0->y1) = d^2 / (Apixel * cos^3	theta_o),
+P(y0->y1) = d^2 / (Apixel * cos^3	theta_o),
 
 cos theta_o = D dot camera.N  (camera.N = -camera.W)
-A_p is pixel density of image with respect to screen size.
+Apixel is pixel density of image with respect to screen size.
 
 For a circular thin lense model camera:
 Spatial
@@ -36,11 +36,14 @@ Angular
 (same as pinhole)
 
 Should sample position on lens, and directional component.
-Note that for bpt these should be seperate as might want to join to
+Note that for bpt these should be separate as might want to join to
 lens.  However this should mean that light paths can contribute to
 *any* pixel when joining to lens. (and indeed may be splatted if
 there is a multi-pixel filter)
 */
+
+// The Camera node represents a 3D camera, it can be specified as a 'lookat' or matrix and
+// may have motion keys for its parameters.
 type Camera struct {
 	NodeName string `node:"Name"`
 
@@ -66,22 +69,26 @@ type Camera struct {
 
 func degToRad(deg float32) float32 { return deg * m.Pi / 180.0 }
 
+// PreRender is a core.Node method.
 func (c *Camera) PreRender(rc *core.RenderContext) error {
 	if c.Aspect == 0.0 {
 		c.Aspect = rc.FrameAspect()
 	}
 
-	c.CalcBasisLookat()
+	c.calcBasisLookat()
 
 	c.TanThetaFocal = m.Tan(degToRad(c.Fov/2)) * c.Focal
 
 	return nil
 }
 
+// PostRender is a core.Node method.
 func (c *Camera) PostRender(*core.RenderContext) error { return nil }
-func (c *Camera) Name() string                         { return c.NodeName }
 
-func (c *Camera) CalcBasisLookat() {
+// Name is a core.Node method.
+func (c *Camera) Name() string { return c.NodeName }
+
+func (c *Camera) calcBasisLookat() {
 
 	c.W = m.Vec3Normalize(m.Vec3Sub(c.From, c.Target)) // Note W points away from target
 	c.U = m.Vec3Normalize(m.Vec3Cross(c.Up, c.W))
@@ -97,6 +104,7 @@ func (c *Camera) CalcBasisLookat() {
 
 */
 
+// SampleLensArea samples the lens according to area.
 func (c *Camera) SampleLensArea(rnd *rand.Rand, P *m.Vec3, We *float32, pdf *float32) error {
 	*P = c.From
 
@@ -115,21 +123,23 @@ func (c *Camera) SampleLensArea(rnd *rand.Rand, P *m.Vec3, We *float32, pdf *flo
 	return nil
 }
 
-func (c *Camera) SampleImagePlaneDir(u, v float32, P m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, We *float32, pdf *float32) error {
+// SampleImagePlaneDir samples a direction from the image plane.
+func (c *Camera) SampleImagePlaneDir(u, v float32, P m.Vec3, rnd *rand.Rand, omegaO *m.Vec3, We *float32, pdf *float32) error {
 
 	camu := u * c.TanThetaFocal
 	camv := v * (c.TanThetaFocal / c.Aspect)
 
 	s := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(camu, c.U), m.Vec3Scale(camv, c.V)), m.Vec3Scale(c.Focal, c.W))
-	*omega_o = m.Vec3Normalize(m.Vec3Sub(m.Vec3Add(c.From, s), P))
+	*omegaO = m.Vec3Normalize(m.Vec3Sub(m.Vec3Add(c.From, s), P))
 
-	cos_omega_o := m.Vec3Dot(*omega_o, m.Vec3Neg(c.W))
-	A_p := float32(1.0) // pixel density WRT image size
-	*We = (c.Focal * c.Focal) / (A_p * cos_omega_o * cos_omega_o * cos_omega_o)
-	*pdf = (c.Focal * c.Focal) / (A_p * cos_omega_o * cos_omega_o * cos_omega_o)
+	cosOmegaO := m.Vec3Dot(*omegaO, m.Vec3Neg(c.W))
+	Apixel := float32(1.0) // pixel density WRT image size
+	*We = (c.Focal * c.Focal) / (Apixel * cosOmegaO * cosOmegaO * cosOmegaO)
+	*pdf = (c.Focal * c.Focal) / (Apixel * cosOmegaO * cosOmegaO * cosOmegaO)
 	return nil
 }
 
+// ComputeRay calculates a position and direction for a sampled ray.
 func (c *Camera) ComputeRay(u, v float32, rnd *rand.Rand) (P, D m.Vec3) {
 	P = c.From
 	// D = || u*U + v*V - d*W  ||

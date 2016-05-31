@@ -11,10 +11,10 @@ import (
 
 // SignMask returns the bits of the float32 v as a uint32 with everything masked off except the sign bit.
 func SignMask(v float32) uint32 {
-	return sign_mask(v)
+	return signMask(v)
 }
 
-func sign_mask(v float32) uint32 {
+func signMask(v float32) uint32 {
 	return (*(*uint32)(unsafe.Pointer(&v))) & (1 << 31) //~0x7fffffff;
 }
 
@@ -28,11 +28,12 @@ func andf(v float32, i uint32) float32 {
 
 }
 
+// Xorf returns the bitwise xor of v with i.
 func Xorf(v float32, i uint32) float32 {
 	return math.Float32frombits(*(*uint32)(unsafe.Pointer(&v)) ^ i)
 
 }
 
 func fabsf(x float32) float32 {
-	return xorf(x, sign_mask(x))
+	return xorf(x, signMask(x))
 }

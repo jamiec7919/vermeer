@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 /*
-	Package image implements a Go-centric version of the Open Image IO library.
+Package image implements a Go-centric version of the Open Image IO library.
 */
 package image
 
@@ -12,22 +12,29 @@ import (
 )
 
 var (
+	// ErrNoWriter is returned if no writer can be found for image file.
 	ErrNoWriter = errors.New("No writer")
 )
 
+// BaseType represents the base type.
 type BaseType int
+
+// Aggregate represents the kind of aggregate (e.g. scalar, array etc.).
 type Aggregate int
 
+// Enum for BaseTypes.
 const (
 	UINT8 BaseType = iota
 	FLOAT
 )
 
+// Enum for Aggregate.
 const (
 	SCALAR Aggregate = iota
 )
 
 const (
+	// AutoStride is used in stride parameters to signify default stride.
 	AutoStride = -1
 )
 

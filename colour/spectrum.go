@@ -21,7 +21,7 @@ const (
 	LAMBDA_N   = 4
 )
 
-const lambda_bar = LAMBDA_MAX - LAMBDA_MIN
+const lambdaBar = LAMBDA_MAX - LAMBDA_MIN
 
 // Spectrum represents a line spectrum using the hero-wavelength idea.
 type Spectrum struct {
@@ -61,13 +61,13 @@ func (wv *Spectrum) ToRGB() (r, g, b float32) {
 	// (How to Derive a Spectrum From an RGB Triple)
 
 	for i := 0; i < LAMBDA_N; i++ {
-		x += wv.C[i] * Cie_x(wv.Wavelength(i))
-		y += wv.C[i] * Cie_y(wv.Wavelength(i))
-		z += wv.C[i] * Cie_z(wv.Wavelength(i))
+		x += wv.C[i] * cie1931deg2.X(wv.Wavelength(i))
+		y += wv.C[i] * cie1931deg2.Y(wv.Wavelength(i))
+		z += wv.C[i] * cie1931deg2.Z(wv.Wavelength(i))
 	}
 
 	// Now transform XYZ to RGB.  Should make this selectable as to which RGB.
-	r, g, b = ColourSpace_sRGB.XYZToRGB(x, y, z)
+	r, g, b = sRGB.XYZToRGB(x, y, z)
 	return
 }
 
@@ -101,10 +101,10 @@ func (wv *Spectrum) Add(other Spectrum) {
 // j = 0..LAMBDA_N
 func (wv *Spectrum) Wavelength(j int) (v float32) {
 
-	v = (wv.Lambda - LAMBDA_MIN + (float32(j)/LAMBDA_N)*lambda_bar)
+	v = (wv.Lambda - LAMBDA_MIN + (float32(j)/LAMBDA_N)*lambdaBar)
 
-	if v >= lambda_bar {
-		v -= lambda_bar
+	if v >= lambdaBar {
+		v -= lambdaBar
 	}
 
 	v += LAMBDA_MIN

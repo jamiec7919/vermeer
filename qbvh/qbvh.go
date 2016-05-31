@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 /*
-	Package qbvh implements the Quad-BVH data structure.
+Package qbvh implements the Quad-BVH data structure.
 */
 package qbvh
 
@@ -11,10 +11,12 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 )
 
-// Max leaf size supported by data structure.  Users of QBVH may request smaller leafs.
+// MaxLeafCount is the maximum leaf size supported by data structure.
+// Users of QBVH may request smaller leafs.
 const MaxLeafCount = 16
 
-type Index int32 // Type of a triangle/prim index
+// Index is the type of a triangle/prim index.
+type Index int32
 
 // Node represenets a QBVH node.
 // 128 byte struct

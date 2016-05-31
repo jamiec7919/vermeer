@@ -16,9 +16,10 @@ var InfNeg = math.Float32frombits(uint32(0x1ff) << 23)
 func Inf(sign int) float32 {
 	if sign > 0 {
 		return InfPos
-	} else {
-		return InfNeg
 	}
+
+	return InfNeg
+
 }
 
 // IsInf returns true if the value represented by v is infinity.

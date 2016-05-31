@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 /*
-	Package hdr implements implements the Radiance HDR format, supports only float32 RGB pixels.
+Package hdr implements implements the Radiance HDR format, supports only float32 RGB pixels.
 */
 package hdr
 

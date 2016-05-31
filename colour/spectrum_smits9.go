@@ -7,18 +7,18 @@ package colour
 // Implements Smits99 RGB->Spectrum conversion.
 
 const (
-	smits_LAMBDAMIN float32 = 380
-	smits_LAMBDAMAX         = 720
+	smitsLambdaMin float32 = 380
+	smitsLambdaMax         = 720
 )
 
 type smitsSpectrum [10]float32
 
 func (s *smitsSpectrum) eval(lambda float32) float32 {
-	if lambda < smits_LAMBDAMIN || lambda >= smits_LAMBDAMAX {
+	if lambda < smitsLambdaMin || lambda >= smitsLambdaMax {
 		return 0
 	}
 
-	bin := int(((lambda - smits_LAMBDAMIN) / (smits_LAMBDAMAX - smits_LAMBDAMIN)) * 10.0)
+	bin := int(((lambda - smitsLambdaMin) / (smitsLambdaMax - smitsLambdaMin)) * 10.0)
 
 	return s[bin]
 

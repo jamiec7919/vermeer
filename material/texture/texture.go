@@ -3,30 +3,30 @@
 // license that can be found in the LICENSE file.
 
 /*
-  Package texture implements an efficient texture cache.
+Package texture implements an efficient texture cache.
 
-  At present it does virtually nothing other than thread-safe loading of texture files.  Doesn't
-  release memory or attempt to use tiled caching.
+At present it does virtually nothing other than thread-safe loading of texture files.  Doesn't
+release memory or attempt to use tiled caching.
 
-  Textures are currently represented simply by a string which references into a hashmap.  Lookup sounds
-  inefficient but has never shown up as significant on profiling.  Expected to change as many more
-  textures are used in shaders.
+Textures are currently represented simply by a string which references into a hashmap.  Lookup sounds
+inefficient but has never shown up as significant on profiling.  Expected to change as many more
+textures are used in shaders.
 */
 package texture
 
 import (
 	//_ "github.com/ftrvxmtrx/tga"
-	_ "golang.org/x/image/tiff"
+	_ "golang.org/x/image/tiff" // Imported for effect
 	"image"
-	_ "image/jpeg"
-	_ "image/png"
+	_ "image/jpeg" // Imported for effect
+	_ "image/png"  // Imported for effect
 	"log"
 	"os"
 	"sync"
 	"sync/atomic"
 )
 
-// Texture represents a texture image.  (shouldnt' be public)
+// Texture represents a texture image.  (shouldn't be public)
 type Texture struct {
 	url  string
 	fmt  int
@@ -120,7 +120,7 @@ func LoadTexture(url string) (*Texture, error) {
 	return t, nil
 }
 
-// SetRGB sets a pixel in a Texture object. (shouldnt be public)
+// SetRGB sets a pixel in a Texture object. (shouldn't be public)
 func (tex *Texture) SetRGB(x, y int, r, g, b byte) {
 	tex.data[(x+(y*tex.w))*3+0] = r
 	tex.data[(x+(y*tex.w))*3+1] = g

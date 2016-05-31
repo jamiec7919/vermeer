@@ -36,7 +36,9 @@ func (b *BoundingBox) AxisCentroid(axis int) float32 {
 	return (b.Bounds[1][axis] + b.Bounds[0][axis]) * 0.5
 }
 
-//Deprecated: Centre is the same as Centroid.
+// Centre returns the centroid of the box projected on the axis.
+//
+// Deprecated: Centre is the same as Centroid.
 func (b *BoundingBox) Centre(axis int) float32 {
 	return b.AxisCentroid(axis)
 }
@@ -46,7 +48,9 @@ func (b *BoundingBox) MaxDim() int {
 	return b.LongestAxis()
 }
 
-//Deprecated: LongestAxis is the same as MaxDim.
+// LongestAxis returns the axis in which the box is maximum.
+//
+// Deprecated: LongestAxis is the same as MaxDim.
 func (b *BoundingBox) LongestAxis() (axis int) {
 
 	if b.Dim(0) < b.Dim(1) {

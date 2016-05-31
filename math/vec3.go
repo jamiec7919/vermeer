@@ -3,11 +3,11 @@
 // license that can be found in the LICENSE file.
 
 /*
-	Package math is the Vermeer math library.  Provides 3D maths and various other functions specialized
-	to float32.
+Package math is the Vermeer math library.  Provides 3D maths and various other functions specialized
+to float32.
 
-	Vermeer relies on at least SSE with support for SQRT instructions and no provision
-	is made for other platforms than AMD64 yet (will fail to compile).
+Vermeer relies on at least SSE with support for SQRT instructions and no provision
+is made for other platforms than AMD64 yet (will fail to compile).
 */
 package math
 
@@ -102,7 +102,7 @@ func Vec3Length2(a Vec3) float32 {
 	return a[0]*a[0] + a[1]*a[1] + a[2]*a[2]
 }
 
-// Vec2Length2 returns the length of vector a.
+// Vec2Length returns the length of vector a.
 func Vec3Length(a Vec3) float32 {
 	return Sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
 }
@@ -123,8 +123,8 @@ func Vec3BasisProject(U, V, W, S Vec3) (o Vec3) {
 	return
 }
 
-// Vec3Basis calculates the vector S in the basis defined by U,V,W.
-// O := U*S_x + V*S_y
+// Vec3BasisExpand calculates the vector S in the basis defined by U,V,W.
+// O := U*S_x + V*S_y + W*S_z
 func Vec3BasisExpand(U, V, W, S Vec3) (o Vec3) {
 	o[0] = U[0]*S[0] + V[0]*S[1] + W[0]*S[2]
 	o[1] = U[1]*S[0] + V[1]*S[1] + W[1]*S[2]
@@ -146,15 +146,14 @@ func (v Vec3) MaxDim() int {
 	if v[0] < v[1] {
 		if v[1] < v[2] {
 			return 2
-		} else {
-			return 1
 		}
+		return 1
+
 	} else {
 		if v[0] < v[2] {
 			return 2
-		} else {
-			return 0
 		}
+		return 0
 
 	}
 }

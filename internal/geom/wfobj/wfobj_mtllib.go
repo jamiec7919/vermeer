@@ -75,7 +75,7 @@ L2:
 	return buf.String()
 }
 
-func ParseMtlLib(rc *core.RenderContext, filename string) error {
+func parseMtlLib(rc *core.RenderContext, filename string) error {
 	fin, err := os.Open(filename)
 	if err != nil {
 		return err

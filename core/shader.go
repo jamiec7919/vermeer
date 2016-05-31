@@ -17,9 +17,9 @@ type BRDF interface {
 	// Sample returns a direction given two (quasi)random numbers.
 	Sample(r0, r1 float64) m.Vec3
 	// Eval evaluates the BRDF given the incoming direction.
-	Eval(omega_o m.Vec3) colour.Spectrum
+	Eval(omegaO m.Vec3) colour.Spectrum
 	// PDF returns the probability density function for the given sample.
-	PDF(omega_o m.Vec3) float64
+	PDF(omegaO m.Vec3) float64
 }
 
 // ShaderGlobals encapsulates all of the data needed for evaluating shaders.
@@ -60,26 +60,28 @@ type ShaderGlobals struct {
 	rnd *rand.Rand
 }
 
-//Deprecated: Rand returns the rng in use
+// Rand returns the rng in use.
+//
+// Deprecated: although still in use, should be removed once new sampling is introduced.
 func (sg *ShaderGlobals) Rand() *rand.Rand {
 	return sg.rnd
 }
 
 // OffsetP returns the intersection point pushed out from surface by about 1 ulp.
 // Pass -ve value to push point 'into' surface (for transmission).
-func (r *ShaderGlobals) OffsetP(dir int) m.Vec3 {
+func (sg *ShaderGlobals) OffsetP(dir int) m.Vec3 {
 	if dir < 0 {
-		r.Poffset = m.Vec3Neg(r.Poffset)
+		sg.Poffset = m.Vec3Neg(sg.Poffset)
 
 	}
-	po := m.Vec3Add(r.P, r.Poffset)
+	po := m.Vec3Add(sg.P, sg.Poffset)
 
 	// round po away from p
 	for i := range po {
 		//log.Printf("%v %v %v", i, offset[i], po[i])
-		if r.Poffset[i] > 0 {
+		if sg.Poffset[i] > 0 {
 			po[i] = m.NextFloatUp(po[i])
-		} else if r.Poffset[i] < 0 {
+		} else if sg.Poffset[i] < 0 {
 			po[i] = m.NextFloatDown(po[i])
 		}
 		//log.Printf("%v %v", i, po[i])
@@ -141,9 +143,10 @@ retry:
 		}
 
 		return true
-	} else {
-		return false
 	}
+
+	return false
+
 }
 
 var shadowRays int
@@ -165,17 +168,17 @@ func (sg *ShaderGlobals) EvaluateLightSample(brdf BRDF) colour.RGB {
 
 		r, g, b := rho.ToRGB()
 		return colour.RGB{r, g, b}
-	} else {
-		return colour.RGB{}
 	}
+
+	return colour.RGB{}
 
 }
 
 // GlossySample generates a sample from the BRDF and sets the globals weight.
 func (sg *ShaderGlobals) GlossySample(brdf BRDF) m.Vec3 {
-	omega_o := brdf.Sample(sg.rnd.Float64(), sg.rnd.Float64())
+	omegaO := brdf.Sample(sg.rnd.Float64(), sg.rnd.Float64())
 
 	// Eval should take the PDF into account.. ??
-	sg.Weight = 1.0 // float32(brdf.PDF(omega_o))
-	return omega_o
+	sg.Weight = 1.0 // float32(brdf.PDF(omegaO))
+	return omegaO
 }
