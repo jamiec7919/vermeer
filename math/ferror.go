@@ -12,8 +12,8 @@ import (
 	Floating point error computation, some (all) of this based on FP error handling from PBRT.
 */
 
-// FLT_EPSILON is the C++ epsilon constant
-const FLT_EPSILON float32 = 1.19209290E-07
+// EpsilonFloat32 is the C++ FLT_EPSILON epsilon constant
+const EpsilonFloat32 float32 = 1.19209290E-07
 
 // MachineEpsilon32 is the smallest useful epsilon (see PBRT), same as C++ numeric_limits<float>::epsilon() * 0.5
 const MachineEpsilon32 float32 = 1.19209290E-07 * 0.5

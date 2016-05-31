@@ -7,10 +7,11 @@ package math
 import "math"
 
 /*
-	Float16 (IEEE binary16, sign bit, 5 bit exponent, 10 bit mantissa)
-	Go implementation of article:
-	http://www.mathworks.com/matlabcentral/fileexchange/23173-ieee-754r-half-precision-floating-point-converter
-	(BSD License)
+Float16 (IEEE binary16, sign bit, 5 bit exponent, 10 bit mantissa)
+
+Go implementation of article:
+http://www.mathworks.com/matlabcentral/fileexchange/23173-ieee-754r-half-precision-floating-point-converter
+(BSD License)
 */
 type Float16 uint16
 

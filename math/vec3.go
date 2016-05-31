@@ -7,8 +7,7 @@ Package math is the Vermeer math library.  Provides 3D maths and various other f
 to float32.
 
 Vermeer relies on at least SSE with support for SQRT instructions and no provision
-is made for other platforms than AMD64 yet (will fail to compile).
-*/
+is made for other platforms than AMD64 yet (will fail to compile). */
 package math
 
 // Vec3 represents a 3 dimensional vector (32 bit floats)
@@ -102,7 +101,7 @@ func Vec3Length2(a Vec3) float32 {
 	return a[0]*a[0] + a[1]*a[1] + a[2]*a[2]
 }
 
-// Vec2Length returns the length of vector a.
+// Vec3Length returns the length of vector a.
 func Vec3Length(a Vec3) float32 {
 	return Sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
 }
@@ -146,14 +145,17 @@ func (v Vec3) MaxDim() int {
 	if v[0] < v[1] {
 		if v[1] < v[2] {
 			return 2
+
 		}
+
 		return 1
 
-	} else {
-		if v[0] < v[2] {
-			return 2
-		}
-		return 0
-
 	}
+
+	if v[0] < v[2] {
+		return 2
+	}
+
+	return 0
+
 }

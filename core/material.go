@@ -16,7 +16,7 @@ type Material interface {
 	//ApplyBumpMap(surf *SurfacePoint)
 	HasBumpMap() bool
 
-	Emission(sg *ShaderGlobals, omega_o m.Vec3) colour.RGB
+	Emission(sg *ShaderGlobals, omegaO m.Vec3) colour.RGB
 
 	// Eval evaluates the shader and returns values in sh.OutXXX members.
 	Eval(sg *ShaderGlobals)

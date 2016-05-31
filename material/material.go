@@ -83,21 +83,21 @@ func (mtl *Material) HasBumpMap() bool {
 }
 
 /*
-func (m *Material) EvalEDF(surf *core.SurfacePoint, omega_o m.Vec3, Le *colour.Spectrum) error {
+func (m *Material) EvalEDF(surf *core.SurfacePoint, omegaO m.Vec3, Le *colour.Spectrum) error {
 	return nil
 }
 
-func (m *Material) EvalBSDF(surf *core.SurfacePoint, omega_i, omega_o m.Vec3, rho *colour.Spectrum) error {
+func (m *Material) EvalBSDF(surf *core.SurfacePoint, omega_i, omegaO m.Vec3, rho *colour.Spectrum) error {
 	return nil
 }
 
-func (m *Material) SampleBSDF(surf *core.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omega_o *m.Vec3, rho *colour.Spectrum, pdf *float64) error {
+func (m *Material) SampleBSDF(surf *core.SurfacePoint, omega_i m.Vec3, rnd *rand.Rand, omegaO *m.Vec3, rho *colour.Spectrum, pdf *float64) error {
 	return nil
 }
 */
 
 // Emission returns the RGB emission for the given direction.
-func (mtl *Material) Emission(sg *core.ShaderGlobals, omega_o m.Vec3) colour.RGB {
+func (mtl *Material) Emission(sg *core.ShaderGlobals, omegaO m.Vec3) colour.RGB {
 	return mtl.E.RGB(sg)
 }
 
