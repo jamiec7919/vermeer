@@ -378,9 +378,9 @@ func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon flo
 
 	offset := m.Vec3Scale(d, face.N)
 
-	if m.Vec3Dot(ray.Ray.D, face.N) > 0 { // Is it a back face hit?
-		offset = m.Vec3Neg(offset)
-	}
+	//if m.Vec3Dot(ray.Ray.D, face.N) > 0 { // Is it a back face hit?
+	//	offset = m.Vec3Neg(offset)
+	//}
 	p := m.Vec3Add3(m.Vec3Scale(U, face.V[0]), m.Vec3Scale(V, face.V[1]), m.Vec3Scale(W, face.V[2]))
 	/*
 		po := m.Vec3Add(p, offset)
@@ -547,9 +547,10 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) bool {
 	d := m.Gamma(7)*xAbsSum*m.Abs(face.N[0]) + m.Gamma(7)*yAbsSum*m.Abs(face.N[1]) + m.Gamma(7)*zAbsSum*m.Abs(face.N[2])
 	offset := m.Vec3Scale(d, face.N)
 
-	if m.Vec3Dot(ray.Ray.D, face.N) > 0 { // Is it a back face hit?
-		offset = m.Vec3Neg(offset)
-	}
+	//if m.Vec3Dot(ray.Ray.D, face.N) > 0 { // Is it a back face hit?
+	//		offset = m.Vec3Neg(offset)
+	//	}
+
 	p := m.Vec3Add3(m.Vec3Scale(U, face.V[0]), m.Vec3Scale(V, face.V[1]), m.Vec3Scale(W, face.V[2]))
 	/*
 		po := m.Vec3Add(p, offset)

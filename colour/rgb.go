@@ -47,3 +47,13 @@ func (c *RGB) Normalize() {
 
 	}
 }
+
+// Maxh returns the maximum component.
+func (c RGB) Maxh() float32 {
+	return m.Max(m.Max(c[0], c[1]), c[2])
+}
+
+// Minh returns the minimum component.
+func (c RGB) Minh() float32 {
+	return m.Min(m.Min(c[0], c[1]), c[2])
+}

@@ -130,6 +130,59 @@ func parseMtlLib(rc *core.RenderContext, filename string) error {
 				return err
 			}
 
+		case "Ns":
+			// Speclular 'highlight' translated into roughness
+			s, err := strconv.ParseFloat(lscan.Token(), 32)
+
+			mtl.SpecularRoughness = &core.ConstantMap{[3]float32{float32((51 - s) / 50), float32((51 - s) / 50), float32((1000 - s) / 1000)}}
+			//log.Printf("%v", (50-s)/50)
+			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
+			if err != nil {
+				return err
+			}
+
+		case "Ni":
+			// Index of refraction - although correct for solid objects we may
+			// run into issues with thin glass - refractive index should not be
+			// used unless there is a back surface or it just warps.
+			s, err := strconv.ParseFloat(lscan.Token(), 32)
+
+			mtl.IOR = &core.ConstantMap{[3]float32{float32(s), float32(s), float32(s)}}
+			// log.Printf("%v",mesh.Verts)
+			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
+			if err != nil {
+				return err
+			}
+
+		case "Tr":
+			// Refractiveness
+			s, err := strconv.ParseFloat(lscan.Token(), 32)
+
+			if s < 1.0 {
+				mtl.TransStrength = &core.ConstantMap{[3]float32{float32(1 - s), float32(1 - s), float32(1 - s)}}
+				mtl.TransThin = true
+				mtl.DiffuseStrength = &core.ConstantMap{[3]float32{0, 0, 0}}
+				mtl.SpecularStrength = &core.ConstantMap{[3]float32{float32(s), float32(s), float32(s)}}
+			}
+			// log.Printf("%v",mesh.Verts)
+			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
+			if err != nil {
+				return err
+			}
+
+		case "Tf":
+			// Transmission filter/colour
+			r, err := strconv.ParseFloat(lscan.Token(), 32)
+			g, err := strconv.ParseFloat(lscan.Token(), 32)
+			b, err := strconv.ParseFloat(lscan.Token(), 32)
+
+			mtl.Kt = &core.ConstantMap{[3]float32{float32(r), float32(g), float32(b)}}
+			// log.Printf("%v",mesh.Verts)
+			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
+			if err != nil {
+				return err
+			}
+
 		case "Kd":
 			r, err := strconv.ParseFloat(lscan.Token(), 32)
 			g, err := strconv.ParseFloat(lscan.Token(), 32)
@@ -149,9 +202,13 @@ func parseMtlLib(rc *core.RenderContext, filename string) error {
 
 			mtl.Specular = "Specular"
 
-			rgb := colour.RGB{float32(r), float32(g), float32(b)}
-			rgb.Normalize()
-			mtl.Ks = &core.ConstantMap{[3]float32(rgb)}
+			if r == 0.0 && g == 0.0 && b == 0.0 {
+				mtl.SpecularStrength = &core.ConstantMap{[3]float32{0, 0, 0}}
+			} else {
+				rgb := colour.RGB{float32(r), float32(g), float32(b)}
+				rgb.Normalize()
+				mtl.Ks = &core.ConstantMap{[3]float32(rgb)}
+			}
 			// log.Printf("%v",mesh.Verts)
 			// log.Printf("A: %v",math.Vec3{float32(x), float32(y), float32(z)})
 			if err != nil {

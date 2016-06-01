@@ -27,15 +27,34 @@ type Id int32
 // Deprecated: should be in core.
 const ID_NONE Id = -1
 
+// Fresnel types
+const (
+	FRESNEL_DIELECTRIC = iota
+	FRESNEL_METAL
+)
+
 // Material is the default surface shader.
 type Material struct {
 	MtlName string `node:"Name"`
 	id      int32  // This should only be assinged by RenderContext
 
-	Sides             int               // One or two sided
-	Specular          string            // Model to use for specular
-	Diffuse           string            // Model to use for diffuse
+	Sides    int    // One or two sided
+	Specular string // Model to use for specular
+	Diffuse  string // Model to use for diffuse
+
+	Spec1FresnelModel string
+	spec1FresnelModel int
+
+	Spec1FresnelRefl core.RGBParam // For metallic
+	Spec1FresnelEdge core.RGBParam // For metallic
+
+	DiffuseStrength   core.Float32Param
+	SpecularStrength  core.Float32Param
+	TransStrength     core.Float32Param // Whether transmissive or not, 0.0 for opaque
+	TransThin         bool              // Is the surface thin?  (e.g. glass modelled as single surface)
+	SpecularMode      string
 	Ks, Kd            core.RGBParam     // Colour parameter for diffuse and specular
+	Kt                core.RGBParam     // Colour parameter for transmission
 	Roughness         core.Float32Param // Diffuse roughness
 	SpecularRoughness core.Float32Param // Specular roughness
 	IOR               core.Float32Param // Index-of-refraction
@@ -53,6 +72,12 @@ func (mtl *Material) Name() string { return mtl.MtlName }
 
 // PreRender is a core.Node method.
 func (mtl *Material) PreRender(rc *core.RenderContext) error {
+	switch mtl.Spec1FresnelModel {
+	case "Metal":
+		mtl.spec1FresnelModel = FRESNEL_METAL
+	default:
+		mtl.spec1FresnelModel = FRESNEL_DIELECTRIC
+	}
 	return nil
 }
 

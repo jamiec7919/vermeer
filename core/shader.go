@@ -10,16 +10,24 @@ import (
 	"math/rand"
 )
 
-// BRDF represents a BRDF that can be sampled.  The core API only considers the incoming direction
+// BSDF represents a BRDF or BTDF that can be sampled.  The core API only considers the incoming direction
 // so all other parameters should be stored in the concrete instance of the individual BRDFs.
 // This is used for Multiple Importance Sampling with light sources.
-type BRDF interface {
+type BSDF interface {
 	// Sample returns a direction given two (quasi)random numbers.
 	Sample(r0, r1 float64) m.Vec3
-	// Eval evaluates the BRDF given the incoming direction.
+	// Eval evaluates the BSDF given the incoming direction. Returns value multiplied by cosine
+	// of angle between omegaO and the normal.
 	Eval(omegaO m.Vec3) colour.Spectrum
 	// PDF returns the probability density function for the given sample.
 	PDF(omegaO m.Vec3) float64
+}
+
+// Fresnel represents a Fresnel model.
+type Fresnel interface {
+	// Kr returns the fresnel value.  cos_theta is the clamped dot product of
+	// view direction and surface normal.
+	Kr(cos_theta float32) colour.RGB
 }
 
 // ShaderGlobals encapsulates all of the data needed for evaluating shaders.
@@ -70,18 +78,23 @@ func (sg *ShaderGlobals) Rand() *rand.Rand {
 // OffsetP returns the intersection point pushed out from surface by about 1 ulp.
 // Pass -ve value to push point 'into' surface (for transmission).
 func (sg *ShaderGlobals) OffsetP(dir int) m.Vec3 {
-	if dir < 0 {
-		sg.Poffset = m.Vec3Neg(sg.Poffset)
 
+	var pofs m.Vec3
+	if dir < 0 {
+		pofs = m.Vec3Neg(sg.Poffset)
+
+	} else {
+		pofs = sg.Poffset
 	}
-	po := m.Vec3Add(sg.P, sg.Poffset)
+
+	po := m.Vec3Add(sg.P, pofs)
 
 	// round po away from p
 	for i := range po {
 		//log.Printf("%v %v %v", i, offset[i], po[i])
-		if sg.Poffset[i] > 0 {
+		if pofs[i] > 0 {
 			po[i] = m.NextFloatUp(po[i])
-		} else if sg.Poffset[i] < 0 {
+		} else if pofs[i] < 0 {
 			po[i] = m.NextFloatDown(po[i])
 		}
 		//log.Printf("%v %v", i, po[i])
@@ -93,7 +106,12 @@ func (sg *ShaderGlobals) OffsetP(dir int) m.Vec3 {
 // WorldToTangent projects the direction v into the tangent space
 // formed from the shading normal N and texture derivative tangents.
 func (sg *ShaderGlobals) WorldToTangent(v m.Vec3) m.Vec3 {
-	V := m.Vec3Normalize(m.Vec3Cross(sg.N, sg.DdPdu))
+	V := m.Vec3Cross(sg.N, sg.DdPdu)
+
+	if m.Vec3Length2(V) < 0.1 {
+		V = m.Vec3Cross(sg.N, sg.DdPdv)
+	}
+	V = m.Vec3Normalize(V)
 	U := m.Vec3Cross(sg.N, V)
 	return m.Vec3BasisProject(U, V, sg.N, v)
 }
@@ -101,14 +119,19 @@ func (sg *ShaderGlobals) WorldToTangent(v m.Vec3) m.Vec3 {
 // TangentToWorld projects the direction v into world space
 // based on the tangent space formed from the shading normal N and texture derivative tangents.
 func (sg *ShaderGlobals) TangentToWorld(v m.Vec3) m.Vec3 {
-	V := m.Vec3Normalize(m.Vec3Cross(sg.N, sg.DdPdu))
+	V := m.Vec3Cross(sg.N, sg.DdPdu)
+
+	if m.Vec3Length2(V) < 0.1 {
+		V = m.Vec3Cross(sg.N, sg.DdPdv)
+	}
+	V = m.Vec3Normalize(V)
 	U := m.Vec3Cross(sg.N, V)
 	return m.Vec3BasisExpand(U, V, sg.N, v)
 }
 
 // ViewDirection returns the view direction (-ve ray direction projected into tangent space).
 func (sg *ShaderGlobals) ViewDirection() m.Vec3 {
-	return sg.WorldToTangent(m.Vec3Neg(sg.Rd))
+	return m.Vec3Normalize(sg.WorldToTangent(m.Vec3Neg(sg.Rd)))
 }
 
 // LightsPrepare initialises the lighting loop.
@@ -152,11 +175,16 @@ retry:
 var shadowRays int
 
 // EvaluateLightSample will evaluate the MIS sample for the current light sample and given BRDF.
-func (sg *ShaderGlobals) EvaluateLightSample(brdf BRDF) colour.RGB {
+func (sg *ShaderGlobals) EvaluateLightSample(brdf BSDF) colour.RGB {
 	// The brdf returns directions in the tangent space
 	ray := new(RayData)
 
-	ray.Init(RAY_SHADOW, sg.OffsetP(1), m.Vec3Scale(sg.Ldist*(1.0-VisRayEpsilon), sg.Ld), 1.0, sg)
+	if m.Vec3Dot(sg.Ld, sg.Ng) < 0 {
+		ray.Init(RAY_SHADOW, sg.OffsetP(-1), m.Vec3Scale(sg.Ldist*(1.0-VisRayEpsilon), sg.Ld), 1.0, sg)
+	} else {
+		ray.Init(RAY_SHADOW, sg.OffsetP(1), m.Vec3Scale(sg.Ldist*(1.0-VisRayEpsilon), sg.Ld), 1.0, sg)
+
+	}
 
 	shadowRays++
 	if !TraceProbe(ray, &ShaderGlobals{}) { // for shadow rays sg is not modified so to avoid allocations reuse it here
@@ -174,11 +202,11 @@ func (sg *ShaderGlobals) EvaluateLightSample(brdf BRDF) colour.RGB {
 
 }
 
-// GlossySample generates a sample from the BRDF and sets the globals weight.
-func (sg *ShaderGlobals) GlossySample(brdf BRDF) m.Vec3 {
+// GlossySample generates a sample from the BSDF and sets the globals weight.
+func (sg *ShaderGlobals) GlossySample(brdf BSDF) m.Vec3 {
 	omegaO := brdf.Sample(sg.rnd.Float64(), sg.rnd.Float64())
 
 	// Eval should take the PDF into account.. ??
-	sg.Weight = 1.0 // float32(brdf.PDF(omegaO))
+	sg.Weight = 1.0 / float32(brdf.PDF(omegaO))
 	return omegaO
 }

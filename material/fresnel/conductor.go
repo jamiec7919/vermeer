@@ -84,5 +84,6 @@ func (f *Conductor) Kr(cos_theta float32) (out colour.RGB) {
 	for k := range out {
 		out[k] = fresnel(f.r[k], f.g[k], cos_theta)
 	}
+
 	return
 }

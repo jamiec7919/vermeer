@@ -8,20 +8,31 @@ import (
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
-	"log"
+	//"log"
 	"math"
 )
 
 // MicrofacetGGX implements the GGX specular microfacet model.
 // Instanced for each point
 type MicrofacetGGX struct {
-	Lambda    float32
-	OmegaR    m.Vec3  // reflected (view or out) direction
-	IOR       float32 // n_i/n_t  (n_i = air)
-	Roughness float32
+	Lambda float32
+	OmegaR m.Vec3 // reflected (view or out) direction
+	//IOR          float32 // n_i/n_t  (n_i = air)
+	Roughness    float32
+	Fresnel      core.Fresnel
+	transmissive bool
+	thin         bool
+	metal        bool
 }
 
-func ggx_SmithG1(omega m.Vec3, alpha float32) float32 {
+func chi(x float32) float32 {
+	if x > 0.0 {
+		return 1
+	}
+	return 0
+}
+
+func ggx_SmithG1(omega, omegaM m.Vec3, alpha float32) float32 {
 
 	// 2 / (1+sqrt(1+alpha^2*tan^2 theta_v))
 	// tan^2(x) + 1 = sec^2(x)
@@ -29,29 +40,52 @@ func ggx_SmithG1(omega m.Vec3, alpha float32) float32 {
 	// sec^2(x) = 1/cos_2(x)
 	// tan^2(x) = 1/cos_2(x) - 1
 
-	o_dot_n := omega[2]
-	denom := 1 + m.Sqrt(1+(alpha*alpha)*((1.0/(o_dot_n*o_dot_n))-1))
+	o_dot_n := m.Vec3Dot(omega, omegaM)
 
-	if denom == 0.0 {
-		log.Printf("denom %v %v", omega, alpha)
-	}
-	return 2 / denom
+	//thetaV := m.Acos(omega[2])
+	//tan := m.Tan(thetaV)
+	//log.Printf("%v %v", tan*tan, (1.0/(omega[2]*omega[2]))-1)
+
+	denom := 1 + m.Sqrt(1+(alpha*alpha)*((1.0/(omega[2]*omega[2]))-1))
+
+	return chi(o_dot_n/omega[2]) * 2 / denom
 }
 
 func ggx_D(omega_m m.Vec3, alpha float32) float32 {
-	numer := alpha * alpha * 1.0
 
-	denom := m.Pi * sqr32(omega_m[2]*omega_m[2]) * sqr32(alpha*alpha+((1.0/(omega_m[2]*omega_m[2]))-1))
+	numer := alpha * alpha * chi(omega_m[2])
+
+	var denom float32
+	if omega_m[2] == 1.0 {
+		// if omegaM == {0,0,1} with alpha small there is a numerical problem
+		// calculating the weight. Since this mostly happens with omegaM being chosen as the
+		// perfect mirror direction (same as shade normal) we do the calculation directly here avoiding
+		// the extra squaring of alpha.
+		// denom = m.Pi * sqr32(alpha*alpha)
+		return 1.0 / (m.Pi * alpha * alpha)
+	} else {
+		denom = m.Pi * sqr32(omega_m[2]*omega_m[2]) * sqr32(alpha*alpha+((1.0/(omega_m[2]*omega_m[2]))-1))
+	}
+	//log.Printf("%v %v %v", omega_m, numer, denom)
 	return numer / denom
 }
 
+func sign(v float32) float32 {
+	if v < 0 {
+		return -1
+	} else {
+		return 1
+	}
+}
+
 // NewMicrofacetGGX returns a new instance of the model for the given parameters.
-func NewMicrofacetGGX(sg *core.ShaderGlobals, IOR, roughness float32) *MicrofacetGGX {
-	return &MicrofacetGGX{sg.Lambda, sg.ViewDirection(), IOR, roughness * roughness}
+func NewMicrofacetGGX(sg *core.ShaderGlobals, fresnel core.Fresnel, roughness float32, transmissive, thin bool) *MicrofacetGGX {
+	return &MicrofacetGGX{sg.Lambda, sg.ViewDirection(), roughness * roughness, fresnel, transmissive, thin, false}
 }
 
 // Sample implements core.BSDF.
-func (b *MicrofacetGGX) Sample(r0, r1 float64) m.Vec3 {
+func (b *MicrofacetGGX) Sample(r0, r1 float64) (omegaO m.Vec3) {
+
 	alpha := sqr32(b.Roughness)
 
 	theta_m := math.Atan2(float64(alpha)*math.Sqrt(r0), math.Sqrt(1-r0))
@@ -61,32 +95,65 @@ func (b *MicrofacetGGX) Sample(r0, r1 float64) m.Vec3 {
 		m.Sin(float32(theta_m)) * m.Sin(float32(phi_m)),
 		m.Cos(float32(theta_m))}
 
-	if omega_m[2] < 0.0 {
-		omega_m = m.Vec3Neg(omega_m)
-	}
-	omega_i := m.Vec3Sub(m.Vec3Scale(2.0*m.Vec3Dot(omega_m, b.OmegaR), omega_m), b.OmegaR)
+	omegaO = m.Vec3Sub(m.Vec3Scale(2.0*m.Vec3DotAbs(omega_m, b.OmegaR), omega_m), b.OmegaR)
 
-	//log.Printf("%v %v", m.Vec3Length(omega_i), omega_i)
-
-	return m.Vec3Normalize(omega_i)
+	return m.Vec3Normalize(omegaO)
 }
 
 // PDF implements core.BSDF.
 func (b *MicrofacetGGX) PDF(omega_i m.Vec3) float64 {
 	alpha := sqr32(b.Roughness)
 
-	m := m.Vec3Normalize(m.Vec3Add(b.OmegaR, omega_i))
+	var omegaM m.Vec3
 
-	return float64(ggx_D(m, alpha) * m[2])
+	omegaM = m.Vec3Scale(sign(b.OmegaR[2]), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omega_i)))
+
+	//log.Printf("D: %v", ggx_D(omegaM, alpha))
+	return float64(ggx_D(omegaM, alpha) * omegaM[2])
 }
 
 // Eval implements core.BSDF.
 func (b *MicrofacetGGX) Eval(omega_i m.Vec3) (rho colour.Spectrum) {
 	alpha := sqr32(b.Roughness)
-	omega_m := m.Vec3Normalize(m.Vec3Add(b.OmegaR, omega_i))
 
-	weight := m.Vec3Dot(omega_i, omega_m) * ggx_SmithG1(omega_i, alpha) * ggx_SmithG1(b.OmegaR, alpha)
-	weight /= omega_m[2] * omega_i[2]
+	h := m.Vec3Scale(sign(b.OmegaR[2]), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omega_i)))
+
+	fresnel := b.Fresnel.Kr(m.Vec3DotAbs(b.OmegaR, h))
+
+	numer := ggx_SmithG1(b.OmegaR, h, alpha) * ggx_SmithG1(omega_i, h, alpha) * ggx_D(h, alpha)
+	denom := 4 * m.Abs(b.OmegaR[2]) * m.Abs(omega_i[2])
+
+	rho.Lambda = b.Lambda
+	rho.FromRGB(fresnel[0], fresnel[1], fresnel[2])
+	rho.Scale(m.Abs(omega_i[2]) * numer / denom)
+	return
+}
+
+// This computes the weight as per the paper, but not sure it's useful for Vermeer.
+func (b *MicrofacetGGX) _weight(omega_i m.Vec3) (rho colour.Spectrum) {
+	alpha := sqr32(b.Roughness)
+
+	var omegaM m.Vec3
+
+	//etaI := float32(1)
+	//etaO := b.IOR
+
+	//if b.OmegaR[2] < 0.0 {
+	//	etaI, etaO = etaO, etaI
+	//}
+
+	weight := float32(0)
+
+	//if b.OmegaR[2] > 0 && omega_i[2] < 0 {
+	//	omegaM = m.Vec3Normalize(m.Vec3Add(m.Vec3Scale(1.0, b.OmegaR), m.Vec3Scale(b.IOR, omega_i)))
+	//} else if b.OmegaR[2] < 0 && omega_i[2] > 0 {
+	//	omegaM = m.Vec3Normalize(m.Vec3Add(m.Vec3Scale(b.IOR, b.OmegaR), m.Vec3Scale(1.0, omega_i)))
+	//} else {
+	omegaM = m.Vec3Scale(sign(m.Vec3Dot(b.OmegaR, omega_i)), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omega_i)))
+	//	}
+
+	weight = m.Vec3DotAbs(omega_i, omegaM) * ggx_SmithG1(omega_i, omegaM, alpha) * ggx_SmithG1(b.OmegaR, omegaM, alpha)
+	weight /= m.Abs(omegaM[2]) * m.Abs(omega_i[2])
 
 	rho.Lambda = b.Lambda
 	rho.FromRGB(1, 1, 1)
