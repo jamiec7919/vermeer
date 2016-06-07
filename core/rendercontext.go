@@ -178,15 +178,13 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b 
 	lambda := (float32(720-450) * rnd.Float32()) + 450
 	time := rnd.Float32()
 
-	P, D := frame.camera.ComputeRay(-1+u, 1-v, rnd)
-
 	sg := &ShaderGlobals{
 		Lambda: lambda,
 		Time:   time,
 		rnd:    rnd,
 	}
 
-	ray.Init(RAY_CAMERA, P, D, m.Inf(1), sg) // Maybe ray types
+	frame.camera.ComputeRay(-1+u, 1-v, time, rnd, ray, sg)
 
 	var samp ScreenSample
 
