@@ -19,9 +19,41 @@ Matrix4 represents a 4x4 homogenous matrix.
 */
 type Matrix4 [16]float32
 
+// IsNull returns true if matrix is the 0 matrix (all elements 0).
+func (m *Matrix4) IsNull() bool {
+	for i := range m {
+		if m[i] != 0.0 && m[i] != -0.0 {
+			return false
+		}
+	}
+	return true
+}
+
+// IsIdentity returns true if matrix is the identity matrix.
+func (m *Matrix4) IsIdentity() bool {
+	for i := range m {
+		switch i {
+		case 0, 5, 10, 15:
+			if m[i] != 1.0 {
+				return false
+			}
+		default:
+			if m[i] != 0.0 && m[i] != -0.0 {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // Elt returns the matrix element at row i, column j.
 func (m *Matrix4) Elt(i, j int) float32 {
 	return m[(j*4)+i]
+}
+
+// Set sets the matrix element at row i, column j.
+func (m *Matrix4) Set(i, j int, v float32) {
+	m[(j*4)+i] = v
 }
 
 // Matrix4Identity is the identity matrix.
@@ -116,6 +148,30 @@ func Matrix4Inverse(m Matrix4) (c Matrix4, ok bool) {
 	return c, true
 }
 
+// Matrix4Det returns the determinant of 4x4 matrix a.
+func Matrix4Det(m Matrix4) float32 {
+	var inv Matrix4
+
+	inv[0] = m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15] + m[9]*m[7]*m[14] + m[13]*m[6]*m[11] - m[13]*m[7]*m[10]
+	inv[4] = -m[4]*m[10]*m[15] + m[4]*m[11]*m[14] + m[8]*m[6]*m[15] - m[8]*m[7]*m[14] - m[12]*m[6]*m[11] + m[12]*m[7]*m[10]
+	inv[8] = m[4]*m[9]*m[15] - m[4]*m[11]*m[13] - m[8]*m[5]*m[15] + m[8]*m[7]*m[13] + m[12]*m[5]*m[11] - m[12]*m[7]*m[9]
+	inv[12] = -m[4]*m[9]*m[14] + m[4]*m[10]*m[13] + m[8]*m[5]*m[14] - m[8]*m[6]*m[13] - m[12]*m[5]*m[10] + m[12]*m[6]*m[9]
+	inv[1] = -m[1]*m[10]*m[15] + m[1]*m[11]*m[14] + m[9]*m[2]*m[15] - m[9]*m[3]*m[14] - m[13]*m[2]*m[11] + m[13]*m[3]*m[10]
+	inv[5] = m[0]*m[10]*m[15] - m[0]*m[11]*m[14] - m[8]*m[2]*m[15] + m[8]*m[3]*m[14] + m[12]*m[2]*m[11] - m[12]*m[3]*m[10]
+	inv[9] = -m[0]*m[9]*m[15] + m[0]*m[11]*m[13] + m[8]*m[1]*m[15] - m[8]*m[3]*m[13] - m[12]*m[1]*m[11] + m[12]*m[3]*m[9]
+	inv[13] = m[0]*m[9]*m[14] - m[0]*m[10]*m[13] - m[8]*m[1]*m[14] + m[8]*m[2]*m[13] + m[12]*m[1]*m[10] - m[12]*m[2]*m[9]
+	inv[2] = m[1]*m[6]*m[15] - m[1]*m[7]*m[14] - m[5]*m[2]*m[15] + m[5]*m[3]*m[14] + m[13]*m[2]*m[7] - m[13]*m[3]*m[6]
+	inv[6] = -m[0]*m[6]*m[15] + m[0]*m[7]*m[14] + m[4]*m[2]*m[15] - m[4]*m[3]*m[14] - m[12]*m[2]*m[7] + m[12]*m[3]*m[6]
+	inv[10] = m[0]*m[5]*m[15] - m[0]*m[7]*m[13] - m[4]*m[1]*m[15] + m[4]*m[3]*m[13] + m[12]*m[1]*m[7] - m[12]*m[3]*m[5]
+	inv[14] = -m[0]*m[5]*m[14] + m[0]*m[6]*m[13] + m[4]*m[1]*m[14] - m[4]*m[2]*m[13] - m[12]*m[1]*m[6] + m[12]*m[2]*m[5]
+	inv[3] = -m[1]*m[6]*m[11] + m[1]*m[7]*m[10] + m[5]*m[2]*m[11] - m[5]*m[3]*m[10] - m[9]*m[2]*m[7] + m[9]*m[3]*m[6]
+	inv[7] = m[0]*m[6]*m[11] - m[0]*m[7]*m[10] - m[4]*m[2]*m[11] + m[4]*m[3]*m[10] + m[8]*m[2]*m[7] - m[8]*m[3]*m[6]
+	inv[11] = -m[0]*m[5]*m[11] + m[0]*m[7]*m[9] + m[4]*m[1]*m[11] - m[4]*m[3]*m[9] - m[8]*m[1]*m[7] + m[8]*m[3]*m[5]
+	inv[15] = m[0]*m[5]*m[10] - m[0]*m[6]*m[9] - m[4]*m[1]*m[10] + m[4]*m[2]*m[9] + m[8]*m[1]*m[6] - m[8]*m[2]*m[5]
+
+	return m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12]
+}
+
 // Matrix4MulPoint post multiplies point b by 4x4 matrix a.
 // b is represented as a Vec3 but is assumed to be homogeonous point [x,y,z,1]
 func Matrix4MulPoint(a Matrix4, b Vec3) (c Vec3) {
@@ -177,18 +233,37 @@ func _Matrix4MulVec2(a Matrix4, b Vec3) (c Vec3) {
 // Matrix4Translate returns the matrix representing a translation by the given amount.
 func Matrix4Translate(X, Y, Z float32) (c Matrix4) {
 	c = Matrix4Identity
-	c[12] = -X
-	c[13] = -Y
-	c[14] = -Z
+	c[12] = X
+	c[13] = Y
+	c[14] = Z
 	return
 }
 
-// Matrix4Scale returns the matrix representing a scaling by the given amount.
-func Matrix4Scale(X, Y, Z float32) (c Matrix4) {
+// Matrix4TransformScale returns the matrix representing a scaling by the given amount.
+func Matrix4TransformScale(X, Y, Z float32) (c Matrix4) {
 	c = Matrix4Identity
 	c[0] = X
 	c[5] = Y
 	c[10] = Z
+	return
+}
+
+// Matrix4Scale returns the matrix m multiplied by scalar s.
+func Matrix4Scale(s float32, m Matrix4) (x Matrix4) {
+	for i := range m {
+		x[i] = s * m[i]
+	}
+
+	return
+}
+
+// Matrix4Lerp returns the linear interpolation between matrix a and b. This
+// is only useful in very restricted circumstances.
+func Matrix4Lerp(a, b Matrix4, t float32) (x Matrix4) {
+	for i := range x {
+		x[i] = (1.0-t)*a[i] + t*b[i]
+	}
+
 	return
 }
 
@@ -229,4 +304,61 @@ func Matrix4Rotate(angle, X, Y, Z float32) (c Matrix4) {
 	c[15] = 1.0
 
 	return
+}
+
+// Matrix4Basis constructs a 4x4 matrix from three basis vectors (for the 3x3 bit).
+// u,v,w form the columns of the matrix.
+func Matrix4Basis(u, v, w Vec3) (out Matrix4) {
+	out[0] = u[0]
+	out[1] = u[1]
+	out[2] = u[2]
+
+	out[4] = v[0]
+	out[5] = v[1]
+	out[6] = v[2]
+
+	out[8] = w[0]
+	out[9] = w[1]
+	out[10] = w[2]
+
+	out[15] = 1.0
+
+	return
+}
+
+// Matrix4Eq returns true if A-B approx= 0, within given epsilon.
+func Matrix4Eq(A, B Matrix4, eps float32) bool {
+	for i := range A {
+		if A[i]-B[i] > eps {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Matrix4PolarFactor computes the Q factor in M = QS where S is a symmetric matrix and Q is
+// a pure rotation. S can then be calculated from S = Q^TM.
+// Returns null,false if unable to decompose (either singular matrix detected or taking
+// too long to converge). det(m) should be +ve.
+func Matrix4PolarFactor(m Matrix4) (Matrix4, bool) {
+	Q := m
+
+	for i := 0; i < 10; i++ {
+		Qinv, ok := Matrix4Inverse(Q)
+
+		if !ok {
+			return Matrix4Null, false
+		}
+
+		Qnew := Matrix4Scale(.5, Matrix4Add(Q, Matrix4Transpose(Qinv)))
+
+		if Matrix4Eq(Qnew, Q, 0.000001) {
+			return Qnew, true
+		}
+
+		Q = Qnew
+	}
+
+	return Matrix4Null, false
 }

@@ -56,3 +56,15 @@ type MatrixArray struct {
 	MotionKeys int // Number of motion keys
 	Elems      []m.Matrix4
 }
+
+// Float32Array represents an set of motion keys, with ElemsPerKey points per key.
+type Float32Array struct {
+	MotionKeys  int // Number of motion keys
+	ElemsPerKey int // Number of elements per key
+	Elems       []float32
+}
+
+// Key returns the slice of elements for the given key
+func (a *Float32Array) Key(key int) []float32 {
+	return a.Elems[key*a.ElemsPerKey : (key+1)*a.ElemsPerKey]
+}

@@ -39,6 +39,7 @@ var typeMatrix = reflect.TypeOf(m.Matrix4{})
 var typePointArray = reflect.TypeOf(core.PointArray{})
 var typeVec2Array = reflect.TypeOf(core.Vec2Array{})
 var typeVec3Array = reflect.TypeOf(core.Vec3Array{})
+var typeFloat32Array = reflect.TypeOf(core.Float32Array{})
 var typeMatrixArray = reflect.TypeOf(core.MatrixArray{})
 
 // SymType is the type of symbols returned from lexer (shouldn't be public)
@@ -416,6 +417,56 @@ func (p *parser) matrixarray(field reflect.Value) error {
 	return nil
 }
 
+func (p *parser) float32array(field reflect.Value) error {
+
+	var sym SymType
+
+	v := core.Float32Array{}
+
+	if t := p.lex.Lex(&sym); t != TOK_INT {
+		return errors.New("Expected number of motion keys.")
+	}
+
+	v.MotionKeys = int(sym.numInt)
+
+	if t := p.lex.Lex(&sym); t != TOK_INT {
+		return errors.New("Expected number of elements.")
+	}
+
+	v.ElemsPerKey = int(sym.numInt)
+
+	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "float" {
+		return errors.New("Expected array type.")
+	}
+
+	k := v.MotionKeys
+
+	if k == 0 {
+		k = 1
+	}
+
+	v.Elems = make([]float32, 0, k*v.ElemsPerKey)
+
+	for j := 0; j < k*v.ElemsPerKey; j++ {
+		var el float32
+
+		switch t := p.lex.Lex(&sym); t {
+		case TOK_INT:
+			el = float32(sym.numInt)
+		case TOK_FLOAT:
+			el = float32(sym.numFloat)
+		default:
+			return errors.New("Expected float32 element.")
+		}
+
+		v.Elems = append(v.Elems, el)
+	}
+
+	field.Set(reflect.ValueOf(v))
+
+	return nil
+}
+
 func (p *parser) matrix(field reflect.Value) error {
 
 	var sym SymType
@@ -520,6 +571,8 @@ func (p *parser) param(field reflect.Value) error {
 			return p.vec3array(field)
 		case typeVec2Array:
 			return p.vec2array(field)
+		case typeFloat32Array:
+			return p.float32array(field)
 		default:
 			p.error("Invalid type for param (%v)", field.Type())
 			p.lex.Skip()
