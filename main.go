@@ -13,16 +13,20 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/nodes"
 	"github.com/jamiec7919/vermeer/preview"
 	"log"
 	"os"
+	"runtime"
 	"runtime/pprof"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 var maxiter = flag.Int("maxiter", -1, "Maximum iterations")
+var stats = flag.Bool("stats", false, "stats will be appended to file")
+var statsfile = flag.String("statsfile", "stats.txt", "file to append stats to")
 
 func main() {
 	flag.Parse()
@@ -70,10 +74,23 @@ func main() {
 			return
 		}
 
-		if err := rc.Render(*maxiter); err != nil {
+		if raystats, err := rc.Render(*maxiter); err != nil {
 			log.Printf("Error: Render: %v", err)
 			renderstatus <- err
 			return
+		} else {
+			if *stats {
+				f, err := os.OpenFile(*statsfile, os.O_APPEND|os.O_WRONLY, 0600)
+				if err != nil {
+					panic(err)
+				}
+
+				defer f.Close()
+
+				if _, err := fmt.Fprintln(f, filename, raystats, runtime.Version()); err != nil {
+					panic(err)
+				}
+			}
 		}
 
 		if err := rc.PostRender(); err != nil {

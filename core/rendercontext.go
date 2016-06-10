@@ -7,6 +7,7 @@ package core
 import (
 	"github.com/cheggaaa/pb"
 	// "github.com/jamiec7919/vermeer/material"
+	"fmt"
 	m "github.com/jamiec7919/vermeer/math"
 	"log"
 	"math/rand"
@@ -24,13 +25,17 @@ const MAXGOROUTINES = 5
 // Deprecated: progressive rendering takes as many samples as needed or use maxiter.
 const NSAMP = 16
 
-var rayCount int
+var rayCount uint64
+var shadowRays uint64
 
-// RenderFuncStats collects stats for a single goroutine.
-//
-// Deprecated: stats system will change.
-type RenderFuncStats struct {
-	RayCount, ShadowRayCount int
+// Stats collects stats for the whole render.
+type Stats struct {
+	Duration                 time.Duration
+	RayCount, ShadowRayCount uint64
+}
+
+func (s *Stats) String() string {
+	return fmt.Sprintf("%v	%v	%v/%v", s.Duration, float64(s.RayCount)/(1000000.0*s.Duration.Seconds()), s.RayCount, s.ShadowRayCount)
 }
 
 // Frame represents a single frame.
@@ -155,7 +160,7 @@ type WorkItem struct {
 }
 
 /* This should return an rgb sample to be accumulated for the pixel */
-func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *RenderFuncStats) (r, g, b float32) {
+func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData) (r, g, b float32) {
 	/*
 	  .. Trace AA_count rays around pixel, for each ray that hits different surface/triangle
 	    shade that and weight accordingly.
@@ -182,7 +187,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 	}
 
 	ray.Init(RAY_CAMERA, P, D, m.Inf(1), sg) // Maybe ray types
-	stats.RayCount++
+
 	var samp ScreenSample
 
 	if Trace(ray, &samp) {
@@ -194,7 +199,7 @@ func samplePixel(x, y int, frame *Frame, rnd *rand.Rand, ray *RayData, stats *Re
 
 // NOTE: we return the raydata here even though it is ignored in order to ensure that ray is
 // heap allocated (for alignment purposes)
-func renderFunc(n int, frame *Frame, c chan *WorkItem, done chan *WorkItem, wg *sync.WaitGroup, stats *RenderFuncStats) *RayData {
+func renderFunc(n int, frame *Frame, c chan *WorkItem, done chan *WorkItem, wg *sync.WaitGroup) *RayData {
 	defer wg.Done()
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -202,7 +207,7 @@ func renderFunc(n int, frame *Frame, c chan *WorkItem, done chan *WorkItem, wg *
 	for w := range c {
 		for j := 0; j < w.h; j++ {
 			for i := 0; i < w.w; i++ {
-				r, g, b := samplePixel(i+w.x, j+w.y, frame, rnd, ray, stats)
+				r, g, b := samplePixel(i+w.x, j+w.y, frame, rnd, ray)
 
 				w.samples[((i+w.x)+(j+w.y)*frame.w)*3+0] = (w.samples[((i+w.x)+(j+w.y)*frame.w)*3+0]*float32(n) + m.Clamp(r*1000, 0, 255)) / float32(n+1)
 				w.samples[((i+w.x)+(j+w.y)*frame.w)*3+1] = (w.samples[((i+w.x)+(j+w.y)*frame.w)*3+1]*float32(n) + m.Clamp(g*1000, 0, 255)) / float32(n+1)
@@ -238,7 +243,7 @@ func (rc *RenderContext) FrameAspect() float32 {
 
 // Render is called to begin the render process. If maxIter >= 0 only that many iterations
 // will be performed before exiting.
-func (rc *RenderContext) Render(maxIter int) error {
+func (rc *RenderContext) Render(maxIter int) (stats Stats, err error) {
 	// render frames as given in frames (could be progressive)
 	var frame Frame
 
@@ -249,7 +254,7 @@ func (rc *RenderContext) Render(maxIter int) error {
 	}
 
 	if frame.camera == nil {
-		return ErrNoCamera
+		return stats, ErrNoCamera
 	}
 
 	frame.rc = rc
@@ -266,7 +271,6 @@ func (rc *RenderContext) Render(maxIter int) error {
 	buf := make([]float32, frame.w*frame.h*3)
 
 	startTime := time.Now()
-	stats := make([]RenderFuncStats, rc.globals.MaxGoRoutines)
 
 L:
 	for k := 0; true; k++ {
@@ -281,7 +285,7 @@ L:
 
 		for n := 0; n < rc.globals.MaxGoRoutines; n++ {
 			wg.Add(1)
-			go renderFunc(k, &frame, workChan, done, &wg, &stats[n])
+			go renderFunc(k, &frame, workChan, done, &wg)
 		}
 
 		complete := make(chan []float32)
@@ -335,13 +339,11 @@ L:
 				rc.preview.Close()
 			}
 			duration := time.Since(startTime)
-			totalRays := 0
 
-			for i := range stats {
-				totalRays += stats[i].RayCount
-			}
-			totalRays = rayCount
-			log.Printf("%v iterations, %v (%v rays, %v shadow) %v %v Mr/sec", k+1, duration, totalRays, shadowRays, rayCount, float64(totalRays+shadowRays)/(1000000.0*duration.Seconds()))
+			stats.Duration = duration
+			stats.RayCount = rayCount
+			stats.ShadowRayCount = shadowRays
+			log.Printf("%v iterations, %v (%v rays, %v shadow) %v Mr/sec", k+1, duration, rayCount, shadowRays, float64(rayCount)/(1000000.0*duration.Seconds()))
 			break L
 		default:
 		}
@@ -351,7 +353,7 @@ L:
 		frame.bar.FinishPrint("Render Complete")
 	}
 
-	return nil
+	return
 }
 
 // PostRender is called on all nodes once Render has returned.

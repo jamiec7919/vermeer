@@ -8,6 +8,7 @@ import (
 	"github.com/jamiec7919/vermeer/colour"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/qbvh"
+	"sync/atomic"
 )
 
 // Scene represents the set of primitives and lights and
@@ -40,9 +41,11 @@ type ScreenSample struct {
 // Returns true if any intersection or false for none.
 func TraceProbe(ray *RayData, sg *ShaderGlobals) bool {
 
+	atomic.AddUint64(&rayCount, 1)
+
 	if ray.Type&RAY_SHADOW != 0 {
 		grc.scene.visRayAccel(ray)
-		shadowRays++
+		atomic.AddUint64(&shadowRays, 1)
 		return !ray.IsVis()
 	}
 
@@ -65,7 +68,6 @@ func TraceProbe(ray *RayData, sg *ShaderGlobals) bool {
 // result is returned in the samp struct.
 // Returns true if any intersection or false for none.
 func Trace(ray *RayData, samp *ScreenSample) bool {
-	rayCount++
 	sg := &ShaderGlobals{
 		Ro:     ray.Ray.P,
 		Rd:     ray.Ray.D,

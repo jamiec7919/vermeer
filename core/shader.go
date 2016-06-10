@@ -172,8 +172,6 @@ retry:
 
 }
 
-var shadowRays int
-
 // EvaluateLightSample will evaluate the MIS sample for the current light sample and given BRDF.
 func (sg *ShaderGlobals) EvaluateLightSample(brdf BSDF) colour.RGB {
 	// The brdf returns directions in the tangent space
@@ -186,7 +184,6 @@ func (sg *ShaderGlobals) EvaluateLightSample(brdf BSDF) colour.RGB {
 
 	}
 
-	shadowRays++
 	if !TraceProbe(ray, &ShaderGlobals{}) { // for shadow rays sg is not modified so to avoid allocations reuse it here
 
 		rho := brdf.Eval(sg.WorldToTangent(sg.Ld))
