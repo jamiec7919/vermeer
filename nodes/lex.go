@@ -21,6 +21,8 @@ import (
 
 // Lex represents a lexical analyser for the vnf parser. (shouldn't be public)
 type Lex struct {
+	LineNumber, ColNumber int
+
 	line []byte
 	peek rune
 	in   *bufio.Reader
@@ -80,15 +82,15 @@ func (x *Lex) lex(yylval *SymType) int {
 		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			return x.num(c, yylval)
 		case '[':
-			return TOK_OPENBRACE
+			return TokOpenBrace
 		case ']':
-			return TOK_CLOSEBRACE
+			return TokCloseBrace
 		case '{':
-			return TOK_OPENCURLYBRACE
+			return TokOpenCurlyBrace
 		case '}':
-			return TOK_CLOSECURLYBRACE
+			return TokCloseCurlyBrace
 		case ',':
-			return TOK_COMMA
+			return TokComma
 		case '"':
 			return x.str(c, yylval)
 		case ' ', '\t', '\n': /* Whitespace */
@@ -122,7 +124,7 @@ L:
 	}
 
 	yylval.str = b.String()
-	return TOK_STRING
+	return TokString
 }
 
 func (x *Lex) token(c rune, yylval *SymType) int {
@@ -151,7 +153,7 @@ L:
 	}
 
 	yylval.str = b.String()
-	return TOK_TOKEN
+	return TokToken
 }
 
 func (x *Lex) num(c rune, yylval *SymType) int {
@@ -187,7 +189,7 @@ L:
 			return eof
 		}
 		yylval.numFloat = f
-		return TOK_FLOAT
+		return TokFloat
 	}
 
 	// not a float, must be int:
@@ -198,11 +200,14 @@ L:
 		return eof
 	}
 	yylval.numInt = f
-	return TOK_INT
+	return TokInt
 
 }
 
 func (x *Lex) readLine() error {
+	x.ColNumber = 0
+	x.LineNumber++
+
 	line, err := x.in.ReadBytes('\n')
 	if err == io.EOF {
 		if len(line) < 1 { // last line may not end with \n so detect with empty data
@@ -220,6 +225,8 @@ func (x *Lex) next() rune {
 		x.peek = eof
 		return r
 	}
+	x.ColNumber++
+
 	if len(x.line) == 0 {
 		err := x.readLine()
 

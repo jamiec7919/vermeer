@@ -20,15 +20,15 @@ import (
 // Token types returned by lexer.
 const (
 	eof = iota
-	TOK_TOKEN
-	TOK_STRING
-	TOK_FLOAT
-	TOK_INT
-	TOK_OPENBRACE
-	TOK_CLOSEBRACE
-	TOK_OPENCURLYBRACE
-	TOK_CLOSECURLYBRACE
-	TOK_COMMA
+	TokToken
+	TokString
+	TokFloat
+	TokInt
+	TokOpenBrace
+	TokCloseBrace
+	TokOpenCurlyBrace
+	TokCloseCurlyBrace
+	TokComma
 )
 
 var typeInt32 = reflect.TypeOf(int32(0))
@@ -51,8 +51,9 @@ type SymType struct {
 }
 
 type parser struct {
-	lex *Lex
-	rc  *core.RenderContext
+	filename string
+	lex      *Lex
+	rc       *core.RenderContext
 }
 
 func init() {
@@ -77,8 +78,10 @@ func Parse(rc *core.RenderContext, filename string) error {
 
 	var l Lex
 	l.in = in
+	l.LineNumber = 0
+	l.ColNumber = 1
 
-	parser := parser{lex: &l, rc: rc}
+	parser := parser{filename: filename, lex: &l, rc: rc}
 
 	//	l.error = parser.error
 
@@ -91,20 +94,20 @@ func (p *parser) int32slice(field reflect.Value) error {
 
 	count := -1
 
-	if t := p.lex.Lex(&sym); t != TOK_INT {
+	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected slice length.")
 	}
 
 	count = int(sym.numInt)
 
-	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "int" {
+	if t := p.lex.Lex(&sym); t != TokToken && sym.str != "int" {
 		return errors.New("Expected slice type.")
 	}
 
 	s := make([]int32, 0, count)
 
 	for i := 0; i < count; i++ {
-		if t := p.lex.Lex(&sym); t != TOK_INT {
+		if t := p.lex.Lex(&sym); t != TokInt {
 			return errors.New("Expected int.")
 		}
 
@@ -120,7 +123,7 @@ func (p *parser) rgb(field reflect.Value) error {
 
 	var sym SymType
 
-	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "rgb" {
+	if t := p.lex.Lex(&sym); t != TokToken && sym.str != "rgb" {
 		return errors.New("Expected field type.")
 	}
 
@@ -128,9 +131,9 @@ func (p *parser) rgb(field reflect.Value) error {
 
 	for i := range v.C {
 		switch t := p.lex.Lex(&sym); t {
-		case TOK_INT:
+		case TokInt:
 			v.C[i] = float32(sym.numInt)
-		case TOK_FLOAT:
+		case TokFloat:
 			v.C[i] = float32(sym.numFloat)
 		default:
 			return errors.New("Expected RGB component.")
@@ -147,18 +150,18 @@ func (p *parser) floatmap(field reflect.Value) error {
 
 	var sym SymType
 
-	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "float" {
+	if t := p.lex.Lex(&sym); t != TokToken && sym.str != "float" {
 		return errors.New("Expected field type.")
 	}
 
 	v := &core.ConstantMap{}
 
 	switch t := p.lex.Lex(&sym); t {
-	case TOK_INT:
+	case TokInt:
 		v.C[0] = float32(sym.numInt)
 		v.C[1] = float32(sym.numInt)
 		v.C[2] = float32(sym.numInt)
-	case TOK_FLOAT:
+	case TokFloat:
 		v.C[0] = float32(sym.numFloat)
 		v.C[1] = float32(sym.numFloat)
 		v.C[2] = float32(sym.numFloat)
@@ -175,13 +178,13 @@ func (p *parser) rgbtex(field reflect.Value) error {
 
 	var sym SymType
 
-	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "rgbtex" {
+	if t := p.lex.Lex(&sym); t != TokToken && sym.str != "rgbtex" {
 		return errors.New("Expected field type.")
 	}
 
 	v := &core.TextureMap{}
 
-	if t := p.lex.Lex(&sym); t != TOK_STRING {
+	if t := p.lex.Lex(&sym); t != TokString {
 		return errors.New("Expected RGB texture filename.")
 	}
 
@@ -200,9 +203,9 @@ func (p *parser) vec3(field reflect.Value) error {
 
 	for i := range v {
 		switch t := p.lex.Lex(&sym); t {
-		case TOK_INT:
+		case TokInt:
 			v[i] = float32(sym.numInt)
-		case TOK_FLOAT:
+		case TokFloat:
 			v[i] = float32(sym.numFloat)
 		default:
 			return errors.New("Expected vector component.")
@@ -221,19 +224,19 @@ func (p *parser) pointarray(field reflect.Value) error {
 
 	v := core.PointArray{}
 
-	if t := p.lex.Lex(&sym); t != TOK_INT {
+	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
 	}
 
 	v.MotionKeys = int(sym.numInt)
 
-	if t := p.lex.Lex(&sym); t != TOK_INT {
+	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of elements.")
 	}
 
 	v.ElemsPerKey = int(sym.numInt)
 
-	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "point" {
+	if t := p.lex.Lex(&sym); t != TokToken && sym.str != "point" {
 		return errors.New("Expected array type.")
 	}
 
@@ -250,9 +253,9 @@ func (p *parser) pointarray(field reflect.Value) error {
 
 		for i := range el {
 			switch t := p.lex.Lex(&sym); t {
-			case TOK_INT:
+			case TokInt:
 				el[i] = float32(sym.numInt)
-			case TOK_FLOAT:
+			case TokFloat:
 				el[i] = float32(sym.numFloat)
 			default:
 				return errors.New("Expected point component.")
@@ -273,19 +276,19 @@ func (p *parser) vec3array(field reflect.Value) error {
 
 	v := core.Vec3Array{}
 
-	if t := p.lex.Lex(&sym); t != TOK_INT {
+	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
 	}
 
 	v.MotionKeys = int(sym.numInt)
 
-	if t := p.lex.Lex(&sym); t != TOK_INT {
+	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of elements.")
 	}
 
 	v.ElemsPerKey = int(sym.numInt)
 
-	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "vec3" {
+	if t := p.lex.Lex(&sym); t != TokToken && sym.str != "vec3" {
 		return errors.New("Expected array type.")
 	}
 
@@ -302,9 +305,9 @@ func (p *parser) vec3array(field reflect.Value) error {
 
 		for i := range el {
 			switch t := p.lex.Lex(&sym); t {
-			case TOK_INT:
+			case TokInt:
 				el[i] = float32(sym.numInt)
-			case TOK_FLOAT:
+			case TokFloat:
 				el[i] = float32(sym.numFloat)
 			default:
 				return errors.New("Expected vec3 component.")
@@ -325,19 +328,19 @@ func (p *parser) vec2array(field reflect.Value) error {
 
 	v := core.Vec2Array{}
 
-	if t := p.lex.Lex(&sym); t != TOK_INT {
+	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
 	}
 
 	v.MotionKeys = int(sym.numInt)
 
-	if t := p.lex.Lex(&sym); t != TOK_INT {
+	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of elements.")
 	}
 
 	v.ElemsPerKey = int(sym.numInt)
 
-	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "vec2" {
+	if t := p.lex.Lex(&sym); t != TokToken && sym.str != "vec2" {
 		return errors.New("Expected array type.")
 	}
 
@@ -354,9 +357,9 @@ func (p *parser) vec2array(field reflect.Value) error {
 
 		for i := range el {
 			switch t := p.lex.Lex(&sym); t {
-			case TOK_INT:
+			case TokInt:
 				el[i] = float32(sym.numInt)
-			case TOK_FLOAT:
+			case TokFloat:
 				el[i] = float32(sym.numFloat)
 			default:
 				return errors.New("Expected vec2 component.")
@@ -377,13 +380,13 @@ func (p *parser) matrixarray(field reflect.Value) error {
 
 	v := core.MatrixArray{}
 
-	if t := p.lex.Lex(&sym); t != TOK_INT {
+	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
 	}
 
 	v.MotionKeys = int(sym.numInt)
 
-	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "matrix" {
+	if t := p.lex.Lex(&sym); t != TokToken && sym.str != "matrix" {
 		return errors.New("Expected array type.")
 	}
 
@@ -400,9 +403,9 @@ func (p *parser) matrixarray(field reflect.Value) error {
 
 		for i := range mat {
 			switch t := p.lex.Lex(&sym); t {
-			case TOK_INT:
+			case TokInt:
 				mat[i] = float32(sym.numInt)
-			case TOK_FLOAT:
+			case TokFloat:
 				mat[i] = float32(sym.numFloat)
 			default:
 				return errors.New("Expected matrix component.")
@@ -423,19 +426,19 @@ func (p *parser) float32array(field reflect.Value) error {
 
 	v := core.Float32Array{}
 
-	if t := p.lex.Lex(&sym); t != TOK_INT {
+	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
 	}
 
 	v.MotionKeys = int(sym.numInt)
 
-	if t := p.lex.Lex(&sym); t != TOK_INT {
+	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of elements.")
 	}
 
 	v.ElemsPerKey = int(sym.numInt)
 
-	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "float" {
+	if t := p.lex.Lex(&sym); t != TokToken && sym.str != "float" {
 		return errors.New("Expected array type.")
 	}
 
@@ -451,9 +454,9 @@ func (p *parser) float32array(field reflect.Value) error {
 		var el float32
 
 		switch t := p.lex.Lex(&sym); t {
-		case TOK_INT:
+		case TokInt:
 			el = float32(sym.numInt)
-		case TOK_FLOAT:
+		case TokFloat:
 			el = float32(sym.numFloat)
 		default:
 			return errors.New("Expected float32 element.")
@@ -471,7 +474,7 @@ func (p *parser) matrix(field reflect.Value) error {
 
 	var sym SymType
 
-	if t := p.lex.Lex(&sym); t != TOK_TOKEN && sym.str != "matrix" {
+	if t := p.lex.Lex(&sym); t != TokToken && sym.str != "matrix" {
 		return errors.New("Expected matrix type.")
 	}
 
@@ -479,9 +482,9 @@ func (p *parser) matrix(field reflect.Value) error {
 
 	for i := range v {
 		switch t := p.lex.Lex(&sym); t {
-		case TOK_INT:
+		case TokInt:
 			v[i] = float32(sym.numInt)
-		case TOK_FLOAT:
+		case TokFloat:
 			v[i] = float32(sym.numFloat)
 		default:
 			return errors.New("Expected matrix component.")
@@ -505,23 +508,23 @@ func (p *parser) param(field reflect.Value) error {
 	switch field.Kind() {
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch t := p.lex.Lex(&v); t {
-		case TOK_FLOAT:
+		case TokFloat:
 			field.SetInt(int64(v.numFloat))
-		case TOK_INT:
+		case TokInt:
 			field.SetInt(v.numInt)
 		}
 
 	case reflect.Float32, reflect.Float64:
 		switch t := p.lex.Lex(&v); t {
-		case TOK_FLOAT:
+		case TokFloat:
 			field.SetFloat(v.numFloat)
-		case TOK_INT:
+		case TokInt:
 			field.SetFloat(float64(v.numInt))
 		}
 
 	case reflect.Bool:
 		switch t := p.lex.Lex(&v); t {
-		case TOK_INT:
+		case TokInt:
 			if v.numInt == 0 {
 				field.SetBool(false)
 			} else {
@@ -531,7 +534,7 @@ func (p *parser) param(field reflect.Value) error {
 
 	case reflect.String:
 		switch t := p.lex.Lex(&v); t {
-		case TOK_STRING:
+		case TokString:
 			field.SetString(v.str)
 		}
 
@@ -539,16 +542,16 @@ func (p *parser) param(field reflect.Value) error {
 		switch field.Type().Elem() {
 		case typeInt32:
 			switch t := p.lex.Peek(&v); t {
-			case TOK_INT:
+			case TokInt:
 				p.int32slice(field)
 			default:
-				p.error("Invalid token for param (expecting length of slice)")
+				p.errorf("Invalid token for param (expecting length of slice)")
 				p.lex.Skip()
 			}
 		}
 
 	case reflect.Interface:
-		if t := p.lex.Peek(&v); t == TOK_TOKEN {
+		if t := p.lex.Peek(&v); t == TokToken {
 			switch v.str {
 			case "rgb":
 				p.rgb(field)
@@ -574,7 +577,7 @@ func (p *parser) param(field reflect.Value) error {
 		case typeFloat32Array:
 			return p.float32array(field)
 		default:
-			p.error("Invalid type for param (%v)", field.Type())
+			p.errorf("Invalid type for param (%v)", field.Type())
 			p.lex.Skip()
 		}
 
@@ -630,7 +633,7 @@ func (p *parser) node(name string) (core.Node, error) {
 		t := p.lex.Lex(&v)
 		// log.Printf("%v", t)
 		switch t {
-		case TOK_TOKEN:
+		case TokToken:
 			paramName := v.str
 
 			field, err := lookupParam(node, paramName)
@@ -640,28 +643,30 @@ func (p *parser) node(name string) (core.Node, error) {
 			}
 
 			if !field.IsValid() {
-				p.error("Field %v not found/invalid in %v", paramName, name)
+				p.errorf("Field %v not found/invalid in %v", paramName, name)
 				return nil, nil
 			}
 
 			if err := p.param(field); err != nil {
-				p.error("Error parsing field: %v", err)
+				p.errorf("Error parsing field: %v", err)
 			}
 
-		case TOK_CLOSECURLYBRACE:
+		case TokCloseCurlyBrace:
 			//log.Printf("Got obj %v %v", objtype, params)
 			return node, nil
 
 		default:
-			p.error("parseNode: Error, invalid token in object \"%v\" %v", t, v)
+			p.errorf("parseNode: Error, invalid token in object \"%v\" %v", t, v)
 
 		}
 	}
 
 }
 
-func (p *parser) error(msg string, v ...interface{}) {
-	if err := p.rc.Error(fmt.Errorf(msg, v...)); err != nil {
+func (p *parser) errorf(msg string, v ...interface{}) {
+	line := p.lex.LineNumber
+	col := p.lex.ColNumber
+	if err := p.rc.Error(fmt.Errorf("%v:%v:%v: %v", p.filename, line, col, fmt.Sprintf(msg, v...))); err != nil {
 		panic(err)
 	}
 }
@@ -672,21 +677,21 @@ L:
 	for {
 		t := p.lex.Lex(&v)
 		switch t {
-		case TOK_TOKEN:
+		case TokToken:
 			token := v.str
-			if t := p.lex.Lex(&v); t != TOK_OPENCURLYBRACE {
-				p.error("Invalid token in node preamble")
+			if t := p.lex.Lex(&v); t != TokOpenCurlyBrace {
+				p.errorf("Invalid token in node preamble")
 			}
 
 			node, err := p.node(token)
 
 			if err != nil || node == nil {
-				p.error("Node is nil: %v", err)
+				p.errorf("Node is nil: %v", err)
 
 				for {
 					t := p.lex.Lex(&v)
 					// skip until closing brace
-					if t == TOK_CLOSECURLYBRACE {
+					if t == TokCloseCurlyBrace {
 						break
 					}
 				}
