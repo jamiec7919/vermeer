@@ -84,6 +84,7 @@ type RenderContext struct {
 	imgbuf    []float32
 	frames    []Frame
 	nodes     []Node
+	nodeMap   map[string]Node
 	scene     Scene
 	cameras   []Camera
 	materials []Material
@@ -111,6 +112,7 @@ func NewRenderContext() *RenderContext {
 	rc.globals.YRes = 256
 	rc.globals.MaxGoRoutines = MAXGOROUTINES
 	rc.finish = make(chan bool, 1)
+	rc.nodeMap = make(map[string]Node)
 	grc = rc
 	return rc
 }
@@ -396,6 +398,7 @@ func (rc *RenderContext) addMaterial(mtl Material) {
 // AddNode adds a node to the core.
 func (rc *RenderContext) AddNode(node Node) {
 	rc.nodes = append(rc.nodes, node)
+	rc.nodeMap[node.Name()] = node
 
 	switch t := node.(type) {
 	case Camera:
@@ -413,12 +416,14 @@ func (rc *RenderContext) AddNode(node Node) {
 
 // FindNode finds the node with the given name.
 func (rc *RenderContext) FindNode(name string) Node {
-	for _, node := range rc.nodes {
-		if node.Name() == name {
-			return node
-		}
+	node, present := rc.nodeMap[name]
+
+	if present {
+		return node
 	}
+
 	return nil
+
 }
 
 // Error is called from the parser.
