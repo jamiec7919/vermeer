@@ -32,12 +32,12 @@ func (b *MicrofacetTransmissionGGX) Sample(r0, r1 float64) (omegaO m.Vec3) {
 
 	alpha := sqr32(b.Roughness)
 
-	theta_m := math.Atan2(float64(alpha)*math.Sqrt(r0), math.Sqrt(1-r0))
-	phi_m := 2.0 * math.Pi * r1
+	thetaM := math.Atan2(float64(alpha)*math.Sqrt(r0), math.Sqrt(1-r0))
+	phiM := 2.0 * math.Pi * r1
 
-	omega_m := m.Vec3{m.Sin(float32(theta_m)) * m.Cos(float32(phi_m)),
-		m.Sin(float32(theta_m)) * m.Sin(float32(phi_m)),
-		m.Cos(float32(theta_m))}
+	omegaM := m.Vec3{m.Sin(float32(thetaM)) * m.Cos(float32(phiM)),
+		m.Sin(float32(thetaM)) * m.Sin(float32(phiM)),
+		m.Cos(float32(thetaM))}
 
 	//		log.Printf("reflect")
 	if b.thin {
@@ -54,11 +54,11 @@ func (b *MicrofacetTransmissionGGX) Sample(r0, r1 float64) (omegaO m.Vec3) {
 		eta = b.ior
 	}
 
-	c := m.Vec3Dot(b.OmegaR, omega_m)
+	c := m.Vec3Dot(b.OmegaR, omegaM)
 
 	a := eta*c - sign*m.Sqrt(1.0+eta*(c*c-1.0))
 
-	omegaO = m.Vec3Sub(m.Vec3Scale(a, omega_m), m.Vec3Scale(eta, b.OmegaR))
+	omegaO = m.Vec3Sub(m.Vec3Scale(a, omegaM), m.Vec3Scale(eta, b.OmegaR))
 
 	return m.Vec3Normalize(omegaO)
 }
@@ -81,7 +81,7 @@ func (b *MicrofacetTransmissionGGX) PDF(omegaO m.Vec3) float64 {
 
 	h := m.Vec3Normalize(m.Vec3Neg(m.Vec3Add(m.Vec3Scale(etaI, b.OmegaR), m.Vec3Scale(etaO, omegaO))))
 
-	return float64(ggx_D(h, alpha) * h[2])
+	return float64(ggxD(h, alpha) * h[2])
 }
 
 // Eval implements core.BSDF.
@@ -101,7 +101,7 @@ func (b *MicrofacetTransmissionGGX) Eval(omegaO m.Vec3) (rho colour.Spectrum) {
 
 	fresnel := b.fresnel.Kr(m.Vec3DotAbs(b.OmegaR, h))
 
-	numer := sqr32(etaO) * ggx_SmithG1(b.OmegaR, h, alpha) * ggx_SmithG1(omegaO, h, alpha) * ggx_D(h, alpha)
+	numer := sqr32(etaO) * ggxSmithG1(b.OmegaR, h, alpha) * ggxSmithG1(omegaO, h, alpha) * ggxD(h, alpha)
 
 	denom := sqr32(etaI*m.Vec3Dot(b.OmegaR, h) + etaO*m.Vec3Dot(omegaO, h))
 

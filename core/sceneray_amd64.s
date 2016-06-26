@@ -29,8 +29,8 @@
 // node is assumed to be on 16 byte alignment. Can probably combine the hits into a struct
 // to ensure padding?)
 // Parallel version
-//func rayNodeIntersectAll_asm(ray *Ray, node *qbvh.Node,  hit *[4]int32, tNear *[4]float32) 
-TEXT ·rayNodeIntersectAll_asm(SB),NOSPLIT,$0
+//func rayNodeIntersectAllASM(ray *Ray, node *qbvh.Node,  hit *[4]int32, tNear *[4]float32) 
+TEXT ·rayNodeIntersectAllASM(SB),NOSPLIT,$0
     MOVQ    node+8(FP),DX
     MOVQ    ray+0(FP),AX
 

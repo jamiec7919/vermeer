@@ -5,8 +5,7 @@
 /*
 Package material provides the default shader(s) for Vermeer.  (should rename).
 
-This package is in heavy development so documentation somewhat sketchy.
-*/
+This package is in heavy development so documentation somewhat sketchy. */
 package material
 
 import (
@@ -17,20 +16,20 @@ import (
 	//"log"
 )
 
-// Id is the type of shader ids.
+// ID is the type of shader ids.
 //
 // Deprecated: should be in core.
-type Id int32
+type ID int32
 
-// ID_NONE is the special shader id representing no shader.
+// None is the special shader id representing no shader.
 //
 // Deprecated: should be in core.
-const ID_NONE Id = -1
+const None ID = -1
 
 // Fresnel types
 const (
-	FRESNEL_DIELECTRIC = iota
-	FRESNEL_METAL
+	FresnelDielectric = iota
+	FresnelMetal
 )
 
 // Material is the default surface shader.
@@ -67,6 +66,10 @@ type Material struct {
 	//	BumpMap *BumpMap
 }
 
+// Assert that Material satisfies important interfaces.
+var _ core.Node = (*Material)(nil)
+var _ core.Material = (*Material)(nil)
+
 // Name is a core.Node method.
 func (mtl *Material) Name() string { return mtl.MtlName }
 
@@ -74,9 +77,9 @@ func (mtl *Material) Name() string { return mtl.MtlName }
 func (mtl *Material) PreRender(rc *core.RenderContext) error {
 	switch mtl.Spec1FresnelModel {
 	case "Metal":
-		mtl.spec1FresnelModel = FRESNEL_METAL
+		mtl.spec1FresnelModel = FresnelMetal
 	default:
-		mtl.spec1FresnelModel = FRESNEL_DIELECTRIC
+		mtl.spec1FresnelModel = FresnelDielectric
 	}
 	return nil
 }
@@ -84,16 +87,16 @@ func (mtl *Material) PreRender(rc *core.RenderContext) error {
 // PostRender is a core.Node method.
 func (mtl *Material) PostRender(rc *core.RenderContext) error { return nil }
 
-// Id is a core.Material method.
+// ID is a core.Material method.
 //
 // Deprecated?:
-func (mtl *Material) Id() int32 {
+func (mtl *Material) ID() int32 {
 	return mtl.id
 }
 
-// SetId is a core.Material method.
+// SetID is a core.Material method.
 // Deprecated?:
-func (mtl *Material) SetId(id int32) {
+func (mtl *Material) SetID(id int32) {
 	mtl.id = id
 }
 

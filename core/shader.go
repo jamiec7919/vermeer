@@ -27,7 +27,7 @@ type BSDF interface {
 type Fresnel interface {
 	// Kr returns the fresnel value.  cos_theta is the clamped dot product of
 	// view direction and surface normal.
-	Kr(cos_theta float32) colour.RGB
+	Kr(cosTheta float32) colour.RGB
 }
 
 // ShaderGlobals encapsulates all of the data needed for evaluating shaders.
@@ -42,7 +42,7 @@ type ShaderGlobals struct {
 	Time        float32
 	Ro, Rd      m.Vec3         // Ray origin and direction
 	Rl          float64        // Ray length (|Ro-P|)
-	ElemId      uint32         // Element ID (triangle, curve etc.)
+	ElemID      uint32         // Element ID (triangle, curve etc.)
 	Prim        Primitive      // primitive pointer
 	Psg         *ShaderGlobals // Parent (last shaded)
 	Shader      Material
@@ -178,9 +178,9 @@ func (sg *ShaderGlobals) EvaluateLightSample(brdf BSDF) colour.RGB {
 	ray := new(RayData)
 
 	if m.Vec3Dot(sg.Ld, sg.Ng) < 0 {
-		ray.Init(RAY_SHADOW, sg.OffsetP(-1), m.Vec3Scale(sg.Ldist*(1.0-VisRayEpsilon), sg.Ld), 1.0, sg)
+		ray.Init(RayShadow, sg.OffsetP(-1), m.Vec3Scale(sg.Ldist*(1.0-VisRayEpsilon), sg.Ld), 1.0, sg)
 	} else {
-		ray.Init(RAY_SHADOW, sg.OffsetP(1), m.Vec3Scale(sg.Ldist*(1.0-VisRayEpsilon), sg.Ld), 1.0, sg)
+		ray.Init(RayShadow, sg.OffsetP(1), m.Vec3Scale(sg.Ldist*(1.0-VisRayEpsilon), sg.Ld), 1.0, sg)
 
 	}
 

@@ -41,7 +41,7 @@ func (b *SpecularTransmission) Sample(r0, r1 float64) (omegaO m.Vec3) {
 }
 
 // PDF implements core.BSDF.
-func (b *SpecularTransmission) PDF(omega_o m.Vec3) float64 {
+func (b *SpecularTransmission) PDF(omegaO m.Vec3) float64 {
 	return 1
 }
 

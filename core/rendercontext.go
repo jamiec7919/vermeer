@@ -368,15 +368,15 @@ func (rc *RenderContext) PostRender() error {
 	return nil
 }
 
-// GetMaterialId returns the shader id for the given node name.
-func GetMaterialId(name string) int32 {
-	return grc.GetMaterialId(name)
+// GetMaterialID returns the shader id for the given node name.
+func GetMaterialID(name string) int32 {
+	return grc.GetMaterialID(name)
 }
 
-// GetMaterialId returns the shader id for the given node name.
+// GetMaterialID returns the shader id for the given node name.
 //
-// Deprecated: Should use the core API global GetMaterialId.
-func (rc *RenderContext) GetMaterialId(name string) int32 {
+// Deprecated: Should use the core API global GetMaterialID.
+func (rc *RenderContext) GetMaterialID(name string) int32 {
 	for id, mtl := range rc.materials {
 		if mtl.Name() == name {
 			return int32(id)
@@ -392,7 +392,7 @@ func (rc *RenderContext) addMaterial(mtl Material) {
 
 	rc.materials = append(rc.materials, mtl)
 
-	mtl.SetId(int32(id))
+	mtl.SetID(int32(id))
 }
 
 // AddNode adds a node to the core.

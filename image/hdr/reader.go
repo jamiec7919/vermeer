@@ -12,6 +12,7 @@ import (
 	"os"
 )
 
+// Reader implements an image reader for Radiance HDR format.
 type Reader struct {
 	file   *os.File
 	reader *bufio.Reader
@@ -32,6 +33,7 @@ func init() {
 	image.RegisterReader(open)
 }
 
+// Open attempts to open the given filename and returns an instance of the reader or nil and an error.
 func Open(filename string) (*Reader, error) {
 
 	h := Reader{}
@@ -98,9 +100,13 @@ func (h *Reader) readHeaders() error {
 	return nil
 }
 
+// Spec returns the image spec fo the open reader.
 func (h *Reader) Spec() (image.Spec, error) { return h.spec, nil }
-func (h *Reader) Close()                    { h.file.Close() }
 
+// Close closes the reader.
+func (h *Reader) Close() { h.file.Close() }
+
+// ReadImage reads entire image into the given buf, translating into type ty (if possible).
 func (h *Reader) ReadImage(ty image.TypeDesc, buf interface{}) error {
 	if ty.BaseType != image.FLOAT {
 		return errors.New("HDR: only supports float32 pixels")
@@ -140,6 +146,7 @@ func (h *Reader) ReadImage(ty image.TypeDesc, buf interface{}) error {
 	return nil
 }
 
+// ReadScanline reads a single scanline (not implemented).
 func (h *Reader) ReadScanline(y, z int, ty image.TypeDesc, buf interface{}) error {
 	if ty.BaseType != image.FLOAT {
 		return errors.New("HDR: only supports float32 pixels")
@@ -155,10 +162,12 @@ func (h *Reader) ReadScanline(y, z int, ty image.TypeDesc, buf interface{}) erro
 	return errors.New("HDR: scanline reading not supported")
 }
 
+// ReadTile reads a single image tile (not implemented).
 func (h *Reader) ReadTile(x, y, z int, ty image.TypeDesc, buf interface{}) error {
 	return errors.New("HDR: doesn't support tiles")
 }
 
+// Supports returns true if the reader supports the given feature.
 func (h *Reader) Supports(tag string) bool { return false }
 
 func readScanlineOld(fin *bufio.Reader, scanline []byte) error {

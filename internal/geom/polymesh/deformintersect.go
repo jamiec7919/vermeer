@@ -96,10 +96,10 @@ func (mesh *PolyMesh) intersectRayMotion(ray *core.RayData, sg *core.ShaderGloba
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
 
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				var face Face
 
 				faceidx := int(mesh.accel.idx[i])
@@ -113,11 +113,11 @@ func (mesh *PolyMesh) intersectRayMotion(ray *core.RayData, sg *core.ShaderGloba
 				face.V[2] = m.Vec3Lerp(mesh.Verts.Elems[int(mesh.idxp[faceidx*3+2])+(mesh.Verts.ElemsPerKey*key)],
 					mesh.Verts.Elems[int(mesh.idxp[faceidx*3+2])+(mesh.Verts.ElemsPerKey*key2)], time)
 
-				face.PrimId = uint64(faceidx)
+				face.PrimID = uint64(faceidx)
 
 				//log.Printf("%v", face)
 				if face.IntersectRay(ray) {
-					ray.Result.MtlId = mesh.mtlid
+					ray.Result.MtlID = mesh.mtlid
 					hit = true
 
 					if mesh.UV.Elems != nil {
@@ -175,7 +175,7 @@ func (mesh *PolyMesh) intersectRayMotion(ray *core.RayData, sg *core.ShaderGloba
 		//sg.V = ray.Result.UV[1]
 		//sg.DdPdu = ray.Result.Pu
 		//sg.DdPdv = ray.Result.Pv
-		return ray.Result.MtlId
+		return ray.Result.MtlID
 	}
 	return -1
 }
@@ -267,10 +267,10 @@ func (mesh *PolyMesh) intersectRayEpsilonMotion(ray *core.RayData, sg *core.Shad
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
 
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				var face Face
 
 				faceidx := int(mesh.accel.idx[i])
@@ -284,10 +284,10 @@ func (mesh *PolyMesh) intersectRayEpsilonMotion(ray *core.RayData, sg *core.Shad
 				face.V[2] = m.Vec3Lerp(mesh.Verts.Elems[int(mesh.idxp[faceidx*3+2])+(mesh.Verts.ElemsPerKey*key)],
 					mesh.Verts.Elems[int(mesh.idxp[faceidx*3+2])+(mesh.Verts.ElemsPerKey*key2)], time)
 
-				face.PrimId = uint64(faceidx)
+				face.PrimID = uint64(faceidx)
 
 				if face.IntersectRayEpsilon(ray, epsilon) {
-					ray.Result.MtlId = mesh.mtlid
+					ray.Result.MtlID = mesh.mtlid
 					hit = true
 					k := ray.Time * float32(mesh.UV.MotionKeys-1)
 
@@ -342,7 +342,7 @@ func (mesh *PolyMesh) intersectRayEpsilonMotion(ray *core.RayData, sg *core.Shad
 		//sg.V = ray.Result.UV[1]
 		//sg.DdPdu = ray.Result.Pu
 		//sg.DdPdv = ray.Result.Pv
-		return ray.Result.MtlId
+		return ray.Result.MtlID
 	}
 	return -1
 
@@ -397,10 +397,10 @@ func (mesh *PolyMesh) intersectVisRayMotion(ray *core.RayData) bool {
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
 
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				var face Face
 
 				faceidx := int(mesh.accel.idx[i])
@@ -476,10 +476,10 @@ func (mesh *PolyMesh) intersectVisRayEpsilonMotion(ray *core.RayData, epsilon fl
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
 
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				var face Face
 
 				faceidx := int(mesh.accel.idx[i])

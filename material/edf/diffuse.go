@@ -26,7 +26,9 @@ func (b *Diffuse) Eval(surf *core.SurfacePoint, omegaO m.Vec3, Le *colour.Spectr
 	return nil
 }
 
-// Deprecated: Sample samples the emission distribution.
+// Sample samples the emission distribution.
+//
+// Deprecated: unused.
 func (b *Diffuse) Sample(surf *core.SurfacePoint, rnd *rand.Rand, omegaO *m.Vec3, Le *colour.Spectrum, pdf *float64) error {
 	return nil
 }

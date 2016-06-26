@@ -11,12 +11,12 @@ import (
 
 // Ray type bit flags.
 const (
-	RAY_CAMERA = (1 << iota)
-	RAY_SHADOW
+	RayCamera = (1 << iota)
+	RayShadow
 )
 
-// CHECK_EMPTY_LEAF is a debug constant. If set then empty leafs are explicitly checked.
-const CHECK_EMPTY_LEAF = true
+// CheckEmptyLeaf is a debug constant. If set then empty leafs are explicitly checked.
+const CheckEmptyLeaf = true
 
 // VisRayEpsilon is the epsilon to use for shadow rays.
 const VisRayEpsilon float32 = 0.0001
@@ -49,12 +49,12 @@ type RayResult struct {
 	POffset  m.Vec3  // 12 Offset to make sure any intersection point is outside face
 	Ng, T, B m.Vec3  // 36 Tangent space, Tg & Bg not normalized, Ng is normalized (as stored with face)
 	Ns       m.Vec3  // 12 Not normalized
-	MtlId    int32   // 4   64 bytes (first line)
+	MtlID    int32   // 4   64 bytes (first line)
 	UV       m.Vec2  // 8 floats (48 bytes)
 	Pu, Pv   m.Vec3  // 12 float32
 	Bu, Bv   float32 // Barycentric coords
 	Prim     Primitive
-	ElemId   uint32
+	ElemID   uint32
 }
 
 // Ray represents a ray in world space plus precalculated intersection values.

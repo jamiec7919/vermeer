@@ -55,9 +55,9 @@ func (mtl *Material) Eval(sg *core.ShaderGlobals) {
 	var fresnel core.Fresnel
 
 	switch mtl.spec1FresnelModel {
-	case FRESNEL_DIELECTRIC:
+	case FresnelDielectric:
 		fresnel = fr.NewDielectric(ior)
-	case FRESNEL_METAL:
+	case FresnelMetal:
 
 		refl := colour.RGB{0.5, 0.5, 0.5}
 		edge := colour.RGB{0.5, 0.5, 0.5}

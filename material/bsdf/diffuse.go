@@ -3,9 +3,8 @@
 // license that can be found in the LICENSE file.
 
 /*
-  Package bsdf provides built-in B(R/S)DF (Bidirectional Reflectance/Scattering Distribution Function)
-  models for Vermeer.
-*/
+Package bsdf provides built-in B(R/S)DF (Bidirectional Reflectance/Scattering Distribution Function)
+models for Vermeer. */
 package bsdf
 
 import (
@@ -16,8 +15,8 @@ import (
 	"math"
 )
 
-// Weight = f * dot(omega_o,n) / pdf
-// pdf := dot(omega_o,n) / m.Pi
+// Weight = f * dot(omegaO,n) / pdf
+// pdf := dot(omegaO,n) / m.Pi
 // f := rho / m.Pi
 
 // Instanced for each point
@@ -39,15 +38,15 @@ func (b *Lambert) Sample(r0, r1 float64) m.Vec3 {
 }
 
 // PDF implements core.BSDF.
-func (b *Lambert) PDF(omega_o m.Vec3) float64 {
-	o_dot_n := float64(m.Abs(omega_o[2]))
+func (b *Lambert) PDF(omegaO m.Vec3) float64 {
+	ODotN := float64(m.Abs(omegaO[2]))
 
-	return o_dot_n / math.Pi
+	return ODotN / math.Pi
 }
 
 // Eval implements core.BSDF.
-func (b *Lambert) Eval(omega_o m.Vec3) (rho colour.Spectrum) {
-	weight := omega_o[2]
+func (b *Lambert) Eval(omegaO m.Vec3) (rho colour.Spectrum) {
+	weight := omegaO[2]
 
 	rho.Lambda = b.Lambda
 	rho.FromRGB(1, 1, 1)

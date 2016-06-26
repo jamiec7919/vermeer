@@ -55,19 +55,19 @@ func getG(n, k float32) float32 {
 	return (nMax(r) - n) / (nMax(r) - nMin(r))
 }
 
-func fresnel(r, g, cos_theta float32) float32 {
+func fresnel(r, g, cosTheta float32) float32 {
 	nr := m.Clamp(r, 0, 0.99)
 
 	n := getN(nr, g)
 	k2 := getK2(nr, n)
 
-	rsNum := n*n + k2 - 2*n*cos_theta + cos_theta*cos_theta
-	rsDen := n*n + k2 + 2*n*cos_theta + cos_theta*cos_theta
+	rsNum := n*n + k2 - 2*n*cosTheta + cosTheta*cosTheta
+	rsDen := n*n + k2 + 2*n*cosTheta + cosTheta*cosTheta
 
 	rs := rsNum / rsDen
 
-	rpNum := (n*n+k2)*cos_theta*cos_theta - 2*n*cos_theta + 1
-	rpDen := (n*n+k2)*cos_theta*cos_theta + 2*n*cos_theta + 1
+	rpNum := (n*n+k2)*cosTheta*cosTheta - 2*n*cosTheta + 1
+	rpDen := (n*n+k2)*cosTheta*cosTheta + 2*n*cosTheta + 1
 	rp := rpNum / rpDen
 
 	return 0.5 * (rs + rp)
@@ -77,12 +77,12 @@ func fresnel(r, g, cos_theta float32) float32 {
 //
 // Implements core.Fresnel
 //
-// cos_theta is the clamped dot product of direction and surface normal.
+// cosTheta is the clamped dot product of direction and surface normal.
 //
 // Note that this returns an RGB value.  To get a single value use RGB.Maxh().
-func (f *Conductor) Kr(cos_theta float32) (out colour.RGB) {
+func (f *Conductor) Kr(cosTheta float32) (out colour.RGB) {
 	for k := range out {
-		out[k] = fresnel(f.r[k], f.g[k], cos_theta)
+		out[k] = fresnel(f.r[k], f.g[k], cosTheta)
 	}
 
 	return

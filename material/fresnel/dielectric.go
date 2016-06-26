@@ -28,11 +28,11 @@ func NewDielectric(eta float32) *Dielectric {
 //
 // Implements core.Fresnel.
 //
-// cos_theta is the clamped dot product of direction and surface normal.
+// cosTheta is the clamped dot product of direction and surface normal.
 //
 // Note that this returns an RGB value.  To get a single value use RGB.Maxh().
-func (f *Dielectric) Kr(cos_theta float32) colour.RGB {
-	c := cos_theta
+func (f *Dielectric) Kr(cosTheta float32) colour.RGB {
+	c := cosTheta
 	g := (f.eta * f.eta) - 1 + (c * c)
 
 	if g < 0.0 {

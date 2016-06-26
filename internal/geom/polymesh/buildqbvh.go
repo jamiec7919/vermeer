@@ -112,8 +112,8 @@ func (mesh *PolyMesh) initMotionBoxesRec(key int, node int32) (nodebox m.Boundin
 			box.Reset()
 
 			// calc box
-			leafBase := qbvh.LEAF_BASE(mesh.accel.mqbvh.Nodes[node].Children[k])
-			leafCount := qbvh.LEAF_COUNT(mesh.accel.mqbvh.Nodes[node].Children[k])
+			leafBase := qbvh.LeafBase(mesh.accel.mqbvh.Nodes[node].Children[k])
+			leafCount := qbvh.LeafCount(mesh.accel.mqbvh.Nodes[node].Children[k])
 
 			for i := leafBase; i < leafBase+leafCount; i++ {
 				faceidx := int(mesh.accel.idx[i])

@@ -9,26 +9,31 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 )
 
+// Face is instanced for each face we're to test against.
 type Face struct {
 	V      [3]m.Vec3
 	Ns     [3]m.Vec3
 	UV     [3]m.Vec2
 	N      m.Vec3
-	PrimId uint64
+	PrimID uint64
 }
 
-func (f *Face) setup() {
-	f.N = m.Vec3Normalize(m.Vec3Cross(m.Vec3Sub(f.V[1], f.V[0]), m.Vec3Sub(f.V[2], f.V[0])))
+func (face *Face) setup() {
+	face.N = m.Vec3Normalize(m.Vec3Cross(m.Vec3Sub(face.V[1], face.V[0]), m.Vec3Sub(face.V[2], face.V[0])))
 
-	for i := range f.N {
-		if f.N[i] == 0.0 {
-			f.N[i] = 0
+	for i := range face.N {
+		if face.N[i] == 0.0 {
+			face.N[i] = 0
 		}
 	}
 }
 
-const BACKFACE_CULL bool = false
+// BackFaceCull controls whether we report back face hits.
+//
+// Deprecated: Should always report backface hits.
+const BackFaceCull bool = false
 
+// Bounds returns the bounding box for the face.
 func (face *Face) Bounds() (box m.BoundingBox) {
 	box.Reset()
 
@@ -39,6 +44,7 @@ func (face *Face) Bounds() (box m.BoundingBox) {
 	return
 }
 
+// Centroid returns the centroid for the face.
 func (face *Face) Centroid() (c m.Vec3) {
 	for i := range c {
 		c[i] = (face.V[0][i] + face.V[1][i] + face.V[2][i]) / 3.0
@@ -72,21 +78,22 @@ func (face *Face) shaderParams(ray *core.RayData, sg *core.ShaderGlobals) {
 	ray.Result.Ng = face.N
 }
 
+// IntersectRay determines if ray intersects the face and updates ray structure.  Returns true on hit.
 //go:noslit
 func (face *Face) IntersectRay(ray *core.RayData) bool {
-	A_Kz := face.V[0][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
-	B_Kz := face.V[1][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
-	C_Kz := face.V[2][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
+	AKz := face.V[0][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
+	BKz := face.V[1][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
+	CKz := face.V[2][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
 
 	var U, V, W float32
 
 	{
-		Cx := (face.V[2][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*C_Kz
-		By := (face.V[1][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*B_Kz
-		Cy := (face.V[2][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*C_Kz
-		Bx := (face.V[1][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*B_Kz
-		Ax := (face.V[0][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*A_Kz
-		Ay := (face.V[0][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*A_Kz
+		Cx := (face.V[2][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*CKz
+		By := (face.V[1][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*BKz
+		Cy := (face.V[2][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*CKz
+		Bx := (face.V[1][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*BKz
+		Ax := (face.V[0][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*AKz
+		Ay := (face.V[0][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*AKz
 
 		// Calc scaled barycentric
 		U = Cx*By - Cy*Bx
@@ -123,15 +130,15 @@ func (face *Face) IntersectRay(ray *core.RayData) bool {
 	}
 
 	// Calc scaled z-coords of verts and calc the hit dis
-	//Az := ray.S[2] * A_Kz
-	//Bz := ray.S[2] * B_Kz
-	//Cz := ray.S[2] * C_Kz
+	//Az := ray.S[2] * AKz
+	//Bz := ray.S[2] * BKz
+	//Cz := ray.S[2] * CKz
 
-	T := ray.Ray.S[2] * (U*A_Kz + V*B_Kz + W*C_Kz)
+	T := ray.Ray.S[2] * (U*AKz + V*BKz + W*CKz)
 
-	det_sign := m.SignMask(det)
+	detSign := m.SignMask(det)
 
-	if m.Xorf(T, det_sign) < 0.0 || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
+	if m.Xorf(T, detSign) < 0.0 || m.Xorf(T, detSign) > ray.Ray.Tclosest*m.Xorf(det, detSign) {
 		return false
 	}
 
@@ -173,25 +180,26 @@ func (face *Face) IntersectRay(ray *core.RayData) bool {
 	//	ray.Result.UVW[1] = V
 	//	ray.Result.UVW[2] = W
 
-	ray.Result.ElemId = uint32(face.PrimId)
+	ray.Result.ElemID = uint32(face.PrimID)
 	return true
 }
 
+// IntersectRayEpsilon determines if ray intersects the face and updates ray structure.  Returns true on hit.
 //go:noslit
 func (face *Face) IntersectRayEpsilon(ray *core.RayData, epsilon float32) bool {
-	A_Kz := face.V[0][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
-	B_Kz := face.V[1][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
-	C_Kz := face.V[2][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
+	AKz := face.V[0][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
+	BKz := face.V[1][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
+	CKz := face.V[2][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
 
 	var U, V, W float32
 
 	{
-		Cx := (face.V[2][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*C_Kz
-		By := (face.V[1][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*B_Kz
-		Cy := (face.V[2][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*C_Kz
-		Bx := (face.V[1][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*B_Kz
-		Ax := (face.V[0][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*A_Kz
-		Ay := (face.V[0][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*A_Kz
+		Cx := (face.V[2][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*CKz
+		By := (face.V[1][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*BKz
+		Cy := (face.V[2][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*CKz
+		Bx := (face.V[1][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*BKz
+		Ax := (face.V[0][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*AKz
+		Ay := (face.V[0][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*AKz
 
 		// Calc scaled barycentric
 		U = Cx*By - Cy*Bx
@@ -228,15 +236,15 @@ func (face *Face) IntersectRayEpsilon(ray *core.RayData, epsilon float32) bool {
 	}
 
 	// Calc scaled z-coords of verts and calc the hit dis
-	//Az := ray.S[2] * A_Kz
-	//Bz := ray.S[2] * B_Kz
-	//Cz := ray.S[2] * C_Kz
+	//Az := ray.S[2] * AKz
+	//Bz := ray.S[2] * BKz
+	//Cz := ray.S[2] * CKz
 
-	T := ray.Ray.S[2] * (U*A_Kz + V*B_Kz + W*C_Kz)
+	T := ray.Ray.S[2] * (U*AKz + V*BKz + W*CKz)
 
-	det_sign := m.SignMask(det)
+	detSign := m.SignMask(det)
 
-	if m.Xorf(T, det_sign) < epsilon*m.Xorf(det, det_sign) || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
+	if m.Xorf(T, detSign) < epsilon*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Ray.Tclosest*m.Xorf(det, detSign) {
 		return false
 	}
 
@@ -277,30 +285,31 @@ func (face *Face) IntersectRayEpsilon(ray *core.RayData, epsilon float32) bool {
 	//ray.Result.UVW[0] = U
 	//ray.Result.UVW[1] = V
 	//ray.Result.UVW[2] = W
-	ray.Result.ElemId = uint32(face.PrimId)
+	ray.Result.ElemID = uint32(face.PrimID)
 	return true
 }
 
+// IntersectVisRayEpsilon determines if ray intersects the face and updates ray structure.  Returns true on hit.
 // Some meshes just seem to need an epsilon to work (e.g. hairball)
 //go:nosplit
 func (face *Face) IntersectVisRayEpsilon(ray *core.RayData, epsilon float32) bool {
 	Kz := ray.Ray.Kz
-	A_Kz := face.V[0][Kz] - ray.Ray.P[Kz]
-	B_Kz := face.V[1][Kz] - ray.Ray.P[Kz]
-	C_Kz := face.V[2][Kz] - ray.Ray.P[Kz]
+	AKz := face.V[0][Kz] - ray.Ray.P[Kz]
+	BKz := face.V[1][Kz] - ray.Ray.P[Kz]
+	CKz := face.V[2][Kz] - ray.Ray.P[Kz]
 
 	// Ax = (V0[Kx]-O[Kx])-S[0]*(V0[Kz]-O[Kz])
 	// = (V0[Kx]-O[Kx])-S[0]*V0[Kz]-S[0]*O[Kz]
 	// = (V0[Kx]-S[0]*V0[Kz])-(O[Kx]+S[0]*O[Kz])
 	Kx := ray.Ray.Kx
-	Cx := (face.V[2][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*C_Kz
-	Bx := (face.V[1][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*B_Kz
-	Ax := (face.V[0][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*A_Kz
+	Cx := (face.V[2][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*CKz
+	Bx := (face.V[1][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*BKz
+	Ax := (face.V[0][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*AKz
 
 	Ky := ray.Ray.Ky
-	By := (face.V[1][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*B_Kz
-	Cy := (face.V[2][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*C_Kz
-	Ay := (face.V[0][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*A_Kz
+	By := (face.V[1][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*BKz
+	Cy := (face.V[2][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*CKz
+	Ay := (face.V[0][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*AKz
 
 	// Calc scaled barycentric
 	U := Cx*By - Cy*Bx
@@ -325,7 +334,7 @@ func (face *Face) IntersectVisRayEpsilon(ray *core.RayData, epsilon float32) boo
 
 	// Perform edge tests
 	// Backface cull:
-	if BACKFACE_CULL {
+	if BackFaceCull {
 		if U < 0.0 || V < 0.0 || W < 0.0 {
 			return false
 		}
@@ -343,22 +352,22 @@ func (face *Face) IntersectVisRayEpsilon(ray *core.RayData, epsilon float32) boo
 	}
 
 	// Calc scaled z-coords of verts and calc the hit dis
-	Az := ray.Ray.S[2] * A_Kz
-	Bz := ray.Ray.S[2] * B_Kz
-	Cz := ray.Ray.S[2] * C_Kz
+	Az := ray.Ray.S[2] * AKz
+	Bz := ray.Ray.S[2] * BKz
+	Cz := ray.Ray.S[2] * CKz
 
 	T := U*Az + V*Bz + W*Cz
-	// T := ray.S[2] * (U*A_Kz + V*B_Kz + W*C_Kz)
+	// T := ray.S[2] * (U*AKz + V*BKz + W*CKz)
 
 	// Backface cull:
-	if BACKFACE_CULL {
+	if BackFaceCull {
 		if T < epsilon || T > ray.Ray.Tclosest*det {
 			return false
 		}
 	} else {
-		det_sign := m.SignMask(det)
+		detSign := m.SignMask(det)
 
-		if m.Xorf(T, det_sign) < epsilon*m.Xorf(det, det_sign) || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
+		if m.Xorf(T, detSign) < epsilon*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Ray.Tclosest*m.Xorf(det, detSign) {
 			return false
 		}
 	}
@@ -366,24 +375,25 @@ func (face *Face) IntersectVisRayEpsilon(ray *core.RayData, epsilon float32) boo
 	return true
 }
 
+// IntersectVisRay determines if ray intersects the face and updates ray structure.  Returns true on hit.
 func (face *Face) IntersectVisRay(ray *core.RayData) bool {
 	Kz := ray.Ray.Kz
-	A_Kz := face.V[0][Kz] - ray.Ray.P[Kz]
-	B_Kz := face.V[1][Kz] - ray.Ray.P[Kz]
-	C_Kz := face.V[2][Kz] - ray.Ray.P[Kz]
+	AKz := face.V[0][Kz] - ray.Ray.P[Kz]
+	BKz := face.V[1][Kz] - ray.Ray.P[Kz]
+	CKz := face.V[2][Kz] - ray.Ray.P[Kz]
 
 	// Ax = (V0[Kx]-O[Kx])-S[0]*(V0[Kz]-O[Kz])
 	// = (V0[Kx]-O[Kx])-S[0]*V0[Kz]-S[0]*O[Kz]
 	// = (V0[Kx]-S[0]*V0[Kz])-(O[Kx]+S[0]*O[Kz])
 	Kx := ray.Ray.Kx
-	Cx := (face.V[2][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*C_Kz
-	Bx := (face.V[1][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*B_Kz
-	Ax := (face.V[0][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*A_Kz
+	Cx := (face.V[2][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*CKz
+	Bx := (face.V[1][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*BKz
+	Ax := (face.V[0][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*AKz
 
 	Ky := ray.Ray.Ky
-	By := (face.V[1][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*B_Kz
-	Cy := (face.V[2][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*C_Kz
-	Ay := (face.V[0][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*A_Kz
+	By := (face.V[1][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*BKz
+	Cy := (face.V[2][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*CKz
+	Ay := (face.V[0][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*AKz
 
 	// Calc scaled barycentric
 	U := Cx*By - Cy*Bx
@@ -408,7 +418,7 @@ func (face *Face) IntersectVisRay(ray *core.RayData) bool {
 
 	// Perform edge tests
 	// Backface cull:
-	if BACKFACE_CULL {
+	if BackFaceCull {
 		if U < 0.0 || V < 0.0 || W < 0.0 {
 			return false
 		}
@@ -426,22 +436,22 @@ func (face *Face) IntersectVisRay(ray *core.RayData) bool {
 	}
 
 	// Calc scaled z-coords of verts and calc the hit dis
-	Az := ray.Ray.S[2] * A_Kz
-	Bz := ray.Ray.S[2] * B_Kz
-	Cz := ray.Ray.S[2] * C_Kz
+	Az := ray.Ray.S[2] * AKz
+	Bz := ray.Ray.S[2] * BKz
+	Cz := ray.Ray.S[2] * CKz
 
 	T := U*Az + V*Bz + W*Cz
-	// T := ray.S[2] * (U*A_Kz + V*B_Kz + W*C_Kz)
+	// T := ray.S[2] * (U*AKz + V*BKz + W*CKz)
 
 	// Backface cull:
-	if BACKFACE_CULL {
+	if BackFaceCull {
 		if T < 0.0 || T > ray.Ray.Tclosest*det {
 			return false
 		}
 	} else {
-		det_sign := m.SignMask(det)
+		detSign := m.SignMask(det)
 
-		if m.Xorf(T, det_sign) < 0.0 || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
+		if m.Xorf(T, detSign) < 0.0 || m.Xorf(T, detSign) > ray.Ray.Tclosest*m.Xorf(det, detSign) {
 			return false
 		}
 	}

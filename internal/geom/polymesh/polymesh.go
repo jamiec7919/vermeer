@@ -48,6 +48,10 @@ type PolyMesh struct {
 	bounds m.BoundingBox
 }
 
+// Assert that PolyMesh implements important interfaces.
+var _ core.Node = (*PolyMesh)(nil)
+var _ core.Primitive = (*PolyMesh)(nil)
+
 // Name is a core.Node method.
 func (mesh *PolyMesh) Name() string { return mesh.NodeName }
 
@@ -60,7 +64,7 @@ func (mesh *PolyMesh) PreRender(rc *core.RenderContext) error {
 	mesh.facecount = len(mesh.idxp) / 3
 	mesh.vertidxstride = 3
 
-	mesh.mtlid = core.GetMaterialId(mesh.Material)
+	mesh.mtlid = core.GetMaterialID(mesh.Material)
 
 	return mesh.initAccel()
 }

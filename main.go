@@ -74,11 +74,8 @@ func main() {
 			return
 		}
 
-		if raystats, err := rc.Render(*maxiter); err != nil {
-			log.Printf("Error: Render: %v", err)
-			renderstatus <- err
-			return
-		} else {
+		if raystats, err := rc.Render(*maxiter); err == nil {
+
 			if *stats {
 				f, err := os.OpenFile(*statsfile, os.O_APPEND|os.O_WRONLY, 0600)
 				if err != nil {
@@ -91,6 +88,10 @@ func main() {
 					panic(err)
 				}
 			}
+		} else {
+			log.Printf("Error: Render: %v", err)
+			renderstatus <- err
+			return
 		}
 
 		if err := rc.PostRender(); err != nil {

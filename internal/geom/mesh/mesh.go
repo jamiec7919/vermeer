@@ -12,13 +12,14 @@ import (
 	"github.com/jamiec7919/vermeer/qbvh"
 )
 
+// FaceGeom is the optimized triangular face structure.
 // WARNING: Do not modify this without careful consideration! Designed to fit neatly in cache.
 // 16 float32, 64bytes
 type FaceGeom struct {
 	V     [3]m.Vec3
 	N     m.Vec3   // Not actually used in intersection code at moment..
 	Vi    [3]int32 // reference the tex coords etc.
-	MtlId int32    // Material Id
+	MtlID int32    // Material Id
 }
 
 func (f *FaceGeom) setup() {
@@ -31,11 +32,13 @@ func (f *FaceGeom) setup() {
 	}
 }
 
+// Loader is implemented by mesh loaders.
 type Loader interface {
 	Load() (*Mesh, error)
 	SetOption(opt string, v interface{}) error
 }
 
+// Mesh represents a triangular mesh.
 type Mesh struct {
 	Name            string
 	Faces           []FaceGeom
@@ -73,66 +76,81 @@ func (mesh *Mesh) calcVertexNormals() error {
 	return nil
 }
 
+// TraceRay implements core.Primitive.
 func (mesh *Mesh) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) int32 {
 	if mesh.faceindex != nil {
 		if mesh.RayBias == 0.0 {
 			return mesh.traceRayAccelIndexed(ray, sg)
-		} else {
-			return mesh.traceRayAccelIndexedEpsilon(ray, sg)
 		}
-	} else {
-		if mesh.RayBias == 0.0 {
-			return mesh.traceRayAccel(ray, sg)
-		} else {
-			return mesh.traceRayAccelEpsilon(ray, sg)
-		}
+
+		return mesh.traceRayAccelIndexedEpsilon(ray, sg)
+
 	}
+
+	if mesh.RayBias == 0.0 {
+		return mesh.traceRayAccel(ray, sg)
+	}
+
+	return mesh.traceRayAccelEpsilon(ray, sg)
+
 }
 
+// VisRay implements core.Primitive.
 func (mesh *Mesh) VisRay(ray *core.RayData) {
 	if mesh.faceindex != nil {
 		if mesh.RayBias == 0.0 {
 			mesh.visRayAccelIndexed(ray)
-		} else {
-			mesh.visRayAccelIndexedEpsilon(ray)
 		}
+		mesh.visRayAccelIndexedEpsilon(ray)
+
 	} else {
 		if mesh.RayBias == 0.0 {
 			mesh.visRayAccel(ray)
-		} else {
-			mesh.visRayAccelEpsilon(ray)
 		}
+		mesh.visRayAccelEpsilon(ray)
 
 	}
 }
 
+// StaticMesh implements a static mesh (non file) node.
 type StaticMesh struct {
 	NodeName string
 	Mesh     *Mesh
 }
 
+// Name implements core.Node.
 func (mesh *StaticMesh) Name() string { return mesh.NodeName }
+
+// PreRender implements core.Node.
 func (mesh *StaticMesh) PreRender(rc *core.RenderContext) error {
 	mesh.Mesh.initFaces()
 	return mesh.Mesh.initAccel()
 }
+
+// PostRender implements core.Node.
 func (mesh *StaticMesh) PostRender(rc *core.RenderContext) error { return nil }
 
+// WorldBounds implements core.Primitive.
 func (mesh *StaticMesh) WorldBounds() (out m.BoundingBox) {
 
 	return mesh.Mesh.WorldBounds()
 }
 
+// Visible implements core.Primitive.
 func (mesh *StaticMesh) Visible() bool { return true }
+
+// TraceRay implements core.Primitive.
 func (mesh *StaticMesh) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) int32 {
 	return mesh.Mesh.TraceRay(ray, sg)
 }
 
+// VisRay implements core.Primitive.
 func (mesh *StaticMesh) VisRay(ray *core.RayData) {
 	mesh.Mesh.VisRay(ray)
 }
 
-type MeshFile struct {
+// Meshfile implements a mesh node loaded from a file.
+type Meshfile struct {
 	NodeName     string `node:"Name"`
 	Filename     string
 	RayBias      float32
@@ -144,8 +162,11 @@ type MeshFile struct {
 	mesh         *Mesh
 }
 
-func (mesh *MeshFile) Name() string { return mesh.NodeName }
-func (mesh *MeshFile) PreRender(rc *core.RenderContext) error {
+// Name implements core.Node.
+func (mesh *Meshfile) Name() string { return mesh.NodeName }
+
+// PreRender implements core.Node.
+func (mesh *Meshfile) PreRender(rc *core.RenderContext) error {
 
 	for _, open := range loaders {
 		loader, err := open(rc, mesh.Filename)
@@ -193,21 +214,29 @@ func (mesh *MeshFile) PreRender(rc *core.RenderContext) error {
 	mesh.mesh = msh
 	return mesh.mesh.initAccel()
 }
-func (mesh *MeshFile) PostRender(rc *core.RenderContext) error { return nil }
 
-func (mesh *MeshFile) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) int32 {
+// PostRender implements core.Node.
+func (mesh *Meshfile) PostRender(rc *core.RenderContext) error { return nil }
+
+// TraceRay implements core.Primitive.
+func (mesh *Meshfile) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) int32 {
 	return mesh.mesh.TraceRay(ray, sg)
 }
 
-func (mesh *MeshFile) Visible() bool { return mesh.IsVisible }
-func (mesh *MeshFile) WorldBounds() (out m.BoundingBox) {
+// Visible implements core.Primitive.
+func (mesh *Meshfile) Visible() bool { return mesh.IsVisible }
+
+// WorldBounds implements core.Primitive.
+func (mesh *Meshfile) WorldBounds() (out m.BoundingBox) {
 	return mesh.mesh.WorldBounds()
 }
 
-func (mesh *MeshFile) VisRay(ray *core.RayData) {
+// VisRay implements core.Primitive.
+func (mesh *Meshfile) VisRay(ray *core.RayData) {
 	mesh.mesh.VisRay(ray)
 }
 
+// Transform applies the given transform to the vertices and recalculates normals.
 func (mesh *Mesh) Transform(trn m.Matrix4) {
 	for i := range mesh.Faces {
 		mesh.Faces[i].V[0] = m.Matrix4MulPoint(trn, mesh.Faces[i].V[0])
@@ -221,6 +250,8 @@ func (mesh *Mesh) Transform(trn m.Matrix4) {
 	}
 
 }
+
+// WorldBounds implements core.Primitive.
 func (mesh *Mesh) WorldBounds() (out m.BoundingBox) {
 	out.Reset()
 
@@ -295,7 +326,7 @@ func trisplit(verts []m.Vec3, idx int32, indexes *[]int32, boxes *[]m.BoundingBo
 func (mesh *Mesh) initFaces() {
 	for face := range mesh.Faces {
 		mesh.Faces[face].setup()
-		//log.Printf("%v %v ", m.Faces[face].N, m.Faces[face].MtlId)
+		//log.Printf("%v %v ", m.Faces[face].N, m.Faces[face].MtlID)
 	}
 
 }
@@ -355,16 +386,17 @@ func (mesh *Mesh) initAccel() error {
 
 var loaders = map[string]func(rc *core.RenderContext, filename string) (Loader, error){}
 
+// RegisterLoader registers the given mesh file loader.
 func RegisterLoader(name string, open func(rc *core.RenderContext, filename string) (Loader, error)) {
 	loaders[name] = open
 }
 
 func create() (core.Node, error) {
-	mfile := MeshFile{IsVisible: true}
+	mfile := Meshfile{IsVisible: true}
 
 	return &mfile, nil
 }
 
 func init() {
-	nodes.Register("MeshFile", create)
+	nodes.Register("Meshfile", create)
 }

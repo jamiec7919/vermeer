@@ -279,7 +279,7 @@ func (c *Camera) ComputeRay(u, v, time float32, rnd *rand.Rand, ray *core.RayDat
 	}
 	//D = D
 
-	ray.Init(core.RAY_CAMERA, P, D, m.Inf(1), sg)
+	ray.Init(core.RayCamera, P, D, m.Inf(1), sg)
 	//	log.Printf("%v %v %v %v", D, u, v, vm.Vec3Add(vm.Vec3Scale(u, c.U), vm.Vec3Scale(v, c.V)))
 	return
 }

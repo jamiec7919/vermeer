@@ -16,16 +16,16 @@ package colour
 // Constants for min and maximum wavelength and number of wavelength samples in use for the
 // hero-wavelength.
 const (
-	LAMBDA_MIN = 450
-	LAMBDA_MAX = 750
-	LAMBDA_N   = 4
+	LambdaMin = 450
+	LambdaMax = 750
+	LambdaN   = 4
 )
 
-const lambdaBar = LAMBDA_MAX - LAMBDA_MIN
+const lambdaBar = LambdaMax - LambdaMin
 
 // Spectrum represents a line spectrum using the hero-wavelength idea.
 type Spectrum struct {
-	C      [LAMBDA_N]float32
+	C      [LambdaN]float32
 	Lambda float32
 }
 
@@ -60,7 +60,7 @@ func (wv *Spectrum) ToRGB() (r, g, b float32) {
 	// Treat s as a line spectrum, therefore integrals required are: Glassner 1987
 	// (How to Derive a Spectrum From an RGB Triple)
 
-	for i := 0; i < LAMBDA_N; i++ {
+	for i := 0; i < LambdaN; i++ {
 		x += wv.C[i] * cie1931deg2.X(wv.Wavelength(i))
 		y += wv.C[i] * cie1931deg2.Y(wv.Wavelength(i))
 		z += wv.C[i] * cie1931deg2.Z(wv.Wavelength(i))
@@ -98,16 +98,16 @@ func (wv *Spectrum) Add(other Spectrum) {
 }
 
 // Wavelength returns the wavelength for index j (see hero-wavelength paper).
-// j = 0..LAMBDA_N
+// j = 0..LambdaN
 func (wv *Spectrum) Wavelength(j int) (v float32) {
 
-	v = (wv.Lambda - LAMBDA_MIN + (float32(j)/LAMBDA_N)*lambdaBar)
+	v = (wv.Lambda - LambdaMin + (float32(j)/LambdaN)*lambdaBar)
 
 	if v >= lambdaBar {
 		v -= lambdaBar
 	}
 
-	v += LAMBDA_MIN
+	v += LambdaMin
 
 	return
 }

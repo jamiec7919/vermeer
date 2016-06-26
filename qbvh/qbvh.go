@@ -49,11 +49,11 @@ func (n *Node) Bounds(idx int) (bounds m.BoundingBox) {
 	return
 }
 
-// LEAF_COUNT returns the number of elements stored in leaf node l.
-func LEAF_COUNT(l int32) int { return int((((l) & 0xf) + 1)) }
+// LeafCount returns the number of elements stored in leaf node l.
+func LeafCount(l int32) int { return int((((l) & 0xf) + 1)) }
 
-// LEAF_BASE returns the first index of thw elements stored in leaf node l.
-func LEAF_BASE(l int32) int { return int(((l) & 0x7ffffff) >> 4) }
+// LeafBase returns the first index of thw elements stored in leaf node l.
+func LeafBase(l int32) int { return int(((l) & 0x7ffffff) >> 4) }
 
 // SetEmptyLeaf sets the given child index to an empty leaf.
 func (n *Node) SetEmptyLeaf(idx int) {
@@ -108,7 +108,7 @@ func (n *Node) SetAxis2(axis int32) {
 func Walk(nodes []Node, node int, nodef func(i int, bounds m.BoundingBox), leaf func(bounds m.BoundingBox, base, count int, empty bool)) {
 	for i := range nodes[node].Children {
 		if nodes[node].Children[i] < 0 {
-			leaf(nodes[node].Bounds(i), LEAF_BASE(nodes[node].Children[i]), LEAF_COUNT(nodes[node].Children[i]), nodes[node].Children[i] == -1)
+			leaf(nodes[node].Bounds(i), LeafBase(nodes[node].Children[i]), LeafCount(nodes[node].Children[i]), nodes[node].Children[i] == -1)
 		} else {
 			nodef(int(nodes[node].Children[i]), nodes[node].Bounds(i))
 			Walk(nodes, int(nodes[node].Children[i]), nodef, leaf)

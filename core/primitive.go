@@ -32,7 +32,7 @@ type Primitive interface {
 
 //go:nosplit
 //go:noescape
-func rayNodeIntersectAll_asm(ray *Ray, node *qbvh.Node, hit *[4]int32, tNear *[4]float32)
+func rayNodeIntersectAllASM(ray *Ray, node *qbvh.Node, hit *[4]int32, tNear *[4]float32)
 
 //go:nosplit
 func (scene *Scene) traceRayAccel(ray *RayData, sg *ShaderGlobals) (mtlid int32) {
@@ -56,7 +56,7 @@ func (scene *Scene) traceRayAccel(ray *RayData, sg *ShaderGlobals) (mtlid int32)
 
 		if node >= 0 {
 			pnode := &(scene.nodes[node])
-			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+			rayNodeIntersectAllASM(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
 
 			order := [4]int{0, 1, 2, 3} // actually in reverse order as this is order pushed on stack
 
@@ -109,8 +109,8 @@ func (scene *Scene) traceRayAccel(ray *RayData, sg *ShaderGlobals) (mtlid int32)
 
 		} else if node < -1 {
 			// Leaf
-			leafBase := qbvh.LEAF_BASE(node)
-			leafCount := qbvh.LEAF_COUNT(node)
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
 			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leafBase, leafCount)
 			for i := leafBase; i < leafBase+leafCount; i++ {
 				_mtlid := scene.prims[i].TraceRay(ray, sg)
@@ -146,7 +146,7 @@ func (scene *Scene) visRayAccel(ray *RayData) {
 
 		if node >= 0 {
 			pnode := &(scene.nodes[node])
-			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+			rayNodeIntersectAllASM(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
 
 			for k := range pnode.Children {
 				if ray.Supp.Hits[k] != 0 {
@@ -159,8 +159,8 @@ func (scene *Scene) visRayAccel(ray *RayData) {
 
 		} else if node < -1 {
 			// Leaf
-			leafBase := qbvh.LEAF_BASE(node)
-			leafCount := qbvh.LEAF_COUNT(node)
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
 			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leafBase, leafCount)
 			for i := leafBase; i < leafBase+leafCount; i++ {
 				scene.prims[i].VisRay(ray)

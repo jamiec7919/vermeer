@@ -11,6 +11,7 @@ import (
 	"github.com/jamiec7919/vermeer/nodes"
 )
 
+// Instance represents a transformed instance of an existing primitive node.
 type Instance struct {
 	NodeName  string
 	Primitive string
@@ -21,7 +22,14 @@ type Instance struct {
 	invTransTransform m.Matrix4 // INverse transpose for normals
 }
 
+// Assert that Instance implements the important interfaces.
+var _ core.Node = (*Instance)(nil)
+var _ core.Primitive = (*Instance)(nil)
+
+// Name implements core.Node.
 func (i *Instance) Name() string { return i.NodeName }
+
+// PreRender implements core.Node.
 func (i *Instance) PreRender(rc *core.RenderContext) error {
 	node := rc.FindNode(i.Primitive)
 
@@ -31,21 +39,25 @@ func (i *Instance) PreRender(rc *core.RenderContext) error {
 		return errors.New("Can't find primitive " + i.Primitive)
 	}
 
-	if invTransform, ok := m.Matrix4Inverse(i.Transform); !ok {
-		return errors.New("Instance: matrix singular.")
-	} else {
-
+	if invTransform, ok := m.Matrix4Inverse(i.Transform); ok {
 		i.invTransform = invTransform
 		invTransTransform, _ := m.Matrix4Inverse(m.Matrix4Transpose(i.Transform))
 		i.invTransTransform = invTransTransform
+	} else {
+		return errors.New("Instance: matrix singular.")
+
 	}
 
 	return nil
 }
 
-func (i *Instance) Visible() bool                           { return true }
+// Visible implements core.Primitive.
+func (i *Instance) Visible() bool { return true }
+
+// PostRender implements core.Node.
 func (i *Instance) PostRender(rc *core.RenderContext) error { return nil }
 
+// WorldBounds implements core.Primtive.
 func (i *Instance) WorldBounds() (out m.BoundingBox) {
 	out.Reset()
 	box := i.prim.WorldBounds()
@@ -86,6 +98,7 @@ func (i *Instance) WorldBounds() (out m.BoundingBox) {
 	return
 }
 
+// TraceRay implements core.Primitive.
 func (i *Instance) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) (mtlid int32) {
 	ray.SavedRay = ray.Ray
 
@@ -113,10 +126,11 @@ func (i *Instance) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) (mtlid in
 	return
 }
 
+// VisRay implements core.Primitive.
 func (i *Instance) VisRay(ray *core.RayData) {
 	ray.SavedRay = ray.Ray
 
-	ray.Init(core.RAY_SHADOW, m.Matrix4MulPoint(i.invTransform, ray.Ray.P), m.Matrix4MulVec(i.invTransform, ray.Ray.D), 1, &core.ShaderGlobals{})
+	ray.Init(core.RayShadow, m.Matrix4MulPoint(i.invTransform, ray.Ray.P), m.Matrix4MulVec(i.invTransform, ray.Ray.D), 1, &core.ShaderGlobals{})
 
 	//i.prim.VisRay(ray)
 	core.TraceProbe(ray, &core.ShaderGlobals{})

@@ -5,15 +5,12 @@
 package bsdf
 
 import (
-	"errors"
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/sample"
 	"math"
 )
-
-var ErrFailedEval = errors.New("Failed Eval")
 
 // OrenNayar2 implements the Oren-Nayar diffuse microfacet model.
 // Instanced for each point
@@ -34,14 +31,14 @@ func (b *OrenNayar2) Sample(r0, r1 float64) m.Vec3 {
 }
 
 // PDF implements core.BSDF.
-func (b *OrenNayar2) PDF(omega_o m.Vec3) float64 {
-	o_dot_n := float64(m.Abs(omega_o[2]))
+func (b *OrenNayar2) PDF(omegaO m.Vec3) float64 {
+	ODotN := float64(m.Abs(omegaO[2]))
 
-	return o_dot_n / math.Pi
+	return ODotN / math.Pi
 }
 
 // Eval implements core.BSDF.
-func (b *OrenNayar2) Eval(omega_o m.Vec3) (rho colour.Spectrum) {
+func (b *OrenNayar2) Eval(omegaO m.Vec3) (rho colour.Spectrum) {
 
 	sigma := b.Roughness
 
@@ -49,22 +46,22 @@ func (b *OrenNayar2) Eval(omega_o m.Vec3) (rho colour.Spectrum) {
 
 	B := 0.45 * (sigma * sigma) / ((sigma * sigma) + 0.09)
 
-	phi_i := m.Atan2(b.OmegaI[1], b.OmegaI[0])
-	phi_o := m.Atan2(omega_o[1], omega_o[0])
-	theta_i := m.Acos(b.OmegaI[2])
-	theta_o := m.Acos(omega_o[2])
+	phiI := m.Atan2(b.OmegaI[1], b.OmegaI[0])
+	phiO := m.Atan2(omegaO[1], omegaO[0])
+	thetaI := m.Acos(b.OmegaI[2])
+	thetaO := m.Acos(omegaO[2])
 
-	alpha := m.Max(theta_i, theta_o)
-	beta := m.Min(theta_i, theta_o)
+	alpha := m.Max(thetaI, thetaO)
+	beta := m.Min(thetaI, thetaO)
 
 	C := m.Sin(alpha) * m.Tan(beta)
 
-	gamma := m.Cos(phi_o - phi_i)
+	gamma := m.Cos(phiO - phiI)
 	// This might be ok:
 	// gamma := dot(eyeDir - normal * dot(eyeDir, normal), light.direction - normal * dot(light.direction, normal))
 
 	//*out = b.Kd
-	scale := omega_o[2] * (A + (B * m.Max(0, gamma) * C))
+	scale := omegaO[2] * (A + (B * m.Max(0, gamma) * C))
 
 	rho.Lambda = b.Lambda
 	rho.FromRGB(1, 1, 1)

@@ -77,7 +77,7 @@ func (b *Specular2) Sample(r0, r1 float64) (omegaO m.Vec3) {
 }
 
 // PDF implements core.BSDF.
-func (b *Specular2) PDF(omega_o m.Vec3) float64 {
+func (b *Specular2) PDF(omegaO m.Vec3) float64 {
 	return 1
 }
 

@@ -136,7 +136,7 @@ func (r *reader) triangulateFace(face []facevert, mtlid int32) {
 		}
 		i++
 
-		f.MtlId = int32(mtlid)
+		f.MtlID = int32(mtlid)
 		//f.setup()
 
 		area := float64(m.Vec3Length(m.Vec3Cross(m.Vec3Sub(f.V[2], f.V[0]), m.Vec3Sub(f.V[1], f.V[0]))))
@@ -279,7 +279,7 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 			}
 		case "usemtl":
 			//fmt.Printf("Mtl %v\n", toks[1])
-			mtlid = r.rc.GetMaterialId(toks[1])
+			mtlid = r.rc.GetMaterialID(toks[1])
 
 			//TODO: Should check if this material is emissive and if so then create a new mesh lightsource.
 
@@ -346,7 +346,7 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 
 			if mtlid == -1 {
 				// assign 'default' material
-				mtlid = r.rc.GetMaterialId("mtl_default")
+				mtlid = r.rc.GetMaterialID("mtl_default")
 				//log.Printf("setting default mtl %v", mtlid)
 			}
 			r.triangulateFace(face, mtlid)

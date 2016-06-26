@@ -13,15 +13,20 @@ import (
 	"github.com/jamiec7919/vermeer/qbvh"
 )
 
-const CHECK_EMPTY_LEAF = true
+// CheckEmptyLeaf controls whether we explicitly check for empty leaves in traversal.
+const CheckEmptyLeaf = true
 
+// VisRayEpsilon is the epsilon used for origin of shadow rays.
 const VisRayEpsilon float32 = 0.0001
 
-const BACKFACE_CULL = false
+// BackFaceCull controls whether back face hits are returned.
+//
+// Deprecated: We should always return backface hits.
+const BackFaceCull = false
 
 //go:nosplit
 //go:noescape
-func rayNodeIntersectAll_asm(ray *core.Ray, node *qbvh.Node, hit *[4]int32, tNear *[4]float32)
+func rayNodeIntersectAllASM(ray *core.Ray, node *qbvh.Node, hit *[4]int32, tNear *[4]float32)
 
 //go:nosplit
 func rayNodeIntersectAll(ray *core.Ray, node *qbvh.Node, hit *[4]int32, tNear *[4]float32) {
@@ -99,22 +104,22 @@ func rayNodeIntersect(ray *core.Ray, node *qbvh.Node, idx int) (bool, float32) {
 //go:nosplit
 func visIntersectFaceEpsilon(ray *core.RayData, face *FaceGeom, epsilon float32) bool {
 	Kz := ray.Ray.Kz
-	A_Kz := face.V[0][Kz] - ray.Ray.P[Kz]
-	B_Kz := face.V[1][Kz] - ray.Ray.P[Kz]
-	C_Kz := face.V[2][Kz] - ray.Ray.P[Kz]
+	AKz := face.V[0][Kz] - ray.Ray.P[Kz]
+	BKz := face.V[1][Kz] - ray.Ray.P[Kz]
+	CKz := face.V[2][Kz] - ray.Ray.P[Kz]
 
 	// Ax = (V0[Kx]-O[Kx])-S[0]*(V0[Kz]-O[Kz])
 	// = (V0[Kx]-O[Kx])-S[0]*V0[Kz]-S[0]*O[Kz]
 	// = (V0[Kx]-S[0]*V0[Kz])-(O[Kx]+S[0]*O[Kz])
 	Kx := ray.Ray.Kx
-	Cx := (face.V[2][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*C_Kz
-	Bx := (face.V[1][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*B_Kz
-	Ax := (face.V[0][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*A_Kz
+	Cx := (face.V[2][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*CKz
+	Bx := (face.V[1][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*BKz
+	Ax := (face.V[0][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*AKz
 
 	Ky := ray.Ray.Ky
-	By := (face.V[1][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*B_Kz
-	Cy := (face.V[2][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*C_Kz
-	Ay := (face.V[0][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*A_Kz
+	By := (face.V[1][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*BKz
+	Cy := (face.V[2][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*CKz
+	Ay := (face.V[0][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*AKz
 
 	// Calc scaled barycentric
 	U := Cx*By - Cy*Bx
@@ -139,7 +144,7 @@ func visIntersectFaceEpsilon(ray *core.RayData, face *FaceGeom, epsilon float32)
 
 	// Perform edge tests
 	// Backface cull:
-	if BACKFACE_CULL {
+	if BackFaceCull {
 		if U < 0.0 || V < 0.0 || W < 0.0 {
 			return false
 		}
@@ -162,22 +167,22 @@ func visIntersectFaceEpsilon(ray *core.RayData, face *FaceGeom, epsilon float32)
 	}
 
 	// Calc scaled z-coords of verts and calc the hit dis
-	//Az := ray.Ray.S[2] * A_Kz
-	//Bz := ray.Ray.S[2] * B_Kz
-	//Cz := ray.Ray.S[2] * C_Kz
+	//Az := ray.Ray.S[2] * AKz
+	//Bz := ray.Ray.S[2] * BKz
+	//Cz := ray.Ray.S[2] * CKz
 
-	T := ray.Ray.S[2] * (U*A_Kz + V*B_Kz + W*C_Kz)
+	T := ray.Ray.S[2] * (U*AKz + V*BKz + W*CKz)
 	//T := U*Az + V*Bz + W*Cz
 
 	// Backface cull:
-	if BACKFACE_CULL {
+	if BackFaceCull {
 		if T < 0.0 || T > ray.Ray.Tclosest*det {
 			return false
 		}
 	} else {
-		det_sign := m.SignMask(det)
+		detSign := m.SignMask(det)
 
-		if m.Xorf(T, det_sign) < epsilon*m.Xorf(det, det_sign) || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
+		if m.Xorf(T, detSign) < epsilon*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Ray.Tclosest*m.Xorf(det, detSign) {
 			return false
 		}
 	}
@@ -188,22 +193,22 @@ func visIntersectFaceEpsilon(ray *core.RayData, face *FaceGeom, epsilon float32)
 //go:nosplit
 func visIntersectFace(ray *core.RayData, face *FaceGeom) bool {
 	Kz := ray.Ray.Kz
-	A_Kz := face.V[0][Kz] - ray.Ray.P[Kz]
-	B_Kz := face.V[1][Kz] - ray.Ray.P[Kz]
-	C_Kz := face.V[2][Kz] - ray.Ray.P[Kz]
+	AKz := face.V[0][Kz] - ray.Ray.P[Kz]
+	BKz := face.V[1][Kz] - ray.Ray.P[Kz]
+	CKz := face.V[2][Kz] - ray.Ray.P[Kz]
 
 	// Ax = (V0[Kx]-O[Kx])-S[0]*(V0[Kz]-O[Kz])
 	// = (V0[Kx]-O[Kx])-S[0]*V0[Kz]-S[0]*O[Kz]
 	// = (V0[Kx]-S[0]*V0[Kz])-(O[Kx]+S[0]*O[Kz])
 	Kx := ray.Ray.Kx
-	Cx := (face.V[2][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*C_Kz
-	Bx := (face.V[1][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*B_Kz
-	Ax := (face.V[0][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*A_Kz
+	Cx := (face.V[2][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*CKz
+	Bx := (face.V[1][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*BKz
+	Ax := (face.V[0][Kx] - ray.Ray.P[Kx]) - ray.Ray.S[0]*AKz
 
 	Ky := ray.Ray.Ky
-	By := (face.V[1][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*B_Kz
-	Cy := (face.V[2][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*C_Kz
-	Ay := (face.V[0][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*A_Kz
+	By := (face.V[1][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*BKz
+	Cy := (face.V[2][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*CKz
+	Ay := (face.V[0][Ky] - ray.Ray.P[Ky]) - ray.Ray.S[1]*AKz
 
 	// Calc scaled barycentric
 	U := Cx*By - Cy*Bx
@@ -228,7 +233,7 @@ func visIntersectFace(ray *core.RayData, face *FaceGeom) bool {
 
 	// Perform edge tests
 	// Backface cull:
-	if BACKFACE_CULL {
+	if BackFaceCull {
 		if U < 0.0 || V < 0.0 || W < 0.0 {
 			return false
 		}
@@ -251,22 +256,22 @@ func visIntersectFace(ray *core.RayData, face *FaceGeom) bool {
 	}
 
 	// Calc scaled z-coords of verts and calc the hit dis
-	//Az := ray.Ray.S[2] * A_Kz
-	//Bz := ray.Ray.S[2] * B_Kz
-	//Cz := ray.Ray.S[2] * C_Kz
+	//Az := ray.Ray.S[2] * AKz
+	//Bz := ray.Ray.S[2] * BKz
+	//Cz := ray.Ray.S[2] * CKz
 
-	T := ray.Ray.S[2] * (U*A_Kz + V*B_Kz + W*C_Kz)
+	T := ray.Ray.S[2] * (U*AKz + V*BKz + W*CKz)
 	//T := U*Az + V*Bz + W*Cz
 
 	// Backface cull:
-	if BACKFACE_CULL {
+	if BackFaceCull {
 		if T < 0.0 || T > ray.Ray.Tclosest*det {
 			return false
 		}
 	} else {
-		det_sign := m.SignMask(det)
+		detSign := m.SignMask(det)
 
-		if m.Xorf(T, det_sign) < 0 || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
+		if m.Xorf(T, detSign) < 0 || m.Xorf(T, detSign) > ray.Ray.Tclosest*m.Xorf(det, detSign) {
 			return false
 		}
 	}
@@ -285,17 +290,17 @@ func (mesh *Mesh) visIntersectTris(ray *core.RayData, base, count int) bool {
 
 //go:noslit
 func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon float32) bool {
-	A_Kz := face.V[0][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
-	B_Kz := face.V[1][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
-	C_Kz := face.V[2][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
+	AKz := face.V[0][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
+	BKz := face.V[1][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
+	CKz := face.V[2][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
 	var U, V, W float32
 	{
-		Cx := (face.V[2][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*C_Kz
-		By := (face.V[1][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*B_Kz
-		Cy := (face.V[2][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*C_Kz
-		Bx := (face.V[1][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*B_Kz
-		Ax := (face.V[0][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*A_Kz
-		Ay := (face.V[0][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*A_Kz
+		Cx := (face.V[2][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*CKz
+		By := (face.V[1][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*BKz
+		Cy := (face.V[2][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*CKz
+		Bx := (face.V[1][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*BKz
+		Ax := (face.V[0][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*AKz
+		Ay := (face.V[0][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*AKz
 
 		// Calc scaled barycentric
 		U = Cx*By - Cy*Bx
@@ -332,15 +337,15 @@ func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon flo
 	}
 
 	// Calc scaled z-coords of verts and calc the hit dis
-	//Az := ray.Ray.S[2] * A_Kz
-	//Bz := ray.Ray.S[2] * B_Kz
-	//Cz := ray.Ray.S[2] * C_Kz
+	//Az := ray.Ray.S[2] * AKz
+	//Bz := ray.Ray.S[2] * BKz
+	//Cz := ray.Ray.S[2] * CKz
 
-	T := ray.Ray.S[2] * (U*A_Kz + V*B_Kz + W*C_Kz)
+	T := ray.Ray.S[2] * (U*AKz + V*BKz + W*CKz)
 
-	det_sign := m.SignMask(det)
+	detSign := m.SignMask(det)
 
-	if m.Xorf(T, det_sign) < epsilon*m.Xorf(det, det_sign) || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
+	if m.Xorf(T, detSign) < epsilon*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Ray.Tclosest*m.Xorf(det, detSign) {
 		return false
 	}
 
@@ -448,23 +453,23 @@ func traceFaceEpsilon(mesh *Mesh, ray *core.RayData, face *FaceGeom, epsilon flo
 
 	}
 
-	ray.Result.MtlId = face.MtlId
+	ray.Result.MtlID = face.MtlID
 	return true
 }
 
 //go:noslit
 func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) bool {
-	A_Kz := face.V[0][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
-	B_Kz := face.V[1][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
-	C_Kz := face.V[2][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
+	AKz := face.V[0][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
+	BKz := face.V[1][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
+	CKz := face.V[2][ray.Ray.Kz] - ray.Ray.P[ray.Ray.Kz]
 	var U, V, W float32
 	{
-		Cx := (face.V[2][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*C_Kz
-		By := (face.V[1][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*B_Kz
-		Cy := (face.V[2][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*C_Kz
-		Bx := (face.V[1][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*B_Kz
-		Ax := (face.V[0][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*A_Kz
-		Ay := (face.V[0][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*A_Kz
+		Cx := (face.V[2][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*CKz
+		By := (face.V[1][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*BKz
+		Cy := (face.V[2][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*CKz
+		Bx := (face.V[1][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*BKz
+		Ax := (face.V[0][ray.Ray.Kx] - ray.Ray.P[ray.Ray.Kx]) - ray.Ray.S[0]*AKz
+		Ay := (face.V[0][ray.Ray.Ky] - ray.Ray.P[ray.Ray.Ky]) - ray.Ray.S[1]*AKz
 
 		// Calc scaled barycentric
 		U = Cx*By - Cy*Bx
@@ -501,15 +506,15 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) bool {
 	}
 
 	// Calc scaled z-coords of verts and calc the hit dis
-	//Az := ray.Ray.S[2] * A_Kz
-	//Bz := ray.Ray.S[2] * B_Kz
-	//Cz := ray.Ray.S[2] * C_Kz
+	//Az := ray.Ray.S[2] * AKz
+	//Bz := ray.Ray.S[2] * BKz
+	//Cz := ray.Ray.S[2] * CKz
 
-	T := ray.Ray.S[2] * (U*A_Kz + V*B_Kz + W*C_Kz)
+	T := ray.Ray.S[2] * (U*AKz + V*BKz + W*CKz)
 
-	det_sign := m.SignMask(det)
+	detSign := m.SignMask(det)
 
-	if m.Xorf(T, det_sign) < 0.0 || m.Xorf(T, det_sign) > ray.Ray.Tclosest*m.Xorf(det, det_sign) {
+	if m.Xorf(T, detSign) < 0.0 || m.Xorf(T, detSign) > ray.Ray.Tclosest*m.Xorf(det, detSign) {
 		return false
 	}
 
@@ -630,7 +635,7 @@ func traceFace(mesh *Mesh, ray *core.RayData, face *FaceGeom) bool {
 
 	}
 
-	ray.Result.MtlId = face.MtlId
+	ray.Result.MtlID = face.MtlID
 	return true
 }
 
@@ -655,7 +660,7 @@ func (mesh *Mesh) traceRayAccelIndexed(ray *core.RayData, sg *core.ShaderGlobals
 
 		if node >= 0 {
 			pnode := &(mesh.nodes[node])
-			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+			rayNodeIntersectAllASM(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
 
 			order := [4]int{0, 1, 2, 3} // actually in reverse order as this is order pushed on stack
 
@@ -688,14 +693,14 @@ func (mesh *Mesh) traceRayAccelIndexed(ray *core.RayData, sg *core.ShaderGlobals
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
-			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leafBase, leafCount)
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				face := &mesh.Faces[mesh.faceindex[i]]
 
 				if traceFace(mesh, ray, face) {
-					ray.Result.ElemId = uint32(mesh.faceindex[i])
+					ray.Result.ElemID = uint32(mesh.faceindex[i])
 					hit = true
 				}
 			}
@@ -714,7 +719,7 @@ func (mesh *Mesh) traceRayAccelIndexed(ray *core.RayData, sg *core.ShaderGlobals
 		sg.DdPdu = ray.Result.Pu
 		sg.DdPdv = ray.Result.Pv
 
-		return ray.Result.MtlId
+		return ray.Result.MtlID
 	}
 
 	return -1
@@ -741,7 +746,7 @@ func (mesh *Mesh) traceRayAccelIndexedEpsilon(ray *core.RayData, sg *core.Shader
 
 		if node >= 0 {
 			pnode := &(mesh.nodes[node])
-			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+			rayNodeIntersectAllASM(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
 
 			order := [4]int{0, 1, 2, 3} // actually in reverse order as this is order pushed on stack
 
@@ -793,14 +798,14 @@ func (mesh *Mesh) traceRayAccelIndexedEpsilon(ray *core.RayData, sg *core.Shader
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
-			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leafBase, leafCount)
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				face := &mesh.Faces[mesh.faceindex[i]]
 
 				if traceFaceEpsilon(mesh, ray, face, mesh.RayBias) {
-					ray.Result.ElemId = uint32(mesh.faceindex[i])
+					ray.Result.ElemID = uint32(mesh.faceindex[i])
 					hit = true
 				}
 			}
@@ -819,7 +824,7 @@ func (mesh *Mesh) traceRayAccelIndexedEpsilon(ray *core.RayData, sg *core.Shader
 		sg.V = ray.Result.UV[1]
 		sg.DdPdu = ray.Result.Pu
 		sg.DdPdv = ray.Result.Pv
-		return ray.Result.MtlId
+		return ray.Result.MtlID
 	}
 	return -1
 }
@@ -845,7 +850,7 @@ func (mesh *Mesh) visRayAccelIndexed(ray *core.RayData) {
 
 		if node >= 0 {
 			pnode := &(mesh.nodes[node])
-			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+			rayNodeIntersectAllASM(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
 
 			for k := range pnode.Children {
 				if ray.Supp.Hits[k] != 0 {
@@ -858,10 +863,10 @@ func (mesh *Mesh) visRayAccelIndexed(ray *core.RayData) {
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
-			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leafBase, leafCount)
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				if visIntersectFace(ray, &mesh.Faces[mesh.faceindex[i]]) {
 					ray.Ray.Tclosest = 0.5
 					return
@@ -893,7 +898,7 @@ func (mesh *Mesh) visRayAccelIndexedEpsilon(ray *core.RayData) {
 
 		if node >= 0 {
 			pnode := &(mesh.nodes[node])
-			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+			rayNodeIntersectAllASM(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
 
 			for k := range pnode.Children {
 				if ray.Supp.Hits[k] != 0 {
@@ -906,10 +911,10 @@ func (mesh *Mesh) visRayAccelIndexedEpsilon(ray *core.RayData) {
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
-			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leafBase, leafCount)
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				if visIntersectFaceEpsilon(ray, &mesh.Faces[mesh.faceindex[i]], mesh.RayBias) {
 					ray.Ray.Tclosest = 0.5
 					return
@@ -941,7 +946,7 @@ func (mesh *Mesh) traceRayAccel(ray *core.RayData, sg *core.ShaderGlobals) int32
 
 		if node >= 0 {
 			pnode := &(mesh.nodes[node])
-			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+			rayNodeIntersectAllASM(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
 
 			order := [4]int{0, 1, 2, 3} // actually in reverse order as this is order pushed on stack
 
@@ -974,14 +979,14 @@ func (mesh *Mesh) traceRayAccel(ray *core.RayData, sg *core.ShaderGlobals) int32
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
-			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leafBase, leafCount)
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				face := &mesh.Faces[i]
 
 				if traceFace(mesh, ray, face) {
-					ray.Result.ElemId = uint32(i)
+					ray.Result.ElemID = uint32(i)
 					hit = true
 				}
 			}
@@ -998,7 +1003,7 @@ func (mesh *Mesh) traceRayAccel(ray *core.RayData, sg *core.ShaderGlobals) int32
 		sg.V = ray.Result.UV[1]
 		sg.DdPdu = ray.Result.Pu
 		sg.DdPdv = ray.Result.Pv
-		return ray.Result.MtlId
+		return ray.Result.MtlID
 	}
 
 	return -1
@@ -1026,7 +1031,7 @@ func (mesh *Mesh) traceRayAccelEpsilon(ray *core.RayData, sg *core.ShaderGlobals
 
 		if node >= 0 {
 			pnode := &(mesh.nodes[node])
-			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+			rayNodeIntersectAllASM(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
 
 			order := [4]int{0, 1, 2, 3} // actually in reverse order as this is order pushed on stack
 
@@ -1078,14 +1083,14 @@ func (mesh *Mesh) traceRayAccelEpsilon(ray *core.RayData, sg *core.ShaderGlobals
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
-			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leafBase, leafCount)
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				face := &mesh.Faces[i]
 
 				if traceFaceEpsilon(mesh, ray, face, mesh.RayBias) {
-					ray.Result.ElemId = uint32(i)
+					ray.Result.ElemID = uint32(i)
 					hit = true
 				}
 			}
@@ -1103,7 +1108,7 @@ func (mesh *Mesh) traceRayAccelEpsilon(ray *core.RayData, sg *core.ShaderGlobals
 		sg.V = ray.Result.UV[1]
 		sg.DdPdu = ray.Result.Pu
 		sg.DdPdv = ray.Result.Pv
-		return ray.Result.MtlId
+		return ray.Result.MtlID
 	}
 
 	return -1
@@ -1130,7 +1135,7 @@ func (mesh *Mesh) visRayAccel(ray *core.RayData) {
 
 		if node >= 0 {
 			pnode := &(mesh.nodes[node])
-			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+			rayNodeIntersectAllASM(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
 
 			for k := range pnode.Children {
 				if ray.Supp.Hits[k] != 0 {
@@ -1143,10 +1148,10 @@ func (mesh *Mesh) visRayAccel(ray *core.RayData) {
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
-			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leafBase, leafCount)
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				if visIntersectFace(ray, &mesh.Faces[i]) {
 					ray.Ray.Tclosest = 0.5
 					return
@@ -1178,7 +1183,7 @@ func (mesh *Mesh) visRayAccelEpsilon(ray *core.RayData) {
 
 		if node >= 0 {
 			pnode := &(mesh.nodes[node])
-			rayNodeIntersectAll_asm(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
+			rayNodeIntersectAllASM(&ray.Ray, pnode, &ray.Supp.Hits, &ray.Supp.T)
 
 			for k := range pnode.Children {
 				if ray.Supp.Hits[k] != 0 {
@@ -1191,10 +1196,10 @@ func (mesh *Mesh) visRayAccelEpsilon(ray *core.RayData) {
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
-			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leaf_base, leaf_count)
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
+			// log.Printf("leaf %v,%v: %v %v", traverseStack[stackTop].node, k, leafBase, leafCount)
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				if visIntersectFaceEpsilon(ray, &mesh.Faces[i], mesh.RayBias) {
 					ray.Ray.Tclosest = 0.5
 					return

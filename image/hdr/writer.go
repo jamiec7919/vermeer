@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 )
 
+// Writer implements the Radiance HDR writer.
 type Writer struct {
 	file *os.File
 	spec image.Spec
@@ -29,9 +30,12 @@ func init() {
 	})
 }
 
+// Open opens file filename, fills in spec and returns nil on success.
 func (w *Writer) Open(filename string, spec *image.Spec) error {
 	return w.OpenMode(filename, spec, "")
 }
+
+// OpenMode opens file filename, fills in spec and returns nil on success.
 func (w *Writer) OpenMode(filename string, spec *image.Spec, mode string) error {
 	file, err := os.Create(filename)
 
@@ -45,10 +49,12 @@ func (w *Writer) OpenMode(filename string, spec *image.Spec, mode string) error 
 	return nil
 }
 
+// Close closes the writer.
 func (w *Writer) Close() {
 	w.file.Close()
 }
 
+// WriteImage writes the image in buf described by ty.
 func (w *Writer) WriteImage(ty image.TypeDesc, buf interface{}) error {
 	if ty.BaseType != image.FLOAT {
 		return errors.New("HDR: only supports float32 pixels")
@@ -83,26 +89,36 @@ func (w *Writer) WriteImage(ty image.TypeDesc, buf interface{}) error {
 	return nil
 }
 
+// WriteImageStride writes the image in buf described by ty with strides as given.
 func (w *Writer) WriteImageStride(ty image.TypeDesc, buf interface{}, xstride, ystride, zstride int) error {
 	return errors.New("HDR WriteImageStride: unsupported")
 }
+
+// WriteScanline writes the scanline in buf described by ty at position y,z.
 func (w *Writer) WriteScanline(y, z int, ty image.TypeDesc, buf interface{}) error {
 	return errors.New("HDR WriteScanline: unsupported")
 
 }
+
+// WriteScanlineStride writes the scanline in buf described by ty with strides as given.
 func (w *Writer) WriteScanlineStride(y, z int, ty image.TypeDesc, buf interface{}, xstride, ystride, zstride int) error {
 	return errors.New("HDR WriteScanlineStride: unsupported")
 
 }
+
+// WriteTile writes the image tile in buf described by ty at position x,y,z.
 func (w *Writer) WriteTile(x, y, z int, ty image.TypeDesc, buf interface{}) error {
 	return errors.New("HDR WriteTile: unsupported")
 
 }
+
+// WriteTileStride writes the image tile in buf described by ty with strides as given.
 func (w *Writer) WriteTileStride(x, y, z int, ty image.TypeDesc, buf interface{}, xstride, ystride, zstride int) error {
 	return errors.New("HDR WriteTileStride: unsupported")
 
 }
 
+// Supports returns true if the feature in tag is supported.
 func (w *Writer) Supports(tag string) bool {
 	return false
 }

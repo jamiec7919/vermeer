@@ -10,8 +10,7 @@ release memory or attempt to use tiled caching.
 
 Textures are currently represented simply by a string which references into a hashmap.  Lookup sounds
 inefficient but has never shown up as significant on profiling.  Expected to change as many more
-textures are used in shaders.
-*/
+textures are used in shaders. */
 package texture
 
 import (

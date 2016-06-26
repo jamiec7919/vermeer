@@ -32,18 +32,18 @@ type ScreenSample struct {
 	Alpha   float32
 	Point   m.Vec3
 	Z       float64
-	ElemId  uint32
+	ElemID  uint32
 	Prim    Primitive
 }
 
 // TraceProbe intersects ray with the scene and sets up the globals sg with the first intersection.
-// rays of type RAY_SHADOW will early-out and not necessarily return the first intersection.
+// rays of type RayShadow will early-out and not necessarily return the first intersection.
 // Returns true if any intersection or false for none.
 func TraceProbe(ray *RayData, sg *ShaderGlobals) bool {
 
 	atomic.AddUint64(&rayCount, 1)
 
-	if ray.Type&RAY_SHADOW != 0 {
+	if ray.Type&RayShadow != 0 {
 		grc.scene.visRayAccel(ray)
 		atomic.AddUint64(&shadowRays, 1)
 		return !ray.IsVis()
@@ -72,7 +72,7 @@ func Trace(ray *RayData, samp *ScreenSample) bool {
 		Ro:     ray.Ray.P,
 		Rd:     ray.Ray.D,
 		Prim:   ray.Result.Prim,
-		ElemId: ray.Result.ElemId,
+		ElemID: ray.Result.ElemID,
 		Depth:  ray.Level,
 		rnd:    ray.rnd,
 		Lambda: ray.Lambda,
@@ -89,7 +89,7 @@ func Trace(ray *RayData, samp *ScreenSample) bool {
 		if samp != nil {
 			samp.Colour = sg.OutRGB
 			samp.Point = sg.Ro
-			samp.ElemId = sg.ElemId
+			samp.ElemID = sg.ElemID
 			samp.Prim = sg.Prim
 		}
 

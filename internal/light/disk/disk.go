@@ -12,33 +12,44 @@ import (
 	"github.com/jamiec7919/vermeer/nodes"
 )
 
+// Disk represents a circular disk light node.
 type Disk struct {
 	NodeName      string `node:"Name"`
 	P, Up, LookAt m.Vec3
 	T, B, N       m.Vec3
 	Radius        float32
 	Material      string
-	MtlId         int32
+	MtlID         int32
 }
 
+// ErrNoSample is returned by sampling function if no sample can be generated.
+//
+// Deprecated: this shouldn't be here!
 var ErrNoSample = errors.New("No smaple")
 
+// DiffuseShadeMult is the amount of effect this light has on the fiffuse component.
 func (d *Disk) DiffuseShadeMult() float32 {
 	return 1.0
 }
+
+// Name implements core.Node.
 func (d *Disk) Name() string { return d.NodeName }
+
+// PreRender implelments core.Node.
 func (d *Disk) PreRender(rc *core.RenderContext) error {
-	mtlid := rc.GetMaterialId(d.Material)
+	mtlid := rc.GetMaterialID(d.Material)
 
 	if mtlid == -1 {
 		return errors.New("DiskLight: can't find material " + d.Material)
 	}
-	d.MtlId = mtlid
+	d.MtlID = mtlid
 
 	mesh := d.CreateDisk(rc, d.P, d.LookAt, d.Up, d.Radius, mtlid)
 	rc.AddNode(mesh)
 	return nil
 }
+
+// PostRender implelments core.Node.
 func (d *Disk) PostRender(rc *core.RenderContext) error { return nil }
 
 /*
@@ -58,11 +69,14 @@ func (d *Disk) SamplePoint(rnd *rand.Rand, surf *core.SurfacePoint, pdf *float64
 	surf.B = d.B
 	surf.T = d.T
 	surf.Ns = d.N
-	surf.MtlId = int32(d.MtlId)
+	surf.MtlID = int32(d.MtlID)
 
 	return nil
 }
 */
+
+// SampleArea returns a sample on the surface of the light with PDF relative to solid angle
+// as seen from the point in sg.
 func (d *Disk) SampleArea(sg *core.ShaderGlobals) error {
 	r0 := sg.Rand().Float32()
 	r1 := sg.Rand().Float32()
@@ -80,28 +94,28 @@ func (d *Disk) SampleArea(sg *core.ShaderGlobals) error {
 		sg.Ldist = m.Vec3Length(V)
 		sg.Ld = m.Vec3Normalize(V)
 
-		lightm := core.GetMaterial(d.MtlId)
+		lightm := core.GetMaterial(d.MtlID)
 
 		sg.Liu.Lambda = sg.Lambda
 		//lightm.EvalEDF(&P, P.WorldToTangent(m.Vec3Neg(sg.Ld)), &sg.Liu)
-		omega_o := m.Vec3BasisProject(d.B, d.T, d.N, m.Vec3Neg(sg.Ld))
-		dot_n := omega_o[2]
-		E := lightm.Emission(sg, omega_o)
-		sg.Liu.FromRGB(E[0]*dot_n, E[1]*dot_n, E[2]*dot_n)
+		omegaO := m.Vec3BasisProject(d.B, d.T, d.N, m.Vec3Neg(sg.Ld))
+		ODotN := omegaO[2]
+		E := lightm.Emission(sg, omegaO)
+		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
 
 		// geometry term / pdf
 		sg.Weight = m.Abs(m.Vec3Dot(sg.Ld, sg.N)) * m.Abs(m.Vec3Dot(sg.Ld, d.N)) / (sg.Ldist * sg.Ldist)
 		sg.Weight /= float32(pdf)
 
 		return nil
-	} else {
-		return ErrNoSample
-
 	}
+
+	return ErrNoSample
+
 }
 
 /*
-func (d *Disk) SampleDirection(surf *core.SurfacePoint, rnd *rand.Rand, omega_o *m.Vec3, Le *colour.Spectrum, pdf *float64) error {
+func (d *Disk) SampleDirection(surf *core.SurfacePoint, rnd *rand.Rand, omegaO *m.Vec3, Le *colour.Spectrum, pdf *float64) error {
 	return nil
 }
 */
@@ -136,10 +150,12 @@ func (d *Disk) Sample(shade *core.ShadePoint, rnd *rand.Rand, sample *core.Direc
 	return nil
 }
 */
-func (d *Disk) Pos() m.Vec3 {
-	return d.P
-}
 
+//func (d *Disk) Pos() m.Vec3 {
+//	return d.P
+//}
+
+// CreateDisk creates the Light and mesh node for a disk light.
 func (d *Disk) CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float32, mtlid int32) *mesh.StaticMesh {
 	N := m.Vec3Normalize(m.Vec3Sub(t, P))
 	T := m.Vec3Normalize(m.Vec3Cross(N, up))
@@ -157,7 +173,7 @@ func (d *Disk) CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float3
 		face.V[0] = P
 		face.V[2] = m.Vec3Add(P, m.Vec3Add(m.Vec3Scale(radius*m.Cos(ang), B), m.Vec3Scale(radius*m.Sin(ang), T)))
 		face.V[1] = m.Vec3Add(P, m.Vec3Add(m.Vec3Scale(radius*m.Cos(ang+dv), B), m.Vec3Scale(radius*m.Sin(ang+dv), T)))
-		face.MtlId = int32(mtlid)
+		face.MtlID = int32(mtlid)
 		ang += dv
 		//face.setup()
 		//log.Printf("%v", face)

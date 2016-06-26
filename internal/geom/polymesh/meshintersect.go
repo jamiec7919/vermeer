@@ -16,24 +16,26 @@ import (
 //go:noescape
 func intersectBoxes(ray *core.Ray, boxes *[4 * 3 * 2]float32, hits *[4]int32, t *[4]float32)
 
+// TraceRay implements core.Primitive.
 func (mesh *PolyMesh) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) int32 {
 
 	if mesh.RayBias > 0.0 {
 		if mesh.Verts.MotionKeys > 1 {
 			return mesh.intersectRayEpsilonMotion(ray, sg, mesh.RayBias)
-		} else {
-			return mesh.intersectRayEpsilon(ray, sg, mesh.RayBias)
 		}
-	} else {
-		if mesh.Verts.MotionKeys > 1 {
-			return mesh.intersectRayMotion(ray, sg)
-		} else {
-			return mesh.intersectRay(ray, sg)
-		}
+		return mesh.intersectRayEpsilon(ray, sg, mesh.RayBias)
+
 	}
+
+	if mesh.Verts.MotionKeys > 1 {
+		return mesh.intersectRayMotion(ray, sg)
+	}
+
+	return mesh.intersectRay(ray, sg)
+
 }
 
-// IntersectViscore.Ray returns true if a hit is detected (i.e. ray is occluded)
+// VisRay implements core.Primitive.
 func (mesh *PolyMesh) VisRay(ray *core.RayData) {
 	if mesh.RayBias > 0.0 {
 		if mesh.Verts.MotionKeys > 1 {
@@ -125,10 +127,10 @@ func (mesh *PolyMesh) intersectRay(ray *core.RayData, sg *core.ShaderGlobals) in
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
 
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				var face Face
 
 				faceidx := mesh.accel.idx[i]
@@ -136,7 +138,7 @@ func (mesh *PolyMesh) intersectRay(ray *core.RayData, sg *core.ShaderGlobals) in
 				face.V[0] = mesh.Verts.Elems[mesh.idxp[faceidx*3+0]]
 				face.V[1] = mesh.Verts.Elems[mesh.idxp[faceidx*3+1]]
 				face.V[2] = mesh.Verts.Elems[mesh.idxp[faceidx*3+2]]
-				face.PrimId = uint64(faceidx)
+				face.PrimID = uint64(faceidx)
 
 				if face.IntersectRay(ray) {
 					hit = true
@@ -177,7 +179,7 @@ func (mesh *PolyMesh) intersectRay(ray *core.RayData, sg *core.ShaderGlobals) in
 		//sg.V = ray.Result.UV[1]
 		//sg.DdPdu = ray.Result.Pu
 		//sg.DdPdv = ray.Result.Pv
-		return ray.Result.MtlId
+		return ray.Result.MtlID
 	}
 	return -1
 
@@ -257,10 +259,10 @@ func (mesh *PolyMesh) intersectRayEpsilon(ray *core.RayData, sg *core.ShaderGlob
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
 
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				var face Face
 
 				faceidx := mesh.accel.idx[i]
@@ -268,7 +270,7 @@ func (mesh *PolyMesh) intersectRayEpsilon(ray *core.RayData, sg *core.ShaderGlob
 				face.V[0] = mesh.Verts.Elems[mesh.idxp[faceidx*3+0]]
 				face.V[1] = mesh.Verts.Elems[mesh.idxp[faceidx*3+1]]
 				face.V[2] = mesh.Verts.Elems[mesh.idxp[faceidx*3+2]]
-				face.PrimId = uint64(faceidx)
+				face.PrimID = uint64(faceidx)
 
 				if face.IntersectRayEpsilon(ray, epsilon) {
 					hit = true
@@ -310,7 +312,7 @@ func (mesh *PolyMesh) intersectRayEpsilon(ray *core.RayData, sg *core.ShaderGlob
 		//	sg.V = ray.Result.UV[1]
 		//	sg.DdPdu = ray.Result.Pu
 		//	sg.DdPdv = ray.Result.Pv
-		return ray.Result.MtlId
+		return ray.Result.MtlID
 	}
 	return -1
 
@@ -352,10 +354,10 @@ func (mesh *PolyMesh) intersectVisRay(ray *core.RayData) bool {
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
 
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				var face Face
 				faceidx := mesh.accel.idx[i]
 
@@ -410,10 +412,10 @@ func (mesh *PolyMesh) intersectVisRayEpsilon(ray *core.RayData, epsilon float32)
 
 		} else if node < -1 {
 			// Leaf
-			leaf_base := qbvh.LEAF_BASE(node)
-			leaf_count := qbvh.LEAF_COUNT(node)
+			leafBase := qbvh.LeafBase(node)
+			leafCount := qbvh.LeafCount(node)
 
-			for i := leaf_base; i < leaf_base+leaf_count; i++ {
+			for i := leafBase; i < leafBase+leafCount; i++ {
 				var face Face
 				faceidx := mesh.accel.idx[i]
 

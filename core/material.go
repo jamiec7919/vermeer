@@ -5,14 +5,14 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 )
 
-// MaterialId is the type of shader ids.
-type MaterialId int32
+// MaterialID is the type of shader ids.
+type MaterialID int32
 
 // Material represents a surface shader (Note: this will be renamed to Shader or SurfaceShader).
 type Material interface {
 	Name() string
-	SetId(id int32)
-	Id() int32
+	SetID(id int32)
+	ID() int32
 	//ApplyBumpMap(surf *SurfacePoint)
 	HasBumpMap() bool
 
