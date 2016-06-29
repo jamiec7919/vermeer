@@ -158,6 +158,7 @@ type Meshfile struct {
 	IsVisible    bool
 	MergeVertPos bool
 	MergeTexVert bool
+	Transform    m.Matrix4
 	Loader       Loader
 	mesh         *Mesh
 }
@@ -194,7 +195,11 @@ func (mesh *Meshfile) PreRender(rc *core.RenderContext) error {
 	if mesh.NodeName == "mesh02" {
 		trn := m.Matrix4Translate(-0.4, 0.3, 0.4)
 		rot := m.Matrix4Rotate(m.Pi/2, 0, 1, 0)
-		msh.Transform(m.Matrix4Mul(trn, rot))
+		mesh.Transform = m.Matrix4Mul(trn, rot)
+	}
+
+	if !mesh.Transform.IsIdentity() {
+		msh.ApplyTransform(mesh.Transform)
 	}
 
 	msh.initFaces()
@@ -237,7 +242,7 @@ func (mesh *Meshfile) VisRay(ray *core.RayData) {
 }
 
 // Transform applies the given transform to the vertices and recalculates normals.
-func (mesh *Mesh) Transform(trn m.Matrix4) {
+func (mesh *Mesh) ApplyTransform(trn m.Matrix4) {
 	for i := range mesh.Faces {
 		mesh.Faces[i].V[0] = m.Matrix4MulPoint(trn, mesh.Faces[i].V[0])
 		mesh.Faces[i].V[1] = m.Matrix4MulPoint(trn, mesh.Faces[i].V[1])
@@ -392,7 +397,7 @@ func RegisterLoader(name string, open func(rc *core.RenderContext, filename stri
 }
 
 func create() (core.Node, error) {
-	mfile := Meshfile{IsVisible: true}
+	mfile := Meshfile{Transform: m.Matrix4Identity, IsVisible: true}
 
 	return &mfile, nil
 }

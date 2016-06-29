@@ -309,15 +309,15 @@ func Matrix4Rotate(angle, X, Y, Z float32) (c Matrix4) {
 // Matrix4Basis constructs a 4x4 matrix from three basis vectors (for the 3x3 bit)
 func Matrix4Basis(u, v, w Vec3) (out Matrix4) {
 	out[0] = u[0]
-	out[4] = u[1]
-	out[8] = u[2]
+	out[1] = u[1]
+	out[2] = u[2]
 
-	out[1] = v[0]
+	out[4] = v[0]
 	out[5] = v[1]
-	out[9] = v[2]
+	out[6] = v[2]
 
-	out[2] = w[0]
-	out[6] = w[1]
+	out[8] = w[0]
+	out[9] = w[1]
 	out[10] = w[2]
 
 	out[15] = 1.0

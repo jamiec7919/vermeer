@@ -12,6 +12,7 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 	"log"
 	"os"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -272,7 +273,7 @@ func (r *reader) Load() (out *mesh.Mesh, err error) {
 
 		switch toks[0] {
 		case "mtllib":
-			err := parseMtlLib(r.rc, toks[1])
+			err := parseMtlLib(r.rc, path.Dir(r.filename), toks[1])
 
 			if err != nil {
 				return nil, err

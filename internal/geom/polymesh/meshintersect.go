@@ -179,7 +179,8 @@ func (mesh *PolyMesh) intersectRay(ray *core.RayData, sg *core.ShaderGlobals) in
 		//sg.V = ray.Result.UV[1]
 		//sg.DdPdu = ray.Result.Pu
 		//sg.DdPdv = ray.Result.Pv
-		return ray.Result.MtlID
+		return mesh.mtlid
+		//	return ray.Result.MtlID
 	}
 	return -1
 
@@ -312,7 +313,8 @@ func (mesh *PolyMesh) intersectRayEpsilon(ray *core.RayData, sg *core.ShaderGlob
 		//	sg.V = ray.Result.UV[1]
 		//	sg.DdPdu = ray.Result.Pu
 		//	sg.DdPdv = ray.Result.Pv
-		return ray.Result.MtlID
+		//return ray.Result.MtlID
+		return mesh.mtlid
 	}
 	return -1
 

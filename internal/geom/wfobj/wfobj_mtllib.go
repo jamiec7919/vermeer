@@ -14,6 +14,7 @@ import (
 	"strconv"
 	//"strings"
 	//"log"
+	"path"
 	"unicode/utf8"
 )
 
@@ -75,10 +76,16 @@ L2:
 	return buf.String()
 }
 
-func parseMtlLib(rc *core.RenderContext, filename string) error {
-	fin, err := os.Open(filename)
+// path is the path that the wfobj was opened.  First try opening file including path
+// then without path.
+func parseMtlLib(rc *core.RenderContext, _path, filename string) error {
+	fin, err := os.Open(path.Join(_path, filename))
+
 	if err != nil {
-		return err
+		fin, err = os.Open(filename)
+		if err != nil {
+			return err
+		}
 	}
 	defer fin.Close()
 
