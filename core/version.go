@@ -4,8 +4,23 @@
 
 package core
 
-const VersionString = "0.1.0"
-const VersionMajor = 0
-const VersionMinor = 1
-const VersionPatch = 0
-const VersionRelease = "alpha"
+import (
+	"fmt"
+)
+
+// Version constants.
+const (
+	VersionMajor   = 0
+	VersionMinor   = 1
+	VersionPatch   = 0
+	VersionRelease = "alpha"
+)
+
+// VersionString returns a string representing the current software version.
+func VersionString() string {
+	if VersionRelease == "" {
+		return fmt.Sprintf("%v.%v.%v", VersionMajor, VersionMinor, VersionPatch)
+	} else {
+		return fmt.Sprintf("%v.%v.%v-%v", VersionMajor, VersionMinor, VersionPatch, VersionRelease)
+	}
+}
