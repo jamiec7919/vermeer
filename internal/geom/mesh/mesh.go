@@ -112,43 +112,6 @@ func (mesh *Mesh) VisRay(ray *core.RayData) {
 	}
 }
 
-// StaticMesh implements a static mesh (non file) node.
-type StaticMesh struct {
-	NodeName string
-	Mesh     *Mesh
-}
-
-// Name implements core.Node.
-func (mesh *StaticMesh) Name() string { return mesh.NodeName }
-
-// PreRender implements core.Node.
-func (mesh *StaticMesh) PreRender(rc *core.RenderContext) error {
-	mesh.Mesh.initFaces()
-	return mesh.Mesh.initAccel()
-}
-
-// PostRender implements core.Node.
-func (mesh *StaticMesh) PostRender(rc *core.RenderContext) error { return nil }
-
-// WorldBounds implements core.Primitive.
-func (mesh *StaticMesh) WorldBounds() (out m.BoundingBox) {
-
-	return mesh.Mesh.WorldBounds()
-}
-
-// Visible implements core.Primitive.
-func (mesh *StaticMesh) Visible() bool { return true }
-
-// TraceRay implements core.Primitive.
-func (mesh *StaticMesh) TraceRay(ray *core.RayData, sg *core.ShaderGlobals) int32 {
-	return mesh.Mesh.TraceRay(ray, sg)
-}
-
-// VisRay implements core.Primitive.
-func (mesh *StaticMesh) VisRay(ray *core.RayData) {
-	mesh.Mesh.VisRay(ray)
-}
-
 // Meshfile implements a mesh node loaded from a file.
 type Meshfile struct {
 	NodeName     string `node:"Name"`

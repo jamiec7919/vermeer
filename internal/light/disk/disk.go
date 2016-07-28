@@ -7,7 +7,7 @@ package light
 import (
 	"errors"
 	"github.com/jamiec7919/vermeer/core"
-	"github.com/jamiec7919/vermeer/internal/geom/mesh"
+	"github.com/jamiec7919/vermeer/internal/geom/polymesh"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/nodes"
 )
@@ -156,7 +156,7 @@ func (d *Disk) Sample(shade *core.ShadePoint, rnd *rand.Rand, sample *core.Direc
 //}
 
 // CreateDisk creates the Light and mesh node for a disk light.
-func (d *Disk) CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float32, mtlid int32) *mesh.StaticMesh {
+func (d *Disk) CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float32, mtlid int32) *polymesh.PolyMesh {
 	N := m.Vec3Normalize(m.Vec3Sub(t, P))
 	T := m.Vec3Normalize(m.Vec3Cross(N, up))
 	B := m.Vec3Cross(N, T)
@@ -165,35 +165,36 @@ func (d *Disk) CreateDisk(rc *core.RenderContext, P, t, up m.Vec3, radius float3
 
 	dv := 2 * m.Pi / float32(nv)
 
-	msh := mesh.Mesh{}
+	msh := polymesh.PolyMesh{NodeName: d.NodeName + ":<mesh>",
+		IsVisible: true,
+		Material:  d.Material}
+
+	msh.ModelToWorld.Elems = []m.Matrix4{m.Matrix4Identity}
+	msh.ModelToWorld.MotionKeys = 1
+
 	ang := float32(0)
 
+	msh.Verts.MotionKeys = 1
+	msh.Normals.MotionKeys = 1
+
 	for i := 0; i < nv; i++ {
-		face := mesh.FaceGeom{}
-		face.V[0] = P
-		face.V[2] = m.Vec3Add(P, m.Vec3Add(m.Vec3Scale(radius*m.Cos(ang), B), m.Vec3Scale(radius*m.Sin(ang), T)))
-		face.V[1] = m.Vec3Add(P, m.Vec3Add(m.Vec3Scale(radius*m.Cos(ang+dv), B), m.Vec3Scale(radius*m.Sin(ang+dv), T)))
-		face.MtlID = int32(mtlid)
+		msh.Verts.Elems = append(msh.Verts.Elems, P)
+		msh.Verts.Elems = append(msh.Verts.Elems, m.Vec3Add(P, m.Vec3Add(m.Vec3Scale(radius*m.Cos(ang), B), m.Vec3Scale(radius*m.Sin(ang), T))))
+		msh.Verts.Elems = append(msh.Verts.Elems, m.Vec3Add(P, m.Vec3Add(m.Vec3Scale(radius*m.Cos(ang+dv), B), m.Vec3Scale(radius*m.Sin(ang+dv), T))))
+		msh.Verts.ElemsPerKey += 3
+		msh.Normals.Elems = append(msh.Normals.Elems, N)
+		msh.Normals.Elems = append(msh.Normals.Elems, N)
+		msh.Normals.Elems = append(msh.Normals.Elems, N)
+		msh.Normals.ElemsPerKey += 3
 		ang += dv
 		//face.setup()
 		//log.Printf("%v", face)
-		msh.Faces = append(msh.Faces, face)
 	}
-
-	//mesh.InitAccel()
-	/*
-		prim := core.Primitive{
-			Mesh:        &mesh,
-			M:           m.MatrixIdentity,
-			Minv:        m.MatrixIdentity,
-			WorldBounds: mesh.WorldBounds(m.MatrixIdentity),
-		}
-	*/
 
 	d.N = N
 	d.T = T
 	d.B = B
-	return &mesh.StaticMesh{"lightmesh", &msh}
+	return &msh
 
 }
 
