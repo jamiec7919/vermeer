@@ -45,6 +45,8 @@ type PolyMesh struct {
 
 	mtlid int32
 
+	Shader core.Material
+
 	bounds m.BoundingBox
 }
 
@@ -65,6 +67,8 @@ func (mesh *PolyMesh) PreRender(rc *core.RenderContext) error {
 	mesh.vertidxstride = 3
 
 	mesh.mtlid = core.GetMaterialID(mesh.Material)
+
+	mesh.Shader = core.GetMaterial(mesh.mtlid)
 
 	return mesh.initAccel()
 }
