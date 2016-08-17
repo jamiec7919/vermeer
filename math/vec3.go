@@ -89,7 +89,9 @@ func Vec3DotAbs(a, b Vec3) float32 {
 }
 
 // Vec3Normalize returns the unit vector in the same direction as a.
-func Vec3Normalize(a Vec3) (v Vec3) {
+func Vec3Normalize(a Vec3) (v Vec3)
+
+func vec3Normalize(a Vec3) (v Vec3) {
 	d := Sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
 
 	v = Vec3Scale(1.0/d, a)
@@ -102,7 +104,9 @@ func Vec3Length2(a Vec3) float32 {
 }
 
 // Vec3Length returns the length of vector a.
-func Vec3Length(a Vec3) float32 {
+func Vec3Length(a Vec3) float32
+
+func vec3Length(a Vec3) float32 {
 	return Sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
 }
 
