@@ -108,7 +108,7 @@ func (b *MicrofacetTransmissionGGX) Eval(omegaO m.Vec3) (rho colour.Spectrum) {
 	weight := factor1 * (numer / denom)
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(1-fresnel[0], 1-fresnel[1], 1-fresnel[2])
+	rho.FromRGB(colour.RGB{1 - fresnel[0], 1 - fresnel[1], 1 - fresnel[2]})
 	rho.Scale(m.Abs(omegaO[2]) * weight)
 	return
 }

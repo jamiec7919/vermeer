@@ -125,7 +125,7 @@ func (b *MicrofacetGGX) Eval(omegaI m.Vec3) (rho colour.Spectrum) {
 	denom := 4 * m.Abs(b.OmegaR[2]) * m.Abs(omegaI[2])
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(fresnel[0], fresnel[1], fresnel[2])
+	rho.FromRGB(fresnel)
 	rho.Scale(m.Abs(omegaI[2]) * numer / denom)
 	return
 }
@@ -157,7 +157,7 @@ func (b *MicrofacetGGX) _weight(omegaI m.Vec3) (rho colour.Spectrum) {
 	weight /= m.Abs(omegaM[2]) * m.Abs(omegaI[2])
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(1, 1, 1)
+	rho.FromRGB(colour.RGB{1, 1, 1})
 	rho.Scale(weight)
 	return
 }

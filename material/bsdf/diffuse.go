@@ -49,7 +49,7 @@ func (b *Lambert) Eval(omegaO m.Vec3) (rho colour.Spectrum) {
 	weight := omegaO[2]
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(1, 1, 1)
+	rho.FromRGB(colour.RGB{1, 1, 1})
 	rho.Scale(weight / m.Pi)
 
 	return

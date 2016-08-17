@@ -206,17 +206,17 @@ func (mtl *Material) Eval(sg *core.ShaderGlobals) {
 					rho.Scale(sg.Weight / float32(pdf))
 
 					//log.Printf("%v %v", sg.Weight, rho)
-					r, g, b := rho.ToRGB()
+					rgb := rho.ToRGB()
 					specrgb := colour.RGB(Ks)
-					specrgb.Mul(colour.RGB{r, g, b})
+					specrgb.Mul(rgb)
 					specrgb.Mul(samp.Colour)
 
 					if transWeight == 0 {
 						rho := brdf.Eval(s)
 						//				rho.Scale(0.9) // should be 1-Fresnel
-						r, g, b := rho.ToRGB()
+						rgb := rho.ToRGB()
 						diffrgb := mtl.Kd.RGB(sg)
-						diffrgb.Mul(colour.RGB{r, g, b})
+						diffrgb.Mul(rgb)
 						diffrgb.Mul(samp.Colour)
 						//			diffrgb.Scale(100)
 						//specrgb.Mul(diffrgb)
@@ -228,9 +228,9 @@ func (mtl *Material) Eval(sg *core.ShaderGlobals) {
 				rho := btdf.Eval(s)
 
 				rho.Scale(sg.Weight / float32(pdf))
-				r, g, b := rho.ToRGB()
+				rgb := rho.ToRGB()
 				specrgb := colour.RGB(Kt)
-				specrgb.Mul(colour.RGB{r, g, b})
+				specrgb.Mul(rgb)
 				specrgb.Mul(samp.Colour)
 				speccontrib.Add(specrgb)
 

@@ -58,7 +58,7 @@ func (b *SpecularTransmission) Eval(omegaO m.Vec3) (rho colour.Spectrum) {
 	fresnel := b.fresnel.Kr(m.Vec3DotAbs(b.OmegaR, m.Vec3{0, 0, 1}))
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(1-fresnel[0], 1-fresnel[1], 1-fresnel[2])
+	rho.FromRGB(colour.RGB{1 - fresnel[0], 1 - fresnel[1], 1 - fresnel[2]})
 	rho.Scale(m.Vec3DotAbs(omegaO, m.Vec3{0, 0, 1}))
 	return
 }

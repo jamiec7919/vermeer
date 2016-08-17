@@ -191,8 +191,7 @@ func (sg *ShaderGlobals) EvaluateLightSample(brdf BSDF) colour.RGB {
 		rho.Mul(sg.Liu)
 		rho.Scale(sg.Weight)
 
-		r, g, b := rho.ToRGB()
-		return colour.RGB{r, g, b}
+		return rho.ToRGB()
 	}
 
 	return colour.RGB{}

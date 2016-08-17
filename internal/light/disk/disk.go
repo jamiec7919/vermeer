@@ -6,6 +6,7 @@ package light
 
 import (
 	"errors"
+	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/internal/geom/polymesh"
 	m "github.com/jamiec7919/vermeer/math"
@@ -101,7 +102,7 @@ func (d *Disk) SampleArea(sg *core.ShaderGlobals) error {
 		omegaO := m.Vec3BasisProject(d.B, d.T, d.N, m.Vec3Neg(sg.Ld))
 		ODotN := omegaO[2]
 		E := lightm.Emission(sg, omegaO)
-		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
+		sg.Liu.FromRGB(colour.RGB{E[0] * ODotN, E[1] * ODotN, E[2] * ODotN})
 
 		// geometry term / pdf
 		sg.Weight = m.Abs(m.Vec3Dot(sg.Ld, sg.N)) * m.Abs(m.Vec3Dot(sg.Ld, d.N)) / (sg.Ldist * sg.Ldist)

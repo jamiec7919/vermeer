@@ -64,7 +64,7 @@ func (b *OrenNayar2) Eval(omegaO m.Vec3) (rho colour.Spectrum) {
 	scale := omegaO[2] * (A + (B * m.Max(0, gamma) * C))
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(1, 1, 1)
+	rho.FromRGB(colour.RGB{1, 1, 1})
 	rho.Scale(scale / math.Pi)
 
 	return

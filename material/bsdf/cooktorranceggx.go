@@ -107,7 +107,7 @@ func (b *CookTorranceGGX2) Eval(omegaO m.Vec3) (rho colour.Spectrum) {
 	spec := D(omegaM, alpha) * F(omegaO, omegaM) * b.G1(omegaI, alpha) * b.G1(omegaO, alpha) / (4.0 * IDotN * ODotN)
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(1, 1, 1)
+	rho.FromRGB(colour.RGB{1, 1, 1})
 	rho.Scale(spec)
 	return
 }
