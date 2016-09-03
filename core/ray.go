@@ -11,112 +11,52 @@ import (
 
 // Ray type bit flags.
 const (
-	RayCamera = (1 << iota)
-	RayShadow
+	RayTypeCamera uint32 = (1 << iota)
+	RayTypeShadow
 )
 
-// CheckEmptyLeaf is a debug constant. If set then empty leafs are explicitly checked.
-const CheckEmptyLeaf = true
+// ShadowRayEpsilon ensures no self-intersecting shadow rays.
+const ShadowRayEpsilon float32 = 0.0001
 
-// VisRayEpsilon is the epsilon to use for shadow rays.
-const VisRayEpsilon float32 = 0.0001
-
-// TraverseElem is the stack element for traversal.
-type TraverseElem struct {
-	Node int32
-	T    float32
-}
-
-// TraceSupport has the stacks and aligned data for SSE routines.
-// Heap allocation guarantees 16-byte alignment, stack allocation doesn't!
-// 512 + (32*8) bytes structure
-type TraceSupport struct {
-	T             [4]float32
-	Hits          [4]int32
-	Boxes         [4 * 3 * 2]float32
-	Stack         [60]TraverseElem // Traverse Elem is 8 bytes
-	TopLevelStack [32]TraverseElem
-}
-
-// RayResult holds the data from a ray intersection.
-//
-// 2 cache lines currently, or would be if 64 byte aligned, as it is should be 32byte aligned by
-// Go allocator so still not too bad.
-// We store the error offset in the result as we may want to move the point to either side depending
-// on the material (e.g. refraction will need point on other side).
-type RayResult struct {
-	P        m.Vec3  // 12
-	POffset  m.Vec3  // 12 Offset to make sure any intersection point is outside face
-	Ng, T, B m.Vec3  // 36 Tangent space, Tg & Bg not normalized, Ng is normalized (as stored with face)
-	Ns       m.Vec3  // 12 Not normalized
-	MtlID    int32   // 4   64 bytes (first line)
-	UV       m.Vec2  // 8 floats (48 bytes)
-	Pu, Pv   m.Vec3  // 12 float32
-	Bu, Bv   float32 // Barycentric coords
-	Prim     Primitive
-	ElemID   uint32
-}
-
-// Ray represents a ray in world space plus precalculated intersection values.
-//
-// 64bytes (one cache line).
+// Ray is a mostly public structure used by individual intersection routines.
+// These should only ever be created with ShaderContext.NewRay as they need to
+// be in the pool.
 type Ray struct {
-	P, D     m.Vec3  // 6
-	Dinv     m.Vec3  // 16
-	Tclosest float32 // offset 4*9 = 36 (total in RayData is 512+36=548)
+	P, D       m.Vec3     // Position and direction
+	Dinv       m.Vec3     // 1/direction
+	Tclosest   float32    // t value of intersection (here instead of in Result to aid cache)
+	S          [3]float32 // Precalculated ray-triangle members
+	Kx, Ky, Kz int32      // Precalculated ray-triangle members
 
-	S          [3]float32 //10
-	Kx, Ky, Kz int32      // 13
-}
+	// 64 bytes to here
+	Time, Lambda float32 // Time value and wavelength
+	X, Y         int32   // Raster position
+	Sx, Sy       float32 // Screen space coords [-1,1]x[-1,1]
+	Level        uint8
+	Type         uint32 // Ray type bits
+	I            int    // pixel sample index
 
-// RayStats collects stats about the ray traversal.
-//
-// Deprecated: RayStats is unused.
-type RayStats struct {
-	Nnodes int
-}
+	// Ray differentials
+	DdPdx, DdPdy m.Vec3 // Ray differential
+	DdDdx, DdDdy m.Vec3 // Ray differential
 
-// RayData represents a ray plus support and transform data.  Will be refactored.
-// For some reason Supp.T is not being aligned to 16-bytes.. (needs to be heap allocated)
-// Aligned into 64byte blocks
-type RayData struct {
-	Supp         TraceSupport
-	Ray          Ray
-	SavedRay     Ray       // Saved version of ray if needed (i.e. we've transformed Ray)
-	LocalToWorld m.Matrix4 // Local to world transform
-	Result       RayResult
-	Stats        RayStats
-	Level        uint8 // recursion level
-	rnd          *rand.Rand
-	Lambda       float32
-	Time         float32
-	Type         uint32
+	next *Ray // Pool list
+	Task *RenderTask
 }
 
 // Init sets up the ray.  ty should be bitwise combination of RAY_ constants.  P is the
 // start point and D is the direction.  maxdist is the length of the ray.  sg is used
-// to get the Lambda, rng and Time parameters.
-func (r *RayData) Init(ty uint32, P, D m.Vec3, maxdist float32, sg *ShaderGlobals) {
-	r.Ray.P = P
-	r.Ray.D = D
-	r.Ray.Tclosest = maxdist
+// to get the Lambda, Time parameters and ray differntial calculations.
+func (r *Ray) Init(ty uint32, P, D m.Vec3, maxdist float32, level uint8, lambda, time float32) {
+	r.P = P
+	r.D = D
+	r.Tclosest = maxdist
 	r.Type = ty
-	r.Ray.setup()
-	r.Level = sg.Depth
-	r.rnd = sg.rnd
-	r.Lambda = sg.Lambda
-	r.Time = sg.Time
+	r.setup()
 
-}
-
-// IsVis returns true if P1 is visible from P0.
-// r is initialized as vis ray
-func (r *RayData) IsVis() bool {
-	if r.Ray.Tclosest < 1-VisRayEpsilon {
-		return false
-	}
-
-	return true
+	r.Level = level
+	r.Lambda = lambda
+	r.Time = time
 
 }
 
@@ -165,4 +105,62 @@ func (r *Ray) setup() {
 	r.Dinv[1] = float32(1.0 / float64(r.D[1]))
 	r.Dinv[2] = float32(1.0 / float64(r.D[2]))
 
+}
+
+// RenderTask represents an image tile.
+// One of these is allocated per goroutine so no worries about thread safety.
+type RenderTask struct {
+	Traversal struct {
+		T        [4]float32         // Temporary T values, MUSE be aligned to 16 bytes
+		Hits     [4]int32           // Temporary hit values, MUSE be aligned to 16 bytes
+		Boxes    [4 * 3 * 2]float32 // Temporary boxes structure, MUST be aligned to 16 bytes
+		StackTop int                // This is the top of the stack for any traversal to start from
+		Stack    [90]struct {
+			T    float32
+			Node int32
+		}
+	}
+	rand    *rand.Rand
+	rayPool *Ray
+	cxtPool *ShaderContext
+}
+
+// NewRay allocates a ray from the pool.
+func (rc *RenderTask) NewRay() *Ray {
+	if rc.rayPool == nil {
+		ray := new(Ray)
+		ray.Task = rc
+		return ray
+	}
+
+	ray := rc.rayPool
+	rc.rayPool = rc.rayPool.next
+	return ray
+
+}
+
+// ReleaseRay releases ray to pool.
+func (rc *RenderTask) ReleaseRay(ray *Ray) {
+	ray.next = rc.rayPool
+	rc.rayPool = ray
+}
+
+// NewShaderContext allocates a ShaderContext from the pool.
+func (rc *RenderTask) NewShaderContext() *ShaderContext {
+	if rc.cxtPool == nil {
+		sc := new(ShaderContext)
+		sc.task = rc
+		return sc
+	}
+
+	sc := rc.cxtPool
+	rc.cxtPool = rc.cxtPool.next
+	return sc
+
+}
+
+// ReleaseShaderContext releases context back to pool.
+func (rc *RenderTask) ReleaseShaderContext(sc *ShaderContext) {
+	sc.next = rc.cxtPool
+	rc.cxtPool = sc
 }

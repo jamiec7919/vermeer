@@ -11,7 +11,9 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/jamiec7919/vermeer/builtin/maps"
 	"github.com/jamiec7919/vermeer/core"
+	"github.com/jamiec7919/vermeer/core/param"
 	m "github.com/jamiec7919/vermeer/math"
 	"os"
 	"reflect"
@@ -36,11 +38,11 @@ var typeUInt32 = reflect.TypeOf(uint32(0))
 var typeVec3 = reflect.TypeOf(m.Vec3{})
 var typeVec2 = reflect.TypeOf(m.Vec2{})
 var typeMatrix = reflect.TypeOf(m.Matrix4{})
-var typePointArray = reflect.TypeOf(core.PointArray{})
-var typeVec2Array = reflect.TypeOf(core.Vec2Array{})
-var typeVec3Array = reflect.TypeOf(core.Vec3Array{})
-var typeFloat32Array = reflect.TypeOf(core.Float32Array{})
-var typeMatrixArray = reflect.TypeOf(core.MatrixArray{})
+var typePointArray = reflect.TypeOf(param.PointArray{})
+var typeVec2Array = reflect.TypeOf(param.Vec2Array{})
+var typeVec3Array = reflect.TypeOf(param.Vec3Array{})
+var typeFloat32Array = reflect.TypeOf(param.Float32Array{})
+var typeMatrixArray = reflect.TypeOf(param.MatrixArray{})
 
 // SymType is the type of symbols returned from lexer (shouldn't be public)
 type SymType struct {
@@ -53,19 +55,19 @@ type SymType struct {
 type parser struct {
 	filename string
 	lex      *Lex
-	rc       *core.RenderContext
+	nerrors  int
 }
 
 func init() {
 	Register("Globals", func() (core.Node, error) {
 
-		return &core.Globals{XRes: 256, YRes: 256, MaxGoRoutines: core.MAXGOROUTINES}, nil
+		return &core.Globals{XRes: 256, YRes: 256, MaxGoRoutines: 5}, nil
 	})
 }
 
 // Parse attempts to open filename and parse the contents, adding nodes to rc.  Returns
 // nil on success or an appropriate error.
-func Parse(rc *core.RenderContext, filename string) error {
+func Parse(filename string) error {
 
 	f, err := os.Open(filename)
 
@@ -81,7 +83,7 @@ func Parse(rc *core.RenderContext, filename string) error {
 	l.LineNumber = 0
 	l.ColNumber = 1
 
-	parser := parser{filename: filename, lex: &l, rc: rc}
+	parser := parser{filename: filename, lex: &l}
 
 	//	l.error = parser.error
 
@@ -127,7 +129,7 @@ func (p *parser) rgb(field reflect.Value) error {
 		return errors.New("Expected field type.")
 	}
 
-	v := &core.ConstantMap{}
+	v := &maps.Constant{}
 
 	for i := range v.C {
 		switch t := p.lex.Lex(&sym); t {
@@ -154,7 +156,7 @@ func (p *parser) floatmap(field reflect.Value) error {
 		return errors.New("Expected field type.")
 	}
 
-	v := &core.ConstantMap{}
+	v := &maps.Constant{}
 
 	switch t := p.lex.Lex(&sym); t {
 	case TokInt:
@@ -182,7 +184,7 @@ func (p *parser) rgbtex(field reflect.Value) error {
 		return errors.New("Expected field type.")
 	}
 
-	v := &core.TextureMap{}
+	v := &maps.Texture{}
 
 	if t := p.lex.Lex(&sym); t != TokString {
 		return errors.New("Expected RGB texture filename.")
@@ -222,7 +224,7 @@ func (p *parser) pointarray(field reflect.Value) error {
 
 	var sym SymType
 
-	v := core.PointArray{}
+	v := param.PointArray{}
 
 	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
@@ -274,7 +276,7 @@ func (p *parser) vec3array(field reflect.Value) error {
 
 	var sym SymType
 
-	v := core.Vec3Array{}
+	v := param.Vec3Array{}
 
 	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
@@ -326,7 +328,7 @@ func (p *parser) vec2array(field reflect.Value) error {
 
 	var sym SymType
 
-	v := core.Vec2Array{}
+	v := param.Vec2Array{}
 
 	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
@@ -378,7 +380,7 @@ func (p *parser) matrixarray(field reflect.Value) error {
 
 	var sym SymType
 
-	v := core.MatrixArray{}
+	v := param.MatrixArray{}
 
 	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
@@ -424,7 +426,7 @@ func (p *parser) float32array(field reflect.Value) error {
 
 	var sym SymType
 
-	v := core.Float32Array{}
+	v := param.Float32Array{}
 
 	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
@@ -666,8 +668,12 @@ func (p *parser) node(name string) (core.Node, error) {
 func (p *parser) errorf(msg string, v ...interface{}) {
 	line := p.lex.LineNumber
 	col := p.lex.ColNumber
-	if err := p.rc.Error(fmt.Errorf("%v:%v:%v: %v", p.filename, line, col, fmt.Sprintf(msg, v...))); err != nil {
-		panic(err)
+	fmt.Printf("%v:%v:%v: %v\n", p.filename, line, col, fmt.Sprintf(msg, v...))
+	p.nerrors++
+
+	if p.nerrors > 10 {
+		fmt.Printf("Too many errors, stopping.\n")
+		os.Exit(1)
 	}
 }
 
@@ -699,7 +705,7 @@ L:
 			}
 
 			if node != nil {
-				p.rc.AddNode(node)
+				core.AddNode(node)
 			}
 
 		// ERROR

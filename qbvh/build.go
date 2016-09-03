@@ -35,7 +35,9 @@ func calcMinCost(bounds m.BoundingBox, centroids []m.Vec3, boxes []m.BoundingBox
 	if bounds.Bounds[1][axis] == bounds.Bounds[0][axis] {
 
 		if len(indxs) > 1 {
-			panic(fmt.Sprintf("calcMinCost: null axis %v %v %v: len(indxs)>1 (%v) %v %v", axis, bounds.Bounds[1][axis]-bounds.Bounds[0][axis], bounds, len(indxs), indxs, boxes))
+			// This shouldn't panic really, it's viable to just do a median split.
+			//panic(fmt.Sprintf("calcMinCost: null axis %v %v %v: len(indxs)>1 (%v) %v %v", axis, bounds.Bounds[1][axis]-bounds.Bounds[0][axis], bounds, len(indxs), indxs, boxes))
+			//fmt.Printf("calcMinCost: %v %v\n", len(indxs), bounds)
 		}
 		return axis, len(indxs)/2 + 1
 	}

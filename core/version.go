@@ -20,7 +20,7 @@ const (
 func VersionString() string {
 	if VersionRelease == "" {
 		return fmt.Sprintf("%v.%v.%v", VersionMajor, VersionMinor, VersionPatch)
-	} else {
-		return fmt.Sprintf("%v.%v.%v-%v", VersionMajor, VersionMinor, VersionPatch, VersionRelease)
 	}
+	return fmt.Sprintf("%v.%v.%v-%v", VersionMajor, VersionMinor, VersionPatch, VersionRelease)
+
 }

@@ -5,8 +5,14 @@
 package qbvh
 
 import (
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 )
+
+// MotionPrimitive (should be Geom)
+type MotionPrimitive interface {
+	TraceMotionElems(time float32, key, key2 int, ray *core.Ray, sg *core.ShaderContext, base, count int) bool
+}
 
 // MotionNodeBoxes describes the 4 child boxes.
 // 96 byte struct (24*4, 1 1/12 cache lines)

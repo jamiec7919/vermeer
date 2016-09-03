@@ -4,8 +4,7 @@
 
 package core
 
-// Camera represents a 3D camera.
-type Camera interface {
-	// ComputeRay should return a world-space ray within the given pixel.
-	ComputeRay(x, y, lensU, lensV, time, lambda float64, ray *Ray)
+// PixelFilter nodes represent sample warp filters for Filter Importance Sampling.
+type PixelFilter interface {
+	WarpSample(r0, r1 float64) (float64, float64)
 }

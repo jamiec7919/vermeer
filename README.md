@@ -21,8 +21,7 @@ Installation
 
 To install from source into an existing Go installation, just do:
 
-	go get github.com/jamiec7919/vermeer
-	go install github.com/jamiec7919/vermeer
+	go get github.com/jamiec7919/vermeer/cmd/vermeer
 
 Use
 ---
