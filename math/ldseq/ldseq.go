@@ -6,7 +6,7 @@
 Package ldseq provides functions for sampling based on low-discrepancy scrambled Sobol,
 Van der Corput and Larscher Pillichshammer sequences.
 
-Based on 'Efficient Multidimensional Sampling' by Keller et al.  (http://www.uni-kl.de/AG-Heinrich/EMS.pdf)
+Based on 'Efficient Multidimensional Sampling' by Kollig and Keller 2002.  (http://www.uni-kl.de/AG-Heinrich/EMS.pdf)
 
 Implies that can use (0,n,1) net from (0,1) sequence for time & lambda (uncorrelated, stratified over 1 dimension)
 And (0,n=2*k,2) nets for 2d lens area (samples per pixel), light source and hemispherical

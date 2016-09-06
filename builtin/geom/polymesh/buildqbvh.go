@@ -6,6 +6,7 @@ package polymesh
 
 import (
 	"errors"
+	//"fmt"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/qbvh"
 )
@@ -85,6 +86,47 @@ func (mesh *PolyMesh) initAccel() error {
 	mesh.accel.idx = idxs
 	mesh.bounds = bounds
 
+	idxp := make([]uint32, len(mesh.idxp))
+
+	for i := range idxs {
+		idxp[i*3+0] = mesh.idxp[idxs[i]*3+0]
+		idxp[i*3+1] = mesh.idxp[idxs[i]*3+1]
+		idxp[i*3+2] = mesh.idxp[idxs[i]*3+2]
+	}
+
+	uvidx := make([]uint32, len(mesh.uvtriidx))
+
+	for i := range idxs {
+		uvidx[i*3+0] = mesh.uvtriidx[idxs[i]*3+0]
+		uvidx[i*3+1] = mesh.uvtriidx[idxs[i]*3+1]
+		uvidx[i*3+2] = mesh.uvtriidx[idxs[i]*3+2]
+	}
+
+	if mesh.normalidx != nil {
+		normalidx := make([]uint32, len(mesh.normalidx))
+
+		for i := range idxs {
+			normalidx[i*3+0] = mesh.normalidx[idxs[i]*3+0]
+			normalidx[i*3+1] = mesh.normalidx[idxs[i]*3+1]
+			normalidx[i*3+2] = mesh.normalidx[idxs[i]*3+2]
+		}
+		mesh.normalidx = normalidx
+	}
+
+	mesh.idxp = idxp
+	mesh.uvtriidx = uvidx
+
+	/*
+		fmt.Printf("Walk %v\n", mesh.Name())
+		nodef := func(i int, b m.BoundingBox) {
+			fmt.Printf(" nodes[%v] %v %v %v %v %v\n", i, b, nodes[i].Children[0], nodes[i].Children[1], nodes[i].Children[2], nodes[i].Children[3])
+		}
+		leaf := func(b m.BoundingBox, base, count int, empty bool) {
+			fmt.Printf(" leaf: %v %v %v %v\n", b, base, count, empty)
+		}
+
+		qbvh.Walk(nodes, 0, nodef, leaf)
+	*/
 	return nil
 
 }

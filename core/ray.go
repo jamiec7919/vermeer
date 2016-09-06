@@ -40,6 +40,8 @@ type Ray struct {
 	DdPdx, DdPdy m.Vec3 // Ray differential
 	DdDdx, DdDdy m.Vec3 // Ray differential
 
+	NodesT, LeafsT int
+
 	next *Ray // Pool list
 	Task *RenderTask
 }
@@ -57,7 +59,8 @@ func (r *Ray) Init(ty uint32, P, D m.Vec3, maxdist float32, level uint8, lambda,
 	r.Level = level
 	r.Lambda = lambda
 	r.Time = time
-
+	r.NodesT = 0
+	r.LeafsT = 0
 }
 
 func (r *Ray) setup() {
@@ -114,7 +117,7 @@ type RenderTask struct {
 		T        [4]float32         // Temporary T values, MUSE be aligned to 16 bytes
 		Hits     [4]int32           // Temporary hit values, MUSE be aligned to 16 bytes
 		Boxes    [4 * 3 * 2]float32 // Temporary boxes structure, MUST be aligned to 16 bytes
-		StackTop int                // This is the top of the stack for any traversal to start from
+		StackTop int32              // This is the top of the stack for any traversal to start from
 		Stack    [90]struct {
 			T    float32
 			Node int32

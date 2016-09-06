@@ -34,17 +34,16 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 
 	// NOTES: by unrolling many of the vector ops we avoid storing vec3's on the stack and allows it to fit
 	// within the nosplit stack allowance.
-
 	idx := int32(-1)
 	var U, V, W float32
 
-	for i := base; i < base+count; i++ {
-		faceidx := mesh.accel.idx[i]
+	if mesh.idxp != nil {
+		for i := base; i < base+count; i++ {
+			//faceidx := mesh.accel.idx[i]
 
-		if mesh.idxp != nil {
-			i0 := int(mesh.idxp[faceidx*3+0])
-			i1 := int(mesh.idxp[faceidx*3+1])
-			i2 := int(mesh.idxp[faceidx*3+2])
+			i0 := int(mesh.idxp[i*3+0])
+			i1 := int(mesh.idxp[i*3+1])
+			i2 := int(mesh.idxp[i*3+2])
 
 			AKz := mesh.Verts.Elems[i0][ray.Kz] - ray.P[ray.Kz]
 			BKz := mesh.Verts.Elems[i1][ray.Kz] - ray.P[ray.Kz]
@@ -116,7 +115,11 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 			W = fW * rcpDet
 
 			ray.Tclosest = T * rcpDet
-		} else {
+			idx = int32(i)
+		}
+	} else {
+		for i := base; i < base+count; i++ {
+			faceidx := mesh.accel.idx[i]
 			i0 := int(faceidx*3 + 0)
 			i1 := int(faceidx*3 + 1)
 			i2 := int(faceidx*3 + 2)
@@ -188,11 +191,11 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 			W = fW * rcpDet
 
 			ray.Tclosest = T * rcpDet
+			idx = faceidx
 		}
 
 		// At this point we have an intersection.
 
-		idx = faceidx
 	}
 
 	if idx == -1 {

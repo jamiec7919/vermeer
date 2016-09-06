@@ -68,7 +68,7 @@ func (n *Node) SetEmptyLeaf(idx int) {
 	n.Children[idx] = -1
 	b := m.InfBox
 	//b := m.BoundingBox{}
-	b.Reset() // setting it like this will not stop rays hitting!
+	//b.Reset() // setting it like this will not stop rays hitting!
 	/*	b.Bounds[0][0] = m.Inf(1)
 		b.Bounds[0][1] = 50000
 		b.Bounds[0][1] = 50000

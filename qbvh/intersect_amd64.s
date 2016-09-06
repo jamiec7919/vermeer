@@ -4,6 +4,7 @@
 
 #include "textflag.h"
 
+// From: https://tavianator.com/fast-branchless-raybounding-box-intersections-part-2-nans/
 //NOTES:  This assumes some 16-byte alignments for boxes, hits and t
 // boxes is assumed to be on 16 byte alignment. Can probably combine the hits into a struct
 // to ensure padding?)

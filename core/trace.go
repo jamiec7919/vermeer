@@ -55,6 +55,7 @@ func Trace(ray *Ray, samp *TraceSample) bool {
 	}
 
 	if TraceProbe(ray, sg) {
+
 		if sg.Shader == nil { // can't do much with no material
 			return false
 		}
@@ -70,6 +71,5 @@ func Trace(ray *Ray, samp *TraceSample) bool {
 
 		return true
 	}
-
 	return false
 }
