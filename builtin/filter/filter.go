@@ -100,11 +100,11 @@ func init() {
 }
 
 type AiryFilter struct {
-	NodeDef  core.NodeDef
-	NodeName string `node:"Name"`
-	Width    float32
-	Res      int
-	Peak     float32
+	NodeDef  core.NodeDef `node:"-"`
+	NodeName string       `node:"Name"`
+	Width    float32      `node:",opt"`
+	Res      int          `node:",opt"`
+	Peak     float32      `node:",opt"`
 
 	sampler *FilterSampler
 }

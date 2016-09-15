@@ -15,14 +15,14 @@ import (
 
 // Quad represents a (planar) quadrilateral light node.
 type Quad struct {
-	NodeDef  core.NodeDef
-	NodeName string `node:"Name"`
+	NodeDef  core.NodeDef `node:"-"`
+	NodeName string       `node:"Name"`
 	P        m.Vec3
 	U, V     m.Vec3
 	p        [4]m.Vec3 // Corners
 	Shader   string
 
-	Samples int
+	Samples int `node:",opt"`
 
 	shader core.Shader
 	geom   core.Geom

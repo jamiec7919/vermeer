@@ -18,10 +18,10 @@ import (
 
 // Debug is the default surface shader.
 type Debug struct {
-	NodeDef core.NodeDef
-	MtlName string `node:"Name"`
+	NodeDef core.NodeDef `node:"-"`
+	MtlName string       `node:"Name"`
 
-	Sides  int              // One or two sided
+	Sides  int              `node:",opt"` // One or two sided
 	Colour param.RGBUniform // Colour parameter
 }
 

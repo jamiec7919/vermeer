@@ -15,14 +15,14 @@ import (
 
 // Disk represents a circular disk light node.
 type Disk struct {
-	NodeDef       core.NodeDef
-	NodeName      string `node:"Name"`
+	NodeDef       core.NodeDef `node:"-"`
+	NodeName      string       `node:"Name"`
 	P, Up, LookAt m.Vec3
-	T, B, N       m.Vec3
+	T, B, N       m.Vec3 `node:"-"`
 	Radius        float32
 	Shader        string
-	Segments      int
-	Samples       int
+	Segments      int `node:",opt"`
+	Samples       int `node:",opt"`
 
 	shader core.Shader
 	geom   core.Geom

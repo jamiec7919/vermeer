@@ -13,9 +13,9 @@ import (
 
 // Sphere geoms are only used for spherical light sources in Vermeer.
 type Sphere struct {
-	NodeDef  core.NodeDef
-	NodeName string `node:"Name"`
-	RayBias  float32
+	NodeDef  core.NodeDef `node:"-"`
+	NodeName string       `node:"Name"`
+	RayBias  float32      `node:",opt"`
 
 	P      m.Vec3
 	Radius float32

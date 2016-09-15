@@ -46,8 +46,8 @@ there is a multi-pixel filter)
 // The Camera node represents a 3D camera, it can be specified as a 'lookat' or matrix and
 // may have motion keys for its parameters.
 type Camera struct {
-	NodeDef  core.NodeDef
-	NodeName string `node:"Name"`
+	NodeDef  core.NodeDef `node:"-"`
+	NodeName string       `node:"Name"`
 
 	Type   string             // 'lookat' 'matrix'
 	From   param.PointArray   // eye point
@@ -55,21 +55,21 @@ type Camera struct {
 	Roll   param.Float32Array // rotation around z axis
 	Up     m.Vec3
 
-	U, V, W m.Vec3 // orthonormal basis
+	U, V, W m.Vec3 `node:"-"` // orthonormal basis
 
-	Aspect float32 // aspect ratio
-	Fov    float32 // field of view (X), Y is calculated from aspect
-	Focal  float32 // focal length
+	Aspect float32 `node:",opt"` // aspect ratio
+	Fov    float32 `node:",opt"` // field of view (X), Y is calculated from aspect
+	Focal  float32 `node:",opt"` // focal length
 
-	WorldToLocal param.MatrixArray
-	LocalToWorld param.MatrixArray
+	WorldToLocal param.MatrixArray `node:",opt"`
+	LocalToWorld param.MatrixArray `node:",opt"`
 
 	decomp []m.TransformDecomp
 
-	TanThetaFocal float32 // = tan(Fov/2)*Focal
+	TanThetaFocal float32 `node:"-"` // = tan(Fov/2)*Focal
 
-	L, R, T, B float32
-	Radius     float32
+	L, R, T, B float32 `node:",opt"`
+	Radius     float32 `node:",opt"`
 }
 
 var _ core.Node = (*Camera)(nil)

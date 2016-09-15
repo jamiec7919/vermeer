@@ -15,13 +15,13 @@ import (
 
 // Sphere represents a spherical light node.
 type Sphere struct {
-	NodeDef  core.NodeDef
-	NodeName string `node:"Name"`
+	NodeDef  core.NodeDef `node:"-"`
+	NodeName string       `node:"Name"`
 	P        m.Vec3
 	Radius   float32
 	Shader   string
 
-	Samples int
+	Samples int `node:",opt"`
 
 	shader core.Shader
 	geom   core.Geom

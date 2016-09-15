@@ -17,6 +17,7 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 	"os"
 	"reflect"
+	"strings"
 )
 
 // Token types returned by lexer.
@@ -43,6 +44,18 @@ var typeVec2Array = reflect.TypeOf(param.Vec2Array{})
 var typeVec3Array = reflect.TypeOf(param.Vec3Array{})
 var typeFloat32Array = reflect.TypeOf(param.Float32Array{})
 var typeMatrixArray = reflect.TypeOf(param.MatrixArray{})
+
+var keywords = []string{"int", "float", "vec2", "vec3", "point", "rgb", "rgbtex", "matrix"}
+
+func isInKeywords(v string) bool {
+	for _, k := range keywords {
+		if k == v {
+			return true
+		}
+	}
+
+	return false
+}
 
 // SymType is the type of symbols returned from lexer (shouldn't be public)
 type SymType struct {
@@ -500,6 +513,10 @@ func (p *parser) matrix(field reflect.Value) error {
 }
 
 func (p *parser) param(field reflect.Value) error {
+	return p.parseParam(field, false)
+}
+
+func (p *parser) parseParam(field reflect.Value, skip bool) error {
 
 	if !field.CanSet() {
 		return errors.New("Can't set field")
@@ -588,13 +605,69 @@ func (p *parser) param(field reflect.Value) error {
 	return nil
 }
 
+type nodeField struct {
+	required bool
+	name     string
+	value    reflect.Value
+	present  bool // Has this field been parsed already
+}
+
+func getFields(node core.Node) (fields map[string]nodeField) {
+	rv := reflect.ValueOf(node)
+
+	relem := rv.Elem()
+
+	if relem.Kind() != reflect.Struct {
+		return nil
+
+	}
+
+	fields = map[string]nodeField{}
+
+	ty := relem.Type()
+
+	for i := 0; i < relem.NumField(); i++ {
+		f := ty.Field(i)
+
+		if !relem.Field(i).CanSet() {
+			continue
+		}
+
+		required := true
+		name := f.Name
+
+		tag := f.Tag.Get("node")
+
+		prts := strings.Split(tag, ",")
+
+		//fmt.Printf("Parts: %v", prts)
+
+		if prts[0] == "-" {
+			continue // field should be skipped
+		}
+
+		if prts[0] != "" {
+			name = prts[0]
+		}
+
+		if len(prts) > 1 && prts[1] == "opt" {
+			required = false
+		}
+
+		fields[name] = nodeField{name: f.Name, value: relem.Field(i), required: required}
+
+	}
+
+	return fields
+}
+
 func lookupParam(node core.Node, fieldName string) (reflect.Value, error) {
 	rv := reflect.ValueOf(node)
 
 	relem := rv.Elem()
 
 	if relem.Kind() != reflect.Struct {
-		return reflect.Value{}, errors.New("node is no a struct")
+		return reflect.Value{}, errors.New("node is not a struct")
 
 	}
 
@@ -620,6 +693,21 @@ func lookupParam(node core.Node, fieldName string) (reflect.Value, error) {
 	return reflect.Value{}, errors.New("Field " + fieldName + " not found.")
 }
 
+// skipToToken skips all tokens up to next non-keyword token or close brace.
+func (p *parser) skipToToken() {
+	var v SymType
+
+	for {
+		t := p.lex.Peek(&v)
+
+		if t == TokCloseCurlyBrace || (t == TokToken && !isInKeywords(v.str)) {
+			return
+		}
+
+		p.lex.Skip()
+	}
+}
+
 func (p *parser) node(name string) (core.Node, error) {
 
 	var v SymType
@@ -631,6 +719,8 @@ func (p *parser) node(name string) (core.Node, error) {
 		return nil, err
 	}
 
+	fields := getFields(node)
+
 	for {
 		t := p.lex.Lex(&v)
 		// log.Printf("%v", t)
@@ -638,27 +728,53 @@ func (p *parser) node(name string) (core.Node, error) {
 		case TokToken:
 			paramName := v.str
 
-			field, err := lookupParam(node, paramName)
+			field, present := fields[paramName]
 
-			if err != nil {
-				return nil, err
+			if field.present {
+				p.errorf("Field %v already found in %v", paramName, name)
+				return nil, nil
+
 			}
 
-			if !field.IsValid() {
-				p.errorf("Field %v not found/invalid in %v", paramName, name)
+			if !present {
+				p.errorf("Field \"%v\" not found in node %v", paramName, name)
+
+				// Simple error recovery, just skip through until we find a non-keyword
+				p.skipToToken()
+				continue
+
+			}
+			//			field, err := lookupParam(node, paramName)
+			//
+			//			if err != nil {
+			//				return nil, err
+			//			}
+
+			if !field.value.IsValid() {
+				p.errorf("Field %v invalid in %v", paramName, name)
 				return nil, nil
 			}
 
-			if err := p.param(field); err != nil {
+			if err := p.param(field.value); err != nil {
 				p.errorf("Error parsing field: %v", err)
 			}
 
+			field.present = true
+			fields[paramName] = field
+
 		case TokCloseCurlyBrace:
 			//log.Printf("Got obj %v %v", objtype, params)
+			for _, v := range fields {
+				if v.required && !v.present {
+					p.errorf("node: required field %v not found in %v", v.name, name)
+					return nil, nil
+				}
+			}
+
 			return node, nil
 
 		default:
-			p.errorf("parseNode: Error, invalid token in object \"%v\" %v", t, v)
+			p.errorf("node: Parse error, invalid token in object \"%v\" %v", t, v)
 
 		}
 	}
@@ -667,7 +783,7 @@ func (p *parser) node(name string) (core.Node, error) {
 
 func (p *parser) errorf(msg string, v ...interface{}) {
 	line := p.lex.LineNumber
-	col := p.lex.ColNumber
+	col := p.lex.BeginColNumber
 	fmt.Printf("%v:%v:%v: %v\n", p.filename, line, col, fmt.Sprintf(msg, v...))
 	p.nerrors++
 

@@ -13,7 +13,7 @@ import (
 
 // OutputHDR is a node which saves the rendered image intoa Radiance HDR file.
 type OutputHDR struct {
-	NodeDef  core.NodeDef
+	NodeDef  core.NodeDef `node:"-"`
 	Filename string
 }
 

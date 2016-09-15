@@ -15,8 +15,8 @@ import (
 
 // Tri represents a triangular light node.
 type Tri struct {
-	NodeDef    core.NodeDef
-	NodeName   string `node:"Name"`
+	NodeDef    core.NodeDef `node:"-"`
+	NodeName   string       `node:"Name"`
 	P0, P1, P2 m.Vec3
 	Shader     string
 

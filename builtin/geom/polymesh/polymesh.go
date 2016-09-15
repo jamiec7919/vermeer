@@ -15,24 +15,24 @@ import (
 
 // PolyMesh is the main polygon mesh type in Vermeer.
 type PolyMesh struct {
-	NodeDef  core.NodeDef
-	NodeName string `node:"Name"`
-	RayBias  float32
+	NodeDef  core.NodeDef `node:"-"`
+	NodeName string       `node:"Name"`
+	RayBias  float32      `node:",opt"`
 
 	Verts     param.PointArray
-	PolyCount []int32
-	FaceIdx   []int32
+	PolyCount []int32 `node:",opt"`
+	FaceIdx   []int32 `node:",opt"`
 
 	Shader       string
-	ModelToWorld param.MatrixArray
-	CalcNormals  bool
-	IsVisible    bool
+	ModelToWorld param.MatrixArray `node:",opt"`
+	CalcNormals  bool              `node:",opt"`
+	IsVisible    bool              `node:",opt"`
 
-	UV    param.Vec2Array
-	UVIdx []int32
+	UV    param.Vec2Array `node:",opt"`
+	UVIdx []int32         `node:",opt"`
 
-	Normals   param.Vec3Array
-	NormalIdx []int32
+	Normals   param.Vec3Array `node:",opt"`
+	NormalIdx []int32         `node:",opt"`
 
 	facecount     int      // Number of faces
 	idxp          []uint32 // Triangle Face indexes (position)

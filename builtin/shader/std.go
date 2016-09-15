@@ -19,14 +19,14 @@ import (
 
 // ShaderStd is the default surface shader.
 type ShaderStd struct {
-	NodeDef core.NodeDef
-	MtlName string `node:"Name"`
+	NodeDef core.NodeDef `node:"-"`
+	MtlName string       `node:"Name"`
 
-	EmissionColour   param.RGBUniform
-	EmissionStrength param.Float32Uniform
+	EmissionColour   param.RGBUniform     `node:",opt"`
+	EmissionStrength param.Float32Uniform `node:",opt"`
 
-	Sides         int              // One or two sided
-	DiffuseColour param.RGBUniform // Colour parameter
+	Sides         int              `node:",opt"` // One or two sided
+	DiffuseColour param.RGBUniform `node:",opt"` // Colour parameter
 }
 
 // Assert that ShaderStd satisfies important interfaces.
