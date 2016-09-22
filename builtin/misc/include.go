@@ -7,8 +7,8 @@ import (
 
 // Include represents a circular disk light node.
 type Include struct {
-	NodeDef  core.NodeDef
-	NodeName string `node:"Name"`
+	NodeDef  core.NodeDef `node:",opt"`
+	NodeName string       `node:"Name,opt"`
 	Filename string
 }
 
