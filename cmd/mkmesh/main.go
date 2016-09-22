@@ -20,6 +20,8 @@ import (
 	"os"
 )
 
+var output = flag.String("o", "test.vnf", "Output filename")
+
 func loadMesh(filename string) error {
 
 	f, err := os.Open(filename)
@@ -30,12 +32,17 @@ func loadMesh(filename string) error {
 
 	defer f.Close()
 
-	meshes, err := wfobj.Load(f)
+	meshes, shaders, err := wfobj.Load(f)
 
-	fout, err := os.Create("test.vnf")
+	fout, err := os.Create(*output)
 	defer fout.Close()
+
 	for i, m := range meshes {
 		m.WriteNodes(fout, filename, fmt.Sprintf("mesh%v", i))
+	}
+
+	for _, m := range shaders {
+		m.Write(fout, filename)
 	}
 
 	return err

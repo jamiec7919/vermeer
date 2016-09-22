@@ -99,13 +99,15 @@ func (m *Mesh) WriteNodes(w io.Writer, prefix, name string) error {
 	fmt.Fprintf(w, "\n}\n\n")
 
 	return nil
+
 }
 
 // Load loads the WFObj from the given reader.
-func Load(r io.Reader) ([]*Mesh, error) {
+func Load(r io.Reader) ([]*Mesh, []Shader, error) {
 
-	meshes, err := parse(r)
-	return meshes, err
+	meshes, shaders, err := parse(r)
+
+	return meshes, shaders, err
 }
 
 func parseFaceField(field string) (p, n, t int) {
@@ -128,7 +130,7 @@ func parseFaceField(field string) (p, n, t int) {
 	return
 }
 
-func parse(r io.Reader) ([]*Mesh, error) {
+func parse(r io.Reader) ([]*Mesh, []Shader, error) {
 	scanner := bufio.NewScanner(bufio.NewReader(r))
 
 	verts := []m.Vec3{}
@@ -138,6 +140,7 @@ func parse(r io.Reader) ([]*Mesh, error) {
 	meshes := map[string]*Mesh{}
 
 	var mesh *Mesh
+	var shaders []Shader
 
 	lineno := 0
 
@@ -160,7 +163,13 @@ func parse(r io.Reader) ([]*Mesh, error) {
 
 		switch toks[0] {
 		case "mtllib":
+			s, err := ParseMtlLib(toks[1])
 
+			if err != nil {
+				fmt.Printf("mtllib: %v", err)
+			}
+
+			shaders = append(shaders, s...)
 		case "usemtl":
 
 			m, present := meshes[toks[1]]
@@ -331,5 +340,5 @@ func parse(r io.Reader) ([]*Mesh, error) {
 	}
 
 	fmt.Printf("TOTAL: %v\n", totalfaces)
-	return mshs, nil
+	return mshs, shaders, nil
 }
