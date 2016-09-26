@@ -30,6 +30,7 @@ func (mesh *PolyMesh) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 }
 
 // TraceElems implements qbvh.Primitive.
+//go:nosplit
 func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, count int) bool {
 
 	// NOTES: by unrolling many of the vector ops we avoid storing vec3's on the stack and allows it to fit
@@ -202,158 +203,86 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 		return false
 	}
 
+	var i0, i1, i2 int32
+
 	if mesh.idxp != nil {
-		i0 := int32(mesh.idxp[idx*3+0])
-		i1 := int32(mesh.idxp[idx*3+1])
-		i2 := int32(mesh.idxp[idx*3+2])
+		i0 = int32(mesh.idxp[idx*3+0])
+		i1 = int32(mesh.idxp[idx*3+1])
+		i2 = int32(mesh.idxp[idx*3+2])
+	} else {
+		i0 = int32(idx*3 + 0)
+		i1 = int32(idx*3 + 1)
+		i2 = int32(idx*3 + 2)
+	}
 
-		xAbsSum := m.Abs(U*mesh.Verts.Elems[i0][0]) + m.Abs(V*mesh.Verts.Elems[i1][0]) + m.Abs(W*mesh.Verts.Elems[i2][0])
-		yAbsSum := m.Abs(U*mesh.Verts.Elems[i0][1]) + m.Abs(V*mesh.Verts.Elems[i1][1]) + m.Abs(W*mesh.Verts.Elems[i2][1])
-		zAbsSum := m.Abs(U*mesh.Verts.Elems[i0][2]) + m.Abs(V*mesh.Verts.Elems[i1][2]) + m.Abs(W*mesh.Verts.Elems[i2][2])
+	xAbsSum := m.Abs(U*mesh.Verts.Elems[i0][0]) + m.Abs(V*mesh.Verts.Elems[i1][0]) + m.Abs(W*mesh.Verts.Elems[i2][0])
+	yAbsSum := m.Abs(U*mesh.Verts.Elems[i0][1]) + m.Abs(V*mesh.Verts.Elems[i1][1]) + m.Abs(W*mesh.Verts.Elems[i2][1])
+	zAbsSum := m.Abs(U*mesh.Verts.Elems[i0][2]) + m.Abs(V*mesh.Verts.Elems[i1][2]) + m.Abs(W*mesh.Verts.Elems[i2][2])
 
-		//xAbsSum = m.Max(xAbsSum, 0.8)
-		//yAbsSum = m.Max(yAbsSum, 0.8)
-		//zAbsSum = m.Max(zAbsSum, 0.8)
+	//xAbsSum = m.Max(xAbsSum, 0.8)
+	//yAbsSum = m.Max(yAbsSum, 0.8)
+	//zAbsSum = m.Max(zAbsSum, 0.8)
 
-		sg.Shader = mesh.shader
+	sg.Shader = mesh.shader
 
-		e00 := mesh.Verts.Elems[i1][0] - mesh.Verts.Elems[i0][0]
-		e01 := mesh.Verts.Elems[i1][1] - mesh.Verts.Elems[i0][1]
-		e02 := mesh.Verts.Elems[i1][2] - mesh.Verts.Elems[i0][2]
-		e10 := mesh.Verts.Elems[i2][0] - mesh.Verts.Elems[i0][0]
-		e11 := mesh.Verts.Elems[i2][1] - mesh.Verts.Elems[i0][1]
-		e12 := mesh.Verts.Elems[i2][2] - mesh.Verts.Elems[i0][2]
+	e00 := mesh.Verts.Elems[i1][0] - mesh.Verts.Elems[i0][0]
+	e01 := mesh.Verts.Elems[i1][1] - mesh.Verts.Elems[i0][1]
+	e02 := mesh.Verts.Elems[i1][2] - mesh.Verts.Elems[i0][2]
+	e10 := mesh.Verts.Elems[i2][0] - mesh.Verts.Elems[i0][0]
+	e11 := mesh.Verts.Elems[i2][1] - mesh.Verts.Elems[i0][1]
+	e12 := mesh.Verts.Elems[i2][2] - mesh.Verts.Elems[i0][2]
 
-		//	e0 := m.Vec3Sub(mesh.Verts.Elems[(idx*3)+1], mesh.Verts.Elems[(idx*3)+0])
-		//	e1 := m.Vec3Sub(mesh.Verts.Elems[(idx*3)+2], mesh.Verts.Elems[(idx*3)+0])
-		//	N := m.Vec3Cross(e0, e1)
-		var N m.Vec3
+	//	e0 := m.Vec3Sub(mesh.Verts.Elems[(idx*3)+1], mesh.Verts.Elems[(idx*3)+0])
+	//	e1 := m.Vec3Sub(mesh.Verts.Elems[(idx*3)+2], mesh.Verts.Elems[(idx*3)+0])
+	//	N := m.Vec3Cross(e0, e1)
 
-		N[0] = e01*e12 - e02*e11
-		N[1] = e02*e10 - e00*e12
-		N[2] = e00*e11 - e01*e10
-		N = m.Vec3Normalize(N)
+	sg.Ng[0] = e01*e12 - e02*e11
+	sg.Ng[1] = e02*e10 - e00*e12
+	sg.Ng[2] = e00*e11 - e01*e10
+	sg.Ng = m.Vec3Normalize(sg.Ng)
 
-		if mesh.Normals.Elems != nil {
-			for k := range sg.N {
-				sg.N[k] = U*mesh.Normals.Elems[mesh.normalidx[(idx*3)+0]][k] +
-					V*mesh.Normals.Elems[mesh.normalidx[(idx*3)+1]][k] +
-					W*mesh.Normals.Elems[mesh.normalidx[(idx*3)+2]][k]
-			}
-
-			sg.N = m.Vec3Normalize(sg.N)
-		} else {
-			sg.N = N
+	if mesh.Normals.Elems != nil {
+		for k := range sg.N {
+			sg.N[k] = U*mesh.Normals.Elems[mesh.normalidx[(idx*3)+0]][k] +
+				V*mesh.Normals.Elems[mesh.normalidx[(idx*3)+1]][k] +
+				W*mesh.Normals.Elems[mesh.normalidx[(idx*3)+2]][k]
 		}
 
-		d := m.Gamma(7)*xAbsSum*m.Abs(N[0]) + m.Gamma(7)*yAbsSum*m.Abs(N[1]) + m.Gamma(7)*zAbsSum*m.Abs(N[2])
-		offset := m.Vec3Scale(d, N)
+		sg.N = m.Vec3Normalize(sg.N)
+	} else {
+		sg.N = sg.Ng
+	}
 
-		sg.Poffset = offset
-		sg.Ng = N
-		sg.Bu = U
-		sg.Bv = V
+	d := m.Gamma(7)*xAbsSum*m.Abs(sg.Ng[0]) + m.Gamma(7)*yAbsSum*m.Abs(sg.Ng[1]) + m.Gamma(7)*zAbsSum*m.Abs(sg.Ng[2])
 
-		for k := range sg.P {
-			sg.P[k] = U*mesh.Verts.Elems[i0][k] +
-				V*mesh.Verts.Elems[i1][k] +
-				W*mesh.Verts.Elems[i2][k]
-		}
-		sg.Po = sg.P
+	sg.Poffset = m.Vec3Scale(d, sg.Ng)
+	sg.Bu = U
+	sg.Bv = V
 
-		if mesh.UV.Elems != nil {
-			sg.U = U*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][0] + V*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][0] + W*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][0]
-			sg.V = U*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][1] + V*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][1] + W*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][1]
+	for k := range sg.P {
+		sg.P[k] = U*mesh.Verts.Elems[i0][k] +
+			V*mesh.Verts.Elems[i1][k] +
+			W*mesh.Verts.Elems[i2][k]
+	}
+	sg.Po = sg.P
 
-		} else {
-			sg.U = U
-			sg.V = V
-		}
-
-		sg.DdPdu[0] = e00
-		sg.DdPdu[1] = e01
-		sg.DdPdu[2] = e02
-
-		sg.DdPdv[0] = e10
-		sg.DdPdv[1] = e11
-		sg.DdPdv[2] = e12
+	if mesh.UV.Elems != nil {
+		sg.U = U*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][0] + V*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][0] + W*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][0]
+		sg.V = U*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][1] + V*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][1] + W*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][1]
 
 	} else {
-		i0 := int32(idx*3 + 0)
-		i1 := int32(idx*3 + 1)
-		i2 := int32(idx*3 + 2)
-
-		sg.Shader = mesh.shader
-
-		e00 := mesh.Verts.Elems[i1][0] - mesh.Verts.Elems[i0][0]
-		e01 := mesh.Verts.Elems[i1][1] - mesh.Verts.Elems[i0][1]
-		e02 := mesh.Verts.Elems[i1][2] - mesh.Verts.Elems[i0][2]
-		e10 := mesh.Verts.Elems[i2][0] - mesh.Verts.Elems[i0][0]
-		e11 := mesh.Verts.Elems[i2][1] - mesh.Verts.Elems[i0][1]
-		e12 := mesh.Verts.Elems[i2][2] - mesh.Verts.Elems[i0][2]
-
-		//	e0 := m.Vec3Sub(mesh.Verts.Elems[(idx*3)+1], mesh.Verts.Elems[(idx*3)+0])
-		//	e1 := m.Vec3Sub(mesh.Verts.Elems[(idx*3)+2], mesh.Verts.Elems[(idx*3)+0])
-		//	N := m.Vec3Cross(e0, e1)
-		var N m.Vec3
-
-		N[0] = e01*e12 - e02*e11
-		N[1] = e02*e10 - e00*e12
-		N[2] = e00*e11 - e01*e10
-		N = m.Vec3Normalize(N)
-
-		if mesh.Normals.Elems != nil {
-			for k := range sg.N {
-				sg.N[k] = U*mesh.Normals.Elems[mesh.normalidx[(idx*3)+0]][k] +
-					V*mesh.Normals.Elems[mesh.normalidx[(idx*3)+1]][k] +
-					W*mesh.Normals.Elems[mesh.normalidx[(idx*3)+2]][k]
-			}
-			sg.N = m.Vec3Normalize(sg.N)
-		} else {
-			sg.N = N
-		}
-
-		xAbsSum := m.Abs(U*mesh.Verts.Elems[i0][0]) + m.Abs(V*mesh.Verts.Elems[i1][0]) + m.Abs(W*mesh.Verts.Elems[i2][0])
-		yAbsSum := m.Abs(U*mesh.Verts.Elems[i0][1]) + m.Abs(V*mesh.Verts.Elems[i1][1]) + m.Abs(W*mesh.Verts.Elems[i2][1])
-		zAbsSum := m.Abs(U*mesh.Verts.Elems[i0][2]) + m.Abs(V*mesh.Verts.Elems[i1][2]) + m.Abs(W*mesh.Verts.Elems[i2][2])
-
-		xAbsSum = m.Max(xAbsSum, 0.08)
-		yAbsSum = m.Max(yAbsSum, 0.08)
-		zAbsSum = m.Max(zAbsSum, 0.08)
-
-		d := m.Gamma(7)*xAbsSum*m.Abs(N[0]) + m.Gamma(7)*yAbsSum*m.Abs(N[1]) + m.Gamma(7)*zAbsSum*m.Abs(N[2])
-		offset := m.Vec3Scale(d, N)
-
-		sg.Poffset = offset
-		sg.Ng = N
-		sg.Bu = U
-		sg.Bv = V
-
-		for k := range sg.P {
-			sg.P[k] = U*mesh.Verts.Elems[i0][k] +
-				V*mesh.Verts.Elems[i1][k] +
-				W*mesh.Verts.Elems[i2][k]
-		}
-		sg.Po = sg.P
-
-		if mesh.UV.Elems != nil {
-			sg.U = U*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][0] + V*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][0] + W*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][0]
-			sg.V = U*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][1] + V*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][1] + W*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][1]
-
-		} else {
-			sg.U = U
-			sg.V = V
-		}
-
-		sg.DdPdu[0] = e00
-		sg.DdPdu[1] = e01
-		sg.DdPdu[2] = e02
-
-		sg.DdPdv[0] = e10
-		sg.DdPdv[1] = e11
-		sg.DdPdv[2] = e12
-
+		sg.U = U
+		sg.V = V
 	}
+
+	sg.DdPdu[0] = e00
+	sg.DdPdu[1] = e01
+	sg.DdPdu[2] = e02
+
+	sg.DdPdv[0] = e10
+	sg.DdPdv[1] = e11
+	sg.DdPdv[2] = e12
+
 	sg.ElemID = uint32(idx)
 
 	return true
