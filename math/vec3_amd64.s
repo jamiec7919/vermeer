@@ -7,7 +7,7 @@
 #define Half 0.5
 #define OnePointFive 1.5
 
-// func ·Vec3Normalize(a Vec3) Vec3
+// func ·Vec3Normalize(a Vec3) (b Vec3)
 TEXT ·Vec3Normalize(SB),NOSPLIT,$0
 	MOVSS a+0(FP), X0
 	MOVSS a+4(FP), X1

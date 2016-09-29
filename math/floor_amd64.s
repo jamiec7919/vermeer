@@ -11,7 +11,7 @@
 // func Floor(x float32) float32
 TEXT ·Floor(SB),NOSPLIT,$0
 	ROUNDSS $1, x+0(FP), X0
-	MOVD X0, ret+8(FP)
+	MOVSS X0, ret+8(FP)
 	RET
 
 // func Ceil(x float64) float64
