@@ -201,7 +201,7 @@ func (c *Camera) calcBasisLookat(from, to, up m.Vec3, roll float32) {
 
 // ComputeRay calculates a position and direction for a sampled ray.
 // x,y are the raster position, lensU,lensV are in [0,1)x[0,1)
-func (c *Camera) ComputeRay(x, y, lensU, lensV, time, lambda float64, ray *core.Ray) {
+func (c *Camera) ComputeRay(x, y, lensU, lensV, lambda, time float64, ray *core.Ray) {
 
 	w, h := core.FrameMetrics()
 

@@ -136,8 +136,8 @@ func (d *Disk) createMesh() *polymesh.PolyMesh {
 		IsVisible: true,
 		Shader:    d.Shader}
 
-	msh.ModelToWorld.Elems = []m.Matrix4{m.Matrix4Identity}
-	msh.ModelToWorld.MotionKeys = 1
+	//msh.ModelToWorld.Elems = []m.Matrix4{m.Matrix4Identity}
+	//msh.ModelToWorld.MotionKeys = 1
 
 	ang := float32(0)
 

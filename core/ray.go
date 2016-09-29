@@ -54,7 +54,7 @@ func (r *Ray) Init(ty uint32, P, D m.Vec3, maxdist float32, level uint8, lambda,
 	r.D = D
 	r.Tclosest = maxdist
 	r.Type = ty
-	r.setup()
+	r.Setup()
 
 	r.Level = level
 	r.Lambda = lambda
@@ -63,7 +63,7 @@ func (r *Ray) Init(ty uint32, P, D m.Vec3, maxdist float32, level uint8, lambda,
 	r.LeafsT = 0
 }
 
-func (r *Ray) setup() {
+func (r *Ray) Setup() {
 
 	r.Kz = 0
 

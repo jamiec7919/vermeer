@@ -29,7 +29,7 @@ func TraceMotion(qbvh MotionQBVH, time float32, key, key2 int, prim MotionPrimit
 	ray.Task.Traversal.Stack[stackTop].T = ray.Tclosest
 	hit := false
 
-	for stackTop >= 0 {
+	for stackTop >= ray.Task.Traversal.StackTop {
 
 		node := ray.Task.Traversal.Stack[stackTop].Node
 		T := ray.Task.Traversal.Stack[stackTop].T
@@ -110,6 +110,8 @@ func TraceMotion(qbvh MotionQBVH, time float32, key, key2 int, prim MotionPrimit
 
 				// Early out if this ray is a shadow ray
 				if ray.Type&core.RayTypeShadow != 0 {
+					// restore
+					ray.Task.Traversal.StackTop = tmp
 					return true
 				}
 			}

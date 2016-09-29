@@ -58,6 +58,8 @@ type ShaderContext struct {
 	Psc                             *ShaderContext // Parent (last shaded)
 	Shader                          Shader
 
+	Transform, InvTransform m.Matrix4
+
 	Po, P, Poffset m.Vec3 // Shading point in object/world space
 
 	N, Nf, Ng, Ngf, Ns m.Vec3  // Shading normal, face-forward shading normal, geometric normal, face-forward geom normal, smoothed normal (N without bump)
@@ -208,9 +210,9 @@ func (sc *ShaderContext) EvaluateLightSample(brdf BSDF) colour.RGB {
 		fmt.Printf("%v %v\n", sc.P, sc.OffsetP(1))
 	}
 	if m.Vec3Dot(sc.Ld, sc.Ng) < 0 {
-		ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(sc.Ldist*(1.0-ShadowRayEpsilon), sc.Ld), 1.0, 0, sc.Time, sc.Lambda)
+		ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(sc.Ldist*(1.0-ShadowRayEpsilon), sc.Ld), 1.0, 0, sc.Lambda, sc.Time)
 	} else {
-		ray.Init(RayTypeShadow, sc.OffsetP(1), m.Vec3Scale(sc.Ldist*(1.0-ShadowRayEpsilon), sc.Ld), 1.0, 0, sc.Time, sc.Lambda)
+		ray.Init(RayTypeShadow, sc.OffsetP(1), m.Vec3Scale(sc.Ldist*(1.0-ShadowRayEpsilon), sc.Ld), 1.0, 0, sc.Lambda, sc.Time)
 
 	}
 

@@ -99,7 +99,7 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 					rasterY = math.Floor(rasterY) + 0.5 + v
 				}
 
-				camera.ComputeRay(rasterX, rasterY, lensU, lensV, time, lambda, ray)
+				camera.ComputeRay(rasterX, rasterY, lensU, lensV, lambda, time, ray)
 
 				samp := TraceSample{}
 				ray.I = int(iter)

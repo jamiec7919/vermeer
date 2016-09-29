@@ -4,8 +4,18 @@
 
 package polymesh
 
+import (
+	m "github.com/jamiec7919/vermeer/math"
+)
+
 // init should triangulate the polygons and build the idxp list.
 func (mesh *PolyMesh) init() error {
+
+	for _, t := range mesh.Transform.Elems {
+		mesh.transformSRT = append(mesh.transformSRT, m.TransformDecompMatrix4(t))
+	}
+
+	mesh.initTransformBounds()
 
 	if mesh.PolyCount != nil {
 		basei := uint32(0)

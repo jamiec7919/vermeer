@@ -426,8 +426,9 @@ func (p *parser) matrixarray(field reflect.Value) error {
 				return errors.New("Expected matrix component.")
 			}
 
-			v.Elems = append(v.Elems, m.Matrix4Transpose(mat))
 		}
+
+		v.Elems = append(v.Elems, m.Matrix4Transpose(mat))
 	}
 
 	field.Set(reflect.ValueOf(v))

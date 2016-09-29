@@ -23,10 +23,14 @@ type PolyMesh struct {
 	PolyCount []int32 `node:",opt"`
 	FaceIdx   []int32 `node:",opt"`
 
-	Shader       string
-	ModelToWorld param.MatrixArray `node:",opt"`
-	CalcNormals  bool              `node:",opt"`
-	IsVisible    bool              `node:",opt"`
+	Shader string
+
+	CalcNormals bool `node:",opt"`
+	IsVisible   bool `node:",opt"`
+
+	Transform    param.MatrixArray `node:",opt"`
+	transformSRT []m.TransformDecomp
+	//	invTransformSRT []m.TransformDecomp
 
 	UV    param.Vec2Array `node:",opt"`
 	UVIdx []int32         `node:",opt"`
@@ -48,8 +52,9 @@ type PolyMesh struct {
 
 	shader core.Shader
 
-	bounds       m.BoundingBox
-	motionBounds []m.BoundingBox
+	bounds          m.BoundingBox
+	motionBounds    []m.BoundingBox
+	transformBounds []m.BoundingBox
 }
 
 // Assert that PolyMesh implements important interfaces.
@@ -92,6 +97,8 @@ func (mesh *PolyMesh) PostRender() error { return nil }
 
 // MotionKeys returns the number of motion keys.
 func (mesh *PolyMesh) MotionKeys() int {
+	//return len(mesh.Transform.Elems)
+
 	if mesh.accel.qbvh != nil {
 		return 1
 	}
