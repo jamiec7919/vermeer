@@ -3,12 +3,13 @@
 // license that can be found in the LICENSE file.
 
 /*
-Package material provides the default shader(s) for Vermeer.  (should rename).
+Package shader provides the default shader(s) for Vermeer.
 
 This package is in heavy development so documentation somewhat sketchy. */
 package shader
 
 import (
+	"fmt"
 	"github.com/jamiec7919/vermeer/builtin/shader/bsdf"
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
@@ -25,8 +26,14 @@ type ShaderStd struct {
 	EmissionColour   param.RGBUniform     `node:",opt"`
 	EmissionStrength param.Float32Uniform `node:",opt"`
 
-	Sides         int              `node:",opt"` // One or two sided
-	DiffuseColour param.RGBUniform `node:",opt"` // Colour parameter
+	Sides int `node:",opt"` // One or two sided
+
+	DiffuseColour   param.RGBUniform     `node:",opt"` // Colour parameter
+	DiffuseStrength param.Float32Uniform `node:",opt"` // Weight parameter
+
+	Spec1Colour    param.RGBUniform     `node:",opt"` // Colour parameter
+	Spec1Strength  param.Float32Uniform `node:",opt"` // Weight parameter
+	Spec1Roughness param.Float32Uniform `node:",opt"`
 }
 
 // Assert that ShaderStd satisfies important interfaces.
@@ -65,25 +72,45 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 
 	var diffContrib colour.RGB
 
-	sg.LightsPrepare()
-
 	var diffColour colour.RGB
+
+	diffWeight := float32(0)
+	spec1Weight := float32(0)
 
 	if sh.DiffuseColour != nil {
 		diffColour = sh.DiffuseColour.RGB(sg)
 	}
 
-	for sg.LightsGetSample() {
+	if sh.DiffuseStrength != nil {
+		diffWeight = sh.DiffuseStrength.Float32(sg)
+	}
 
-		if sg.Lp.DiffuseShadeMult() > 0.0 {
+	totalWeight := m.Sqrt(diffWeight*diffWeight + spec1Weight*spec1Weight)
+	diffWeight /= totalWeight
+	spec1Weight /= totalWeight
 
-			// In this example the brdf passed is an interface
-			// allowing sampling, pdf and bsdf eval
-			col := sg.EvaluateLightSample(diffBrdf)
-			col.Mul(diffColour)
-			diffContrib.Add(col)
+	if diffWeight == 0.0 && spec1Weight == 0.0 {
+		panic(fmt.Sprintf("Shader %v has no diffuse or spec1 wreight", sh.Name()))
+	}
+
+	if diffWeight > 0.0 {
+
+		sg.LightsPrepare()
+
+		for sg.LightsGetSample() {
+
+			if sg.Lp.DiffuseShadeMult() > 0.0 {
+
+				// In this example the brdf passed is an interface
+				// allowing sampling, pdf and bsdf eval
+				col := sg.EvaluateLightSample(diffBrdf)
+				col.Mul(diffColour)
+				diffContrib.Add(col)
+			}
+
 		}
 
+		diffContrib.Scale(diffWeight)
 	}
 
 	contrib := colour.RGB{}

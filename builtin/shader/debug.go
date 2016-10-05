@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Package material provides the default shader(s) for Vermeer.  (should rename).
-
-This package is in heavy development so documentation somewhat sketchy. */
 package shader
 
 import (

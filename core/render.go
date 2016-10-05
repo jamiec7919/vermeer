@@ -19,6 +19,7 @@ type pixelscramble struct {
 	lensU, lensV uint64
 	time         uint64
 	lambda       uint64
+	scramble     [2]uint64 // Light and glossy scramble.  Currently each light uses same, but could combine with a unique light scramble (e.g. xor?)
 }
 
 var framescramble []pixelscramble
@@ -103,6 +104,7 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 
 				samp := TraceSample{}
 				ray.I = int(iter)
+				ray.Scramble = framescramble[pixIdx].scramble
 				Trace(ray, &samp)
 
 				for k := 0; k < 3; k++ {
@@ -150,6 +152,8 @@ func Render(maxIter int, exit chan bool) (RenderStats, error) {
 		framescramble[i].lensV = uint64(rand.Int63())
 		framescramble[i].time = uint64(rand.Int63())
 		framescramble[i].lambda = uint64(rand.Int63())
+		framescramble[i].scramble[0] = uint64(rand.Int63())
+		framescramble[i].scramble[1] = uint64(rand.Int63())
 
 	}
 

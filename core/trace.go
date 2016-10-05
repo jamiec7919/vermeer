@@ -41,17 +41,18 @@ func Trace(ray *Ray, samp *TraceSample) bool {
 
 	// This is the only time that ShaderContext should be created manually, note we set task here.
 	sg := &ShaderContext{
-		Ro:     ray.P,
-		Rd:     ray.D,
-		X:      ray.X,
-		Y:      ray.Y,
-		Sx:     ray.Sx,
-		Sy:     ray.Sy,
-		Level:  ray.Level,
-		Lambda: ray.Lambda,
-		I:      ray.I,
-		Time:   ray.Time,
-		task:   ray.Task,
+		Ro:       ray.P,
+		Rd:       ray.D,
+		X:        ray.X,
+		Y:        ray.Y,
+		Sx:       ray.Sx,
+		Sy:       ray.Sy,
+		Level:    ray.Level,
+		Lambda:   ray.Lambda,
+		I:        ray.I,
+		Time:     ray.Time,
+		task:     ray.Task,
+		Scramble: ray.Scramble,
 	}
 
 	if TraceProbe(ray, sg) {

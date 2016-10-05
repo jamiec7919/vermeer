@@ -94,12 +94,16 @@ func (mesh *PolyMesh) initAccel() error {
 		idxp[i*3+2] = mesh.idxp[idxs[i]*3+2]
 	}
 
-	uvidx := make([]uint32, len(mesh.uvtriidx))
+	if mesh.uvtriidx != nil {
 
-	for i := range idxs {
-		uvidx[i*3+0] = mesh.uvtriidx[idxs[i]*3+0]
-		uvidx[i*3+1] = mesh.uvtriidx[idxs[i]*3+1]
-		uvidx[i*3+2] = mesh.uvtriidx[idxs[i]*3+2]
+		uvidx := make([]uint32, len(mesh.uvtriidx))
+
+		for i := range idxs {
+			uvidx[i*3+0] = mesh.uvtriidx[idxs[i]*3+0]
+			uvidx[i*3+1] = mesh.uvtriidx[idxs[i]*3+1]
+			uvidx[i*3+2] = mesh.uvtriidx[idxs[i]*3+2]
+		}
+		mesh.uvtriidx = uvidx
 	}
 
 	if mesh.normalidx != nil {
@@ -114,7 +118,6 @@ func (mesh *PolyMesh) initAccel() error {
 	}
 
 	mesh.idxp = idxp
-	mesh.uvtriidx = uvidx
 
 	/*
 		fmt.Printf("Walk %v\n", mesh.Name())

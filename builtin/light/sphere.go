@@ -126,7 +126,7 @@ func raySphereIntersect(Ro, Rd, P m.Vec3, radius float32) (float32, bool) {
 func sqr(x float32) float32 { return x * x }
 
 // SampleArea implements core.Light.
-func (d *Sphere) SampleArea(sg *core.ShaderContext, n int) error {
+func (d *Sphere) SampleArea(sg *core.ShaderContext, n int, scramble0, scramble1 uint64) error {
 
 	V := m.Vec3Sub(d.P, sg.P)
 
@@ -137,9 +137,9 @@ func (d *Sphere) SampleArea(sg *core.ShaderContext, n int) error {
 	u := m.Vec3Cross(w, v)
 
 	for i := 0; i < n; i++ {
-		idx := uint64(sg.I*sg.NSamples + sg.Sample + i)
-		r0 := ldseq.VanDerCorput(idx, sg.SampleScramble)
-		r1 := ldseq.Sobol(idx, sg.SampleScramble2)
+		idx := uint64(sg.I*d.NumSamples(sg) + sg.Sample + i)
+		r0 := ldseq.VanDerCorput(idx, scramble0)
+		r1 := ldseq.Sobol(idx, scramble1)
 
 		theta := m.Acos(1 - float32(r0) + float32(r0)*m.Sqrt(1-sqr(d.Radius/l)))
 		phi := 2 * m.Pi * float32(r1)

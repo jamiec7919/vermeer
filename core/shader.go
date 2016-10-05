@@ -42,21 +42,21 @@ type Shader interface {
 // ShaderContext encapsulates all of the data needed for evaluating shaders.
 // These should only ever be created with NewShaderContext.
 type ShaderContext struct {
-	X, Y                            int32   // raster positions
-	Sx, Sy                          float32 // screen space [-1,1]x[-1,1]
-	RayType                         uint16  // Ray type
-	Level                           uint8   // Recursive level of sample (0 for first hit)
-	I, Sample, NSamples             int     // pixel sample index, sample index, total samples
-	SampleScramble, SampleScramble2 uint64
-	Weight                          float32 // Sample weight
-	Lambda                          float32 // Wavelength
-	Time                            float32
-	Ro, Rd                          m.Vec3         // Ray origin and direction
-	Rl                              float64        // Ray length (|Ro-P|)
-	ElemID                          uint32         // Element ID (triangle, curve etc.)
-	Geom                            Geom           // Geom pointer
-	Psc                             *ShaderContext // Parent (last shaded)
-	Shader                          Shader
+	X, Y                int32     // raster positions
+	Sx, Sy              float32   // screen space [-1,1]x[-1,1]
+	RayType             uint16    // Ray type
+	Level               uint8     // Recursive level of sample (0 for first hit)
+	I, Sample, NSamples int       // pixel sample index, sample index, total samples
+	Scramble            [2]uint64 // Per pixel scramble values for lights and glossy
+	Weight              float32   // Sample weight
+	Lambda              float32   // Wavelength
+	Time                float32
+	Ro, Rd              m.Vec3         // Ray origin and direction
+	Rl                  float64        // Ray length (|Ro-P|)
+	ElemID              uint32         // Element ID (triangle, curve etc.)
+	Geom                Geom           // Geom pointer
+	Psc                 *ShaderContext // Parent (last shaded)
+	Shader              Shader
 
 	Transform, InvTransform m.Matrix4
 
@@ -147,9 +147,6 @@ func (sc *ShaderContext) OffsetP(dir int) m.Vec3 {
 // LightsPrepare initialises the lighting loop.
 func (sc *ShaderContext) LightsPrepare() {
 	sc.Sample = 0
-	sc.SampleScramble = uint64(sc.task.rand.Int63())  // This no longer needs to be in sc
-	sc.SampleScramble2 = uint64(sc.task.rand.Int63()) // as the lights generate the n samples in SampleArea.
-	//sc.SampleScramble = 0
 	scene.LightsPrepare(sc)
 
 	sc.Lidx = -1 // Must be -1 as it is updated first thing in LightsGetSample.
@@ -180,10 +177,8 @@ func (sc *ShaderContext) LightsGetSample() bool {
 		}
 
 		sc.Sample = 0
-		sc.SampleScramble = uint64(sc.task.rand.Int63())
-		sc.SampleScramble2 = uint64(sc.task.rand.Int63())
 		sc.Lp = sc.Lights[sc.Lidx]
-		sc.Lp.SampleArea(sc, n)
+		sc.Lp.SampleArea(sc, n, sc.Scramble[0], sc.Scramble[1])
 
 	}
 

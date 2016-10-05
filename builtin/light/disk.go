@@ -83,11 +83,11 @@ func (d *Disk) Geom() core.Geom { return d.geom }
 func (d *Disk) PostRender() error { return nil }
 
 // SampleArea implements core.Light.
-func (d *Disk) SampleArea(sg *core.ShaderContext, n int) error {
-
-	idx := uint64(sg.I*sg.NSamples + sg.Sample)
-	r0 := ldseq.VanDerCorput(idx, sg.SampleScramble)
-	r1 := ldseq.Sobol(idx, sg.SampleScramble2)
+func (d *Disk) SampleArea(sg *core.ShaderContext, n int, scramble0, scramble1 uint64) error {
+	panic("builtin/light/disk.go: SampleArea not implemented")
+	idx := uint64(sg.I*d.NumSamples(sg) + sg.Sample)
+	r0 := ldseq.VanDerCorput(idx, scramble0)
+	r1 := ldseq.Sobol(idx, scramble1)
 
 	u := d.Radius * m.Sqrt(float32(r0)) * m.Cos(2*m.Pi*float32(r1))
 	v := d.Radius * m.Sqrt(float32(r0)) * m.Sin(2*m.Pi*float32(r1))

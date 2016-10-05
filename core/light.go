@@ -24,7 +24,7 @@ type Light interface {
 	// SampleArea samples n points on the surface of the light by area as seen from given ShaderGlobals point.
 	// sg.Lsamples should be filled with the samples using append.
 	// Returns nil on successful sample.
-	SampleArea(sg *ShaderContext, n int) error
+	SampleArea(sg *ShaderContext, n int, scramble0, scramble1 uint64) error
 
 	// DiffuseShadeMult returns the diffuse lighting multiplier.
 	DiffuseShadeMult() float32

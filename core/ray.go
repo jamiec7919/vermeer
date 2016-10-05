@@ -33,8 +33,9 @@ type Ray struct {
 	X, Y         int32   // Raster position
 	Sx, Sy       float32 // Screen space coords [-1,1]x[-1,1]
 	Level        uint8
-	Type         uint32 // Ray type bits
-	I            int    // pixel sample index
+	Type         uint32    // Ray type bits
+	I            int       // pixel sample index
+	Scramble     [2]uint64 // Pixel scramble values used for light/glossy scrambling
 
 	// Ray differentials
 	DdPdx, DdPdy m.Vec3 // Ray differential
@@ -63,6 +64,8 @@ func (r *Ray) Init(ty uint32, P, D m.Vec3, maxdist float32, level uint8, lambda,
 	r.LeafsT = 0
 }
 
+// Setup should be called after P and D have been set, this will precalculate various values for triangle intersection.  This
+// is called by Init but sometimes may need to call it manually.
 func (r *Ray) Setup() {
 
 	r.Kz = 0

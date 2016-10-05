@@ -186,10 +186,12 @@ func ParseMtlLib(filename string) (shaders []Shader, err error) {
 				return shaders, err
 			}
 			mtl.params["DiffuseColour"] = &rgbparam{[3]float32{float32(r), float32(g), float32(b)}}
+			mtl.params["DiffuseStrength"] = &floatparam{float32(1)}
 
 		case "map_Kd":
 
 			mtl.params["DiffuseColour"] = &texparam{lscan.Rest()}
+			mtl.params["DiffuseStrength"] = &floatparam{float32(1)}
 
 		case "map_bump":
 			i := 1

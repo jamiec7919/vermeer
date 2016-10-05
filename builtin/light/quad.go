@@ -84,7 +84,7 @@ func (d *Quad) NumSamples(sg *core.ShaderContext) int {
 func (d *Quad) Geom() core.Geom { return d.geom }
 
 // SampleArea implements core.Light.
-func (d *Quad) SampleArea(sg *core.ShaderContext, n int) error {
+func (d *Quad) SampleArea(sg *core.ShaderContext, n int, scramble0, scramble1 uint64) error {
 
 	a1 := sphericalTriangleArea(d.p[0], d.p[1], d.p[2], sg.P)
 	a2 := sphericalTriangleArea(d.p[0], d.p[2], d.p[3], sg.P)
@@ -92,22 +92,22 @@ func (d *Quad) SampleArea(sg *core.ShaderContext, n int) error {
 	w2 := float64(a2 / (a1 + a2))
 
 	for i := 0; i < n; i++ {
-		idx := uint64(sg.I*sg.NSamples + sg.Sample + i)
-		r0 := ldseq.VanDerCorput(idx, sg.SampleScramble)
-		r1 := ldseq.Sobol(idx, sg.SampleScramble2)
+		idx := uint64(sg.I*d.NumSamples(sg) + sg.Sample + i)
+		r0 := ldseq.VanDerCorput(idx, scramble0)
+		r1 := ldseq.Sobol(idx, scramble1)
 
 		var x m.Vec3
 		var pdf float64
 
 		if r0 < w1 {
+			r0 = r0 / (w1 + w2)
 			x, pdf = sampleSphericalTriangle(d.p[0], d.p[1], d.p[2], sg.P, r0, r1)
 
 			pdf *= w1
-			r0 = r0 / (w1 + w2)
 		} else {
+			r0 = (r0 - w1) / (w1 + w2)
 			x, pdf = sampleSphericalTriangle(d.p[0], d.p[2], d.p[3], sg.P, r0, r1)
 			pdf *= 1 - w1
-			r0 = (r0 - w1) / (w1 + w2)
 		}
 
 		// x is point on sphere, do a ray-plane intersection
