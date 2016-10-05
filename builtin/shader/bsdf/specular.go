@@ -6,9 +6,9 @@ package bsdf
 
 import (
 	"github.com/jamiec7919/vermeer/colour"
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	"log"
-	"vermeer/core"
 )
 
 func reflect(omegaR, N m.Vec3) (omegaO m.Vec3) {
@@ -37,23 +37,22 @@ func refract(omegaR m.Vec3, ior float32) (omegaO m.Vec3) {
 	return
 }
 
-// Specular2 implements perfect mirror specular reflection.
+// Specular implements perfect mirror specular reflection.
 // Instanced for each point
-type Specular2 struct {
-	Lambda       float32
-	OmegaR       m.Vec3
-	fresnel      core.Fresnel
-	transmissive float32
-	thin         bool
+type Specular struct {
+	Lambda  float32
+	OmegaR  m.Vec3
+	fresnel core.Fresnel
+	U, V, N m.Vec3
 }
 
 // NewSpecular returns a new instance of the model.
-func NewSpecular(sg *core.ShaderGlobals, fresnel core.Fresnel, transmissive float32, thin bool) *Specular2 {
-	return &Specular2{sg.Lambda, sg.ViewDirection(), fresnel, transmissive, thin}
+func NewSpecular(sg *core.ShaderContext, omegaI m.Vec3, fresnel core.Fresnel, U, V, N m.Vec3) *Specular {
+	return &Specular{sg.Lambda, m.Vec3BasisProject(U, V, N, omegaI), fresnel, U, V, N}
 }
 
 // Sample implements core.BSDF.
-func (b *Specular2) Sample(r0, r1 float64) (omegaO m.Vec3) {
+func (b *Specular) Sample(r0, r1 float64) (omegaO m.Vec3) {
 
 	//fresnel := fresnel.Kr(m.Vec3DotAbs(b.OmegaRm.Vec3{0, 0, 1})).Maxh()
 
@@ -77,16 +76,16 @@ func (b *Specular2) Sample(r0, r1 float64) (omegaO m.Vec3) {
 }
 
 // PDF implements core.BSDF.
-func (b *Specular2) PDF(omegaO m.Vec3) float64 {
+func (b *Specular) PDF(omegaO m.Vec3) float64 {
 	return 1
 }
 
 // Eval implements core.BSDF.
-func (b *Specular2) Eval(omegaO m.Vec3) (rho colour.Spectrum) {
+func (b *Specular) Eval(omegaO m.Vec3) (rho colour.Spectrum) {
 	fresnel := b.fresnel.Kr(b.OmegaR[2])
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(fresnel[0], fresnel[1], fresnel[2])
+	rho.FromRGB(fresnel)
 	rho.Scale(m.Vec3DotAbs(omegaO, m.Vec3{0, 0, 1}))
 	return
 }

@@ -11,10 +11,12 @@ package shader
 import (
 	"fmt"
 	"github.com/jamiec7919/vermeer/builtin/shader/bsdf"
+	fr "github.com/jamiec7919/vermeer/builtin/shader/fresnel"
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/core/param"
 	m "github.com/jamiec7919/vermeer/math"
+	"github.com/jamiec7919/vermeer/math/ldseq"
 	"github.com/jamiec7919/vermeer/nodes"
 )
 
@@ -28,12 +30,19 @@ type ShaderStd struct {
 
 	Sides int `node:",opt"` // One or two sided
 
-	DiffuseColour   param.RGBUniform     `node:",opt"` // Colour parameter
-	DiffuseStrength param.Float32Uniform `node:",opt"` // Weight parameter
+	DiffuseColour    param.RGBUniform     `node:",opt"` // Colour parameter
+	DiffuseStrength  param.Float32Uniform `node:",opt"` // Weight parameter
+	DiffuseRoughness param.Float32Uniform `node:",opt"` // Oren-Nayar Roughness parameter
 
-	Spec1Colour    param.RGBUniform     `node:",opt"` // Colour parameter
-	Spec1Strength  param.Float32Uniform `node:",opt"` // Weight parameter
-	Spec1Roughness param.Float32Uniform `node:",opt"`
+	Spec1Colour       param.RGBUniform     `node:",opt"` // Colour parameter
+	Spec1Strength     param.Float32Uniform `node:",opt"` // Weight parameter
+	Spec1Roughness    param.Float32Uniform `node:",opt"`
+	Spec1FresnelModel string               `node:",opt"`
+	spec1FresnelModel fr.Model
+	Spec1FresnelRefl  param.RGBUniform `node:",opt"` // Colour parameter
+	Spec1FresnelEdge  param.RGBUniform `node:",opt"` // Colour parameter
+
+	IOR param.Float32Uniform `node:",opt"`
 }
 
 // Assert that ShaderStd satisfies important interfaces.
@@ -48,6 +57,14 @@ func (sh *ShaderStd) Def() core.NodeDef { return sh.NodeDef }
 
 // PreRender is a core.Node method.
 func (sh *ShaderStd) PreRender() error {
+
+	switch sh.Spec1FresnelModel {
+	case "Dielectric":
+		sh.spec1FresnelModel = fr.DielectricModel
+	case "Metal":
+		sh.spec1FresnelModel = fr.ConductorModel
+
+	}
 	return nil
 }
 
@@ -58,6 +75,10 @@ func (sh *ShaderStd) PostRender() error { return nil }
 // rays and shadow rays.
 func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 
+	if sg.Level > 3 {
+		return
+	}
+
 	// Construct a tangent space
 	V := m.Vec3Cross(sg.N, sg.DdPdu)
 
@@ -67,30 +88,40 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 	V = m.Vec3Normalize(V)
 	U := m.Vec3Cross(sg.N, V)
 
-	//diffBrdf := bsdf.NewOrenNayar(sg.Lambda, m.Vec3Neg(sg.Rd), 0.4, U, V, sg.N)
-	diffBrdf := bsdf.NewLambert(sg.Lambda, m.Vec3Neg(sg.Rd), U, V, sg.N)
+	diffRoughness := float32(0.3)
+
+	if sh.DiffuseRoughness != nil {
+		diffRoughness = sh.DiffuseRoughness.Float32(sg)
+	}
+
+	diffBrdf := bsdf.NewOrenNayar(sg.Lambda, m.Vec3Neg(sg.Rd), diffRoughness, U, V, sg.N)
+	//diffBrdf := bsdf.NewLambert(sg.Lambda, m.Vec3Neg(sg.Rd), U, V, sg.N)
 
 	var diffContrib colour.RGB
 
 	var diffColour colour.RGB
 
-	diffWeight := float32(0)
-	spec1Weight := float32(0)
-
 	if sh.DiffuseColour != nil {
 		diffColour = sh.DiffuseColour.RGB(sg)
 	}
+
+	diffWeight := float32(0)
+	spec1Weight := float32(0)
 
 	if sh.DiffuseStrength != nil {
 		diffWeight = sh.DiffuseStrength.Float32(sg)
 	}
 
-	totalWeight := m.Sqrt(diffWeight*diffWeight + spec1Weight*spec1Weight)
+	if sh.Spec1Strength != nil {
+		spec1Weight = sh.Spec1Strength.Float32(sg)
+	}
+
+	totalWeight := diffWeight + spec1Weight
 	diffWeight /= totalWeight
 	spec1Weight /= totalWeight
 
-	if diffWeight == 0.0 && spec1Weight == 0.0 {
-		panic(fmt.Sprintf("Shader %v has no diffuse or spec1 wreight", sh.Name()))
+	if totalWeight == 0.0 {
+		panic(fmt.Sprintf("Shader %v has no weight", sh.Name()))
 	}
 
 	if diffWeight > 0.0 {
@@ -113,12 +144,116 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 		diffContrib.Scale(diffWeight)
 	}
 
+	ior := float32(1.7)
+
+	if sh.IOR != nil {
+		ior = sh.IOR.Float32(sg)
+	}
+
+	var fresnel core.Fresnel
+
+	switch sh.spec1FresnelModel {
+	case fr.DielectricModel:
+		fresnel = fr.NewDielectric(ior)
+	case fr.ConductorModel:
+
+		refl := colour.RGB{0.5, 0.5, 0.5}
+		edge := colour.RGB{0.5, 0.5, 0.5}
+
+		if sh.Spec1FresnelRefl != nil {
+			refl = sh.Spec1FresnelRefl.RGB(sg)
+		}
+
+		if sh.Spec1FresnelEdge != nil {
+			refl = sh.Spec1FresnelEdge.RGB(sg)
+		}
+
+		fresnel = fr.NewConductor(0, refl, edge)
+	}
+
+	var spec1Contrib colour.RGB
+
+	if spec1Weight > 0.0 {
+		spec1Roughness := float32(0.5)
+
+		if sh.Spec1Roughness != nil {
+			spec1Roughness = sh.Spec1Roughness.Float32(sg)
+		}
+
+		var spec1Colour colour.RGB
+
+		if sh.Spec1Colour != nil {
+			spec1Colour = sh.Spec1Colour.RGB(sg)
+		}
+
+		var spec1BRDF core.BSDF
+
+		if spec1Roughness == 0.0 {
+			spec1BRDF = bsdf.NewSpecular(sg, m.Vec3Neg(sg.Rd), fresnel, U, V, sg.N)
+		} else {
+			spec1BRDF = bsdf.NewMicrofacetGGX(sg, m.Vec3Neg(sg.Rd), fresnel, spec1Roughness, U, V, sg.N)
+		}
+
+		//	Kr := fresnel.Kr(m.Vec3DotAbs(sg.N, m.Vec3Neg(sg.Rd)))
+		var samp core.TraceSample
+		ray := sg.NewRay()
+
+		spec1Samples := 4
+
+		if spec1Roughness == 0.0 {
+			spec1Samples = 1
+		}
+
+		for i := 0; i < spec1Samples; i++ {
+			idx := uint64(sg.I*spec1Samples /*+ sg.Sample*/ + i)
+			r0 := ldseq.VanDerCorput(idx, sg.Scramble[0])
+			r1 := ldseq.Sobol(idx, sg.Scramble[1])
+
+			omegaO := spec1BRDF.Sample(r0, r1)
+			pdf := spec1BRDF.PDF(omegaO)
+
+			spec1Omega := m.Vec3BasisExpand(U, V, sg.N, omegaO)
+
+			if m.Vec3Dot(spec1Omega, sg.Ng) <= 0.0 {
+				continue
+
+			}
+			//fmt.Printf("%v %v\n", spec1Omega, m.Vec3Length(spec1Omega))
+
+			ray.Init(0, sg.OffsetP(1), spec1Omega, m.Inf(1), sg.Level+1, sg.Lambda, sg.Time)
+			ray.Scramble[0] = sg.Scramble[0] // ^ math.Float64bits(pdf)
+			ray.Scramble[1] = sg.Scramble[1] // ^ math.Float64bits(pdf)
+			ray.I = sg.I
+
+			if core.Trace(ray, &samp) {
+
+				rho := spec1BRDF.Eval(omegaO)
+
+				rho.Scale(1.0 / float32(pdf))
+
+				col := rho.ToRGB()
+
+				//fmt.Printf("%v %v\n", col, samp.Colour)
+				col.Mul(spec1Colour)
+				col.Mul(samp.Colour)
+				spec1Contrib.Add(col)
+			}
+
+		}
+
+		sg.ReleaseRay(ray)
+
+		spec1Contrib.Scale(spec1Weight / float32(spec1Samples))
+
+	}
+
 	contrib := colour.RGB{}
 
 	emissContrib := sh.EvalEmission(sg, m.Vec3Neg(sg.Rd))
 
 	contrib.Add(emissContrib)
 	contrib.Add(diffContrib)
+	contrib.Add(spec1Contrib)
 
 	sg.OutRGB = contrib
 }

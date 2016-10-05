@@ -6,8 +6,8 @@ package bsdf
 
 import (
 	"github.com/jamiec7919/vermeer/colour"
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
-	"vermeer/core"
 	//"log"
 	"math"
 )
@@ -15,14 +15,12 @@ import (
 // MicrofacetGGX implements the GGX specular microfacet model.
 // Instanced for each point
 type MicrofacetGGX struct {
-	Lambda float32
-	OmegaR m.Vec3 // reflected (view or out) direction
-	//IOR          float32 // n_i/n_t  (n_i = air)
-	Roughness    float32
-	Fresnel      core.Fresnel
-	transmissive bool
-	thin         bool
-	metal        bool
+	Lambda    float32
+	OmegaR    m.Vec3 // reflected (view or out) direction
+	Roughness float32
+	Fresnel   core.Fresnel
+	U, V, N   m.Vec3 // Tangent space
+
 }
 
 func chi(x float32) float32 {
@@ -80,8 +78,8 @@ func sign(v float32) float32 {
 }
 
 // NewMicrofacetGGX returns a new instance of the model for the given parameters.
-func NewMicrofacetGGX(sg *core.ShaderGlobals, fresnel core.Fresnel, roughness float32, transmissive, thin bool) *MicrofacetGGX {
-	return &MicrofacetGGX{sg.Lambda, sg.ViewDirection(), roughness * roughness, fresnel, transmissive, thin, false}
+func NewMicrofacetGGX(sg *core.ShaderContext, omegaI m.Vec3, fresnel core.Fresnel, roughness float32, U, V, N m.Vec3) *MicrofacetGGX {
+	return &MicrofacetGGX{sg.Lambda, m.Vec3BasisProject(U, V, N, omegaI), roughness * roughness, fresnel, U, V, N}
 }
 
 // Sample implements core.BSDF.
@@ -125,7 +123,7 @@ func (b *MicrofacetGGX) Eval(omegaI m.Vec3) (rho colour.Spectrum) {
 	denom := 4 * m.Abs(b.OmegaR[2]) * m.Abs(omegaI[2])
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(fresnel[0], fresnel[1], fresnel[2])
+	rho.FromRGB(fresnel)
 	rho.Scale(m.Abs(omegaI[2]) * numer / denom)
 	return
 }
@@ -157,7 +155,7 @@ func (b *MicrofacetGGX) _weight(omegaI m.Vec3) (rho colour.Spectrum) {
 	weight /= m.Abs(omegaM[2]) * m.Abs(omegaI[2])
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(1, 1, 1)
+	rho.FromRGB(colour.RGB{1, 1, 1})
 	rho.Scale(weight)
 	return
 }

@@ -178,7 +178,7 @@ func (sc *ShaderContext) LightsGetSample() bool {
 
 		sc.Sample = 0
 		sc.Lp = sc.Lights[sc.Lidx]
-		sc.Lp.SampleArea(sc, n, sc.Scramble[0], sc.Scramble[1])
+		sc.Lp.SampleArea(sc, n)
 
 	}
 

@@ -96,7 +96,7 @@ func (mesh *PolyMesh) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 		sg.Transform = transform
 		sg.InvTransform = invTransform
 		sg.P = m.Matrix4MulPoint(transform, sg.Po)
-		sg.N = m.Matrix4MulVec(m.Matrix4Transpose(transform), sg.N)
+		sg.N = m.Matrix4MulVec(m.Matrix4Transpose(invTransform), sg.N)
 	}
 	return hit
 }
@@ -177,7 +177,7 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 			detSign := m.SignMask(det)
 
 			// NOTE: the t < 0 bound here is a bit adhoc, it is possible to calculate tighter error bounds automatically.
-			if m.Xorf(T, detSign) < mesh.RayBias*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Tclosest*m.Xorf(det, detSign) {
+			if m.Xorf(T, detSign) < (m.EpsilonFloat32+mesh.RayBias)*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Tclosest*m.Xorf(det, detSign) {
 				continue
 			}
 

@@ -84,7 +84,7 @@ func (d *Quad) NumSamples(sg *core.ShaderContext) int {
 func (d *Quad) Geom() core.Geom { return d.geom }
 
 // SampleArea implements core.Light.
-func (d *Quad) SampleArea(sg *core.ShaderContext, n int, scramble0, scramble1 uint64) error {
+func (d *Quad) SampleArea(sg *core.ShaderContext, n int) error {
 
 	a1 := sphericalTriangleArea(d.p[0], d.p[1], d.p[2], sg.P)
 	a2 := sphericalTriangleArea(d.p[0], d.p[2], d.p[3], sg.P)
@@ -93,8 +93,8 @@ func (d *Quad) SampleArea(sg *core.ShaderContext, n int, scramble0, scramble1 ui
 
 	for i := 0; i < n; i++ {
 		idx := uint64(sg.I*d.NumSamples(sg) + sg.Sample + i)
-		r0 := ldseq.VanDerCorput(idx, scramble0)
-		r1 := ldseq.Sobol(idx, scramble1)
+		r0 := ldseq.VanDerCorput(idx, sg.Scramble[0])
+		r1 := ldseq.Sobol(idx, sg.Scramble[1])
 
 		var x m.Vec3
 		var pdf float64
