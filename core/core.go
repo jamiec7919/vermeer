@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+/*
+Package core provides core interfaces and main render control paths.
+*/
 package core
 
 var stats RenderStats

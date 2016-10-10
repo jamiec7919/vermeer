@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+/*
+Package fresnel implements various Fresnel models.
+*/
 package fresnel
 
-// Fresnel model type
+// Model is the tyoe of Fresnel model constants.
 type Model int
 
-// Fresnel model constants
+// Fresnel model constants.
 const (
 	DielectricModel Model = iota
 	ConductorModel
