@@ -1,0 +1,361 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Release on Vermeer Light Tools</title>
+    <link>http://vermeerlt.com/categories/release/</link>
+    <description>Recent content in Release on Vermeer Light Tools</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 10 Oct 2016 15:10:42 +0100</lastBuildDate>
+    <atom:link href="http://vermeerlt.com/categories/release/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Release 0.2.0</title>
+      <link>http://vermeerlt.com/blog/release-0.2.0/</link>
+      <pubDate>Mon, 10 Oct 2016 15:10:42 +0100</pubDate>
+      
+      <guid>http://vermeerlt.com/blog/release-0.2.0/</guid>
+      <description>
+
+&lt;h2 id=&#34;features&#34;&gt;Features&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Disk, Sphere, Quad and triangle light sources&lt;/li&gt;
+&lt;li&gt;Polygon meshes&lt;/li&gt;
+&lt;li&gt;Basic texture support&lt;/li&gt;
+&lt;li&gt;BSDF support, Oren-Nayar diffuse and GGX specular&lt;/li&gt;
+&lt;li&gt;Efficient deterministic sampling&lt;/li&gt;
+&lt;li&gt;Progressive rendering&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;images&#34;&gt;Images&lt;/h2&gt;
+
+
+
+    
+
+    
+    
+
+
+
+
+    
+
+
+    
+
+    &lt;div class=&#34;box alt&#34;&gt;
+        &lt;div class=&#34;row uniform&#34;&gt;
+        
+        
+        
+            
+                &lt;div class=&#34;3u&#34;&gt;
+            
+            
+        
+            
+                
+                    
+                    &lt;span class=&#34;image fit&#34;&gt;
+                
+            
+            
+        
+            
+                
+                        &lt;img src=&#39;http://vermeerlt.com/img/render/0.2.0//cornell.jpg&#39;
+                            alt=&#34;Cornell Box&#34; /&gt;
+                    &lt;/span&gt;&lt;/div&gt;
+                
+                
+            
+            
+        
+            
+                &lt;div class=&#34;3u&#34;&gt;
+            
+            
+        
+            
+                
+                    
+                    &lt;span class=&#34;image fit&#34;&gt;
+                
+            
+            
+        
+            
+                
+                        &lt;img src=&#39;http://vermeerlt.com/img/render/0.2.0//lambo.jpg&#39;
+                            alt=&#34;Lambo&#34; /&gt;
+                    &lt;/span&gt;&lt;/div&gt;
+                
+                
+            
+            
+        
+            
+                &lt;div class=&#34;3u&#34;&gt;
+            
+            
+        
+            
+                
+                    
+                    &lt;span class=&#34;image fit&#34;&gt;
+                
+            
+            
+        
+            
+                
+                        &lt;img src=&#39;http://vermeerlt.com/img/render/0.2.0//teapot.jpg&#39;
+                            alt=&#34;Teapot&#34; /&gt;
+                    &lt;/span&gt;&lt;/div&gt;
+                
+                
+            
+            
+        
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+</description>
+    </item>
+    
+    <item>
+      <title>Release 0.1.0</title>
+      <link>http://vermeerlt.com/blog/release-0.1.0/</link>
+      <pubDate>Wed, 03 Aug 2016 15:10:42 +0100</pubDate>
+      
+      <guid>http://vermeerlt.com/blog/release-0.1.0/</guid>
+      <description>
+
+&lt;h2 id=&#34;features&#34;&gt;Features&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Distribution ray tracing&lt;/li&gt;
+&lt;li&gt;Disk light sources&lt;/li&gt;
+&lt;li&gt;Polygon meshes (+ WF .obj loading)&lt;/li&gt;
+&lt;li&gt;Basic texture support&lt;/li&gt;
+&lt;li&gt;BSDF support, Oren-Nayar diffuse and GGX specular&lt;/li&gt;
+&lt;li&gt;Transparency and thin-transparency support&lt;/li&gt;
+&lt;li&gt;Bump mapping&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;images&#34;&gt;Images&lt;/h2&gt;
+
+
+
+    
+
+    
+    
+
+
+
+
+    
+
+
+    
+
+    &lt;div class=&#34;box alt&#34;&gt;
+        &lt;div class=&#34;row uniform&#34;&gt;
+        
+        
+        
+            
+                &lt;div class=&#34;3u&#34;&gt;
+            
+            
+        
+            
+                
+                    
+                    &lt;span class=&#34;image fit&#34;&gt;
+                
+            
+            
+        
+            
+                
+                        &lt;img src=&#39;http://vermeerlt.com/img/render/0.1.0//gopher.jpg&#39;
+                            alt=&#34;Go Gopher&#34; /&gt;
+                    &lt;/span&gt;&lt;/div&gt;
+                
+                
+            
+            
+        
+            
+                &lt;div class=&#34;3u&#34;&gt;
+            
+            
+        
+            
+                
+                    
+                    &lt;span class=&#34;image fit&#34;&gt;
+                
+            
+            
+        
+            
+                
+                        &lt;img src=&#39;http://vermeerlt.com/img/render/0.1.0//head.jpg&#39;
+                            alt=&#34;Head&#34; /&gt;
+                    &lt;/span&gt;&lt;/div&gt;
+                
+                
+            
+            
+        
+            
+                &lt;div class=&#34;3u&#34;&gt;
+            
+            
+        
+            
+                
+                    
+                    &lt;span class=&#34;image fit&#34;&gt;
+                
+            
+            
+        
+            
+                
+                        &lt;img src=&#39;http://vermeerlt.com/img/render/0.1.0//Audi1.jpg&#39;
+                            alt=&#34;Audi R6&#34; /&gt;
+                    &lt;/span&gt;&lt;/div&gt;
+                
+                
+            
+            
+        
+            
+                &lt;div class=&#34;3u&#34;&gt;
+            
+            
+        
+            
+                
+                    
+                    &lt;span class=&#34;image fit&#34;&gt;
+                
+            
+            
+        
+            
+                
+                        &lt;img src=&#39;http://vermeerlt.com/img/render/0.1.0//audi_1h37m_1909iter.jpg&#39;
+                            alt=&#34;Audi&#34; /&gt;
+                    &lt;/span&gt;&lt;/div&gt;
+                
+                
+            
+            
+        
+            
+                &lt;div class=&#34;3u&#34;&gt;
+            
+            
+        
+            
+                
+                    
+                    &lt;span class=&#34;image fit&#34;&gt;
+                
+            
+            
+        
+            
+                
+                        &lt;img src=&#39;http://vermeerlt.com/img/render/0.1.0//cornell_155338b_1812iter_1h50m.jpg&#39;
+                            alt=&#34;Cornell Box&#34; /&gt;
+                    &lt;/span&gt;&lt;/div&gt;
+                
+                
+            
+            
+        
+            
+                &lt;div class=&#34;3u&#34;&gt;
+            
+            
+        
+            
+                
+                    
+                    &lt;span class=&#34;image fit&#34;&gt;
+                
+            
+            
+        
+            
+                
+                        &lt;img src=&#39;http://vermeerlt.com/img/render/0.1.0//CornellBox-Sphere.jpg&#39;
+                            alt=&#34;Cornell Box&#34; /&gt;
+                    &lt;/span&gt;&lt;/div&gt;
+                
+                
+            
+            
+        
+            
+                &lt;div class=&#34;3u&#34;&gt;
+            
+            
+        
+            
+                
+                    
+                    &lt;span class=&#34;image fit&#34;&gt;
+                
+            
+            
+        
+            
+                
+                        &lt;img src=&#39;http://vermeerlt.com/img/render/0.1.0//teapot.jpg&#39;
+                            alt=&#34;Teapot&#34; /&gt;
+                    &lt;/span&gt;&lt;/div&gt;
+                
+                
+            
+            
+        
+            
+                &lt;div class=&#34;3u&#34;&gt;
+            
+            
+        
+            
+                
+                    
+                    &lt;span class=&#34;image fit&#34;&gt;
+                
+            
+            
+        
+            
+                
+                        &lt;img src=&#39;http://vermeerlt.com/img/render/0.1.0//teapot2.jpg&#39;
+                            alt=&#34;Teapot2&#34; /&gt;
+                    &lt;/span&gt;&lt;/div&gt;
+                
+                
+            
+            
+        
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,921 @@
+<!DOCTYPE HTML>
+
+<html>
+    <head>
+        
+            
+                <title>Release 0.1.0</title>
+            
+        
+
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="generator" content="Hugo 0.16" />
+        
+
+
+        
+        
+            
+                <meta name="description" content="Physically plausible production renderer.">
+            
+        
+
+        
+
+  <meta name="twitter:card" content="summary"/>
+
+
+
+<meta name="twitter:title" content="Release 0.1.0"/>
+<meta name="twitter:description" content="Features Distribution ray tracing Disk light sources Polygon meshes (&#43; WF .obj loading) Basic texture support BSDF support, Oren-Nayar diffuse and GGX specular Transparency and thin-transparency support Bump mapping Images"/>
+
+
+
+        <meta property="og:title" content="Release 0.1.0" />
+<meta property="og:description" content="Features Distribution ray tracing Disk light sources Polygon meshes (&#43; WF .obj loading) Basic texture support BSDF support, Oren-Nayar diffuse and GGX specular Transparency and thin-transparency support Bump mapping Images" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://vermeerlt.com/blog/release-0.1.0/" />
+
+
+<meta property="og:updated_time" content="2016-08-03T15:10:42&#43;01:00"/>
+
+
+
+
+
+
+
+
+
+
+        
+<meta itemprop="name" content="Release 0.1.0">
+<meta itemprop="description" content="Features Distribution ray tracing Disk light sources Polygon meshes (&#43; WF .obj loading) Basic texture support BSDF support, Oren-Nayar diffuse and GGX specular Transparency and thin-transparency support Bump mapping Images">
+
+
+<meta itemprop="dateModified" content="2016-08-03T15:10:42&#43;01:00" />
+<meta itemprop="wordCount" content="30">
+
+
+
+<meta itemprop="keywords" content="Release," />
+
+        
+
+        
+
+        
+        
+            
+        
+
+        
+        
+
+        
+            
+                
+                    <link rel="stylesheet" href="/css/main.min.css" />
+                
+            
+        
+
+        
+        
+        
+            
+        
+    </head>
+    <body>
+
+        
+        <div id="wrapper">
+
+    
+    
+<header id="header">
+    
+        <h2><a href="/">Vermeer LT</i></a></h2>
+    
+
+    <nav class="links">
+        <ul>
+            
+                <li>
+                    <a href="/blog">
+                        
+                            <i class="fa fa-newspaper-o">&nbsp;</i>Blog
+                    </a>
+                </li>
+            
+                <li>
+                    <a href="/categories">
+                        Categories
+                    </a>
+                </li>
+            
+                <li>
+                    <a href="/about">
+                        About
+                    </a>
+                </li>
+            
+        </ul>
+    </nav>
+    <nav class="main">
+        <ul>
+            
+            <li id="share-nav" class="share-menu" style="display:none;">
+                <a class="fa-share-alt" href="#share-menu">Share</a>
+            </li>
+            
+            <li class="search">
+                <a class="fa-search" href="#search">Search</a>
+                <form id="search" method="get" action="//google.com/search">
+                    <input type="text" name="q" placeholder="Search" />
+                    <input type="hidden" name="q" value="site:http://vermeerlt.com/">
+                </form>
+            </li>
+            <li class="menu">
+                <a class="fa-bars" href="#menu">Menu</a>
+            </li>
+        </ul>
+    </nav>
+</header>
+
+
+<section id="menu">
+
+    
+        <section>
+            <form class="search" method="get" action="//google.com/search">
+                <input type="text" name="q" placeholder="Search" />
+                <input type="hidden" name="q" value="site:http://vermeerlt.com/">
+            </form>
+        </section>
+
+    
+        <section>
+            <ul class="links">
+                
+                    <li>
+                        <a href="/blog">
+                            <h3>
+                                
+                                    <i class="fa fa-newspaper-o">&nbsp;</i>
+                                
+                                Blog
+                            </h3>
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href="/categories">
+                            <h3>
+                                
+                                Categories
+                            </h3>
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href="/about">
+                            <h3>
+                                
+                                About
+                            </h3>
+                        </a>
+                    </li>
+                
+            </ul>
+        </section>
+
+    
+        <section>
+            <ul class="links">
+                <header>
+                    <h3>Recent Posts</h3>
+                </header>
+                
+                    
+                
+
+                
+                    <li>
+                        <a href="http://vermeerlt.com/blog/release-0.2.0/"><p>Release 0.2.0</p></a>
+                    </li>
+                
+                    <li>
+                        <a href="http://vermeerlt.com/blog/release-0.1.0/"><p>Release 0.1.0</p></a>
+                    </li>
+                
+            </ul>
+        </section>
+
+    
+        
+</section>
+
+    <section id="share-menu">
+    <section id="social-share-nav">
+        <ul class="links">
+            <header>
+                <h3>Share this post <i class="fa fa-smile-o"></i></h3>
+            </header>
+            
+
+
+<li><a href="//twitter.com/share?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f&text=Release%200.1.0&via=" target="_blank" class="share-btn twitter">
+    <i class="fa fa-twitter"></i>
+    <p>Twitter</p>
+</a></li>
+
+
+<li><a href="//plus.google.com/share?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f" target="_blank" class="share-btn google-plus">
+    <i class="fa fa-google-plus"></i>
+    <p>Google+</p>
+</a></li>
+
+
+<li><a href="//www.facebook.com/sharer/sharer.php?u=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f" target="_blank" class="share-btn facebook">
+    <i class="fa fa-facebook"></i>
+    <p>Facebook</p>
+</a></li>
+
+
+<li><a href="//reddit.com/submit?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f&title=Release%200.1.0" target="_blank" class="share-btn reddit">
+    <i class="fa fa-reddit-alien"></i>
+    <p>Reddit</p>
+</a></li>
+
+
+<li><a href="//www.linkedin.com/shareArticle?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f&title=Release%200.1.0" target="_blank" class="share-btn linkedin">
+    <i class="fa fa-linkedin"></i>
+    <p>LinkedIn</p>
+</a></li>
+
+
+<li><a href="//www.stumbleupon.com/submit?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f&title=Release%200.1.0" target="_blank" class="share-btn stumbleupon">
+    <i class="fa fa-stumbleupon"></i>
+    <p>StumbleUpon</p>
+</a></li>
+
+
+<li><a href="mailto:?subject=Check out this post by &body=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f" target="_blank" class="share-btn email">
+    <i class="fa fa-envelope"></i>
+    <p>Email</p>
+</a></li>
+
+        </ul>
+    </section>
+</section>
+
+    
+    <div id="main">
+        
+        
+        <article class="post">
+    <header>
+    <div class="title">
+        
+            <h1><a href="http://vermeerlt.com/blog/release-0.1.0/">Release 0.1.0</a></h1>
+            
+        
+        
+    </div>
+    <div class="meta">
+        
+            
+        
+
+        <time class="published"
+            datetime='2016-08-03'>
+            August 3, 2016</time>
+        <span class="author"></span>
+        
+            <p>1 minute read</p>
+        
+        
+    </div>
+</header>
+
+
+    <section id="social-share">
+        <ul class="icons">
+            
+
+
+<li><a href="//twitter.com/share?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f&text=Release%200.1.0&via=" target="_blank" class="share-btn twitter">
+    <i class="fa fa-twitter"></i>
+    <p>Twitter</p>
+</a></li>
+
+
+<li><a href="//plus.google.com/share?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f" target="_blank" class="share-btn google-plus">
+    <i class="fa fa-google-plus"></i>
+    <p>Google+</p>
+</a></li>
+
+
+<li><a href="//www.facebook.com/sharer/sharer.php?u=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f" target="_blank" class="share-btn facebook">
+    <i class="fa fa-facebook"></i>
+    <p>Facebook</p>
+</a></li>
+
+
+<li><a href="//reddit.com/submit?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f&title=Release%200.1.0" target="_blank" class="share-btn reddit">
+    <i class="fa fa-reddit-alien"></i>
+    <p>Reddit</p>
+</a></li>
+
+
+<li><a href="//www.linkedin.com/shareArticle?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f&title=Release%200.1.0" target="_blank" class="share-btn linkedin">
+    <i class="fa fa-linkedin"></i>
+    <p>LinkedIn</p>
+</a></li>
+
+
+<li><a href="//www.stumbleupon.com/submit?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f&title=Release%200.1.0" target="_blank" class="share-btn stumbleupon">
+    <i class="fa fa-stumbleupon"></i>
+    <p>StumbleUpon</p>
+</a></li>
+
+
+<li><a href="mailto:?subject=Check out this post by &body=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.1.0%2f" target="_blank" class="share-btn email">
+    <i class="fa fa-envelope"></i>
+    <p>Email</p>
+</a></li>
+
+        </ul>
+    </section>
+    
+
+    <div id="content">
+        
+
+<h2 id="features">Features</h2>
+
+<ul>
+<li>Distribution ray tracing</li>
+<li>Disk light sources</li>
+<li>Polygon meshes (+ WF .obj loading)</li>
+<li>Basic texture support</li>
+<li>BSDF support, Oren-Nayar diffuse and GGX specular</li>
+<li>Transparency and thin-transparency support</li>
+<li>Bump mapping</li>
+</ul>
+
+<h2 id="images">Images</h2>
+
+
+
+    
+
+    
+    
+
+
+
+
+    
+
+
+    
+
+    <div class="box alt">
+        <div class="row uniform">
+        
+        
+        
+            
+                <div class="3u">
+            
+            
+        
+            
+                
+                    
+                    <span class="image fit">
+                
+            
+            
+        
+            
+                
+                        <img src='/img/render/0.1.0//gopher.jpg'
+                            alt="Go Gopher" />
+                    </span></div>
+                
+                
+            
+            
+        
+            
+                <div class="3u">
+            
+            
+        
+            
+                
+                    
+                    <span class="image fit">
+                
+            
+            
+        
+            
+                
+                        <img src='/img/render/0.1.0//head.jpg'
+                            alt="Head" />
+                    </span></div>
+                
+                
+            
+            
+        
+            
+                <div class="3u">
+            
+            
+        
+            
+                
+                    
+                    <span class="image fit">
+                
+            
+            
+        
+            
+                
+                        <img src='/img/render/0.1.0//Audi1.jpg'
+                            alt="Audi R6" />
+                    </span></div>
+                
+                
+            
+            
+        
+            
+                <div class="3u">
+            
+            
+        
+            
+                
+                    
+                    <span class="image fit">
+                
+            
+            
+        
+            
+                
+                        <img src='/img/render/0.1.0//audi_1h37m_1909iter.jpg'
+                            alt="Audi" />
+                    </span></div>
+                
+                
+            
+            
+        
+            
+                <div class="3u">
+            
+            
+        
+            
+                
+                    
+                    <span class="image fit">
+                
+            
+            
+        
+            
+                
+                        <img src='/img/render/0.1.0//cornell_155338b_1812iter_1h50m.jpg'
+                            alt="Cornell Box" />
+                    </span></div>
+                
+                
+            
+            
+        
+            
+                <div class="3u">
+            
+            
+        
+            
+                
+                    
+                    <span class="image fit">
+                
+            
+            
+        
+            
+                
+                        <img src='/img/render/0.1.0//CornellBox-Sphere.jpg'
+                            alt="Cornell Box" />
+                    </span></div>
+                
+                
+            
+            
+        
+            
+                <div class="3u">
+            
+            
+        
+            
+                
+                    
+                    <span class="image fit">
+                
+            
+            
+        
+            
+                
+                        <img src='/img/render/0.1.0//teapot.jpg'
+                            alt="Teapot" />
+                    </span></div>
+                
+                
+            
+            
+        
+            
+                <div class="3u">
+            
+            
+        
+            
+                
+                    
+                    <span class="image fit">
+                
+            
+            
+        
+            
+                
+                        <img src='/img/render/0.1.0//teapot2.jpg'
+                            alt="Teapot2" />
+                    </span></div>
+                
+                
+            
+            
+        
+        </div>
+    </div>
+
+
+    </div>
+
+    <footer>
+        <ul class="stats">
+    
+        
+
+        
+        
+            <li>
+                
+                
+                    
+
+                    
+
+                    
+
+                    
+                        Category
+                    
+                
+            </li>
+        
+    
+
+    
+    
+        <li><a href='/categoriesrelease'>Release</a></li>
+    
+</ul>
+
+    </footer>
+</article>
+<ul class="actions pagination">
+    
+        <li><a href="http://vermeerlt.com/blog/prerelease/"
+                class="button big previous">Pre-release</a></li>
+    
+
+    
+        <li><a href="http://vermeerlt.com/blog/release-0.2.0/"
+                class="button big next">Release 0.2.0</a></li>
+    
+</ul>
+
+
+
+    
+        <article class="post">
+            <div id="disqus_thread"></div>
+<script type="text/javascript">
+    var disqus_shortname = 'shortname';
+    var disqus_identifier = 'http:\/\/vermeerlt.com\/blog\/release-0.1.0\/';
+    var disqus_title = 'Release 0.1.0';
+    var disqus_url = 'http:\/\/vermeerlt.com\/blog\/release-0.1.0\/';
+
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        </article>
+    
+
+
+    </div>
+    
+<section id="sidebar">
+
+    
+        <section id="intro">
+            
+            
+                
+                    <a href="/" class="logo"><img src="/img/main/logo.jpg" alt="Vermeer Light Tools" /></a>
+                
+            
+            
+                <header>
+                    <h2>Vermeer Light Tools</h2>
+                    <p>Physically plausible production renderer.</p>
+                </header>
+            
+            <ul class="icons">
+                
+                
+                    
+<li><a href="//github.com/jamiec7919/vermeer/" target="_blank" title="GitHub" class="fa fa-github"></a></li>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<li><a href="//facebook.com/Vermeer-Light-Tools-764097793665652/" target="_blank" title="Facebook" class="fa fa-facebook"></a></li>
+
+
+
+
+
+
+                
+            </ul>
+        </section>
+
+    
+        <section id="recent-posts">
+            <ul class="posts">
+                <header>
+                    <h3>Recent Posts</h3>
+                </header>
+                
+                    
+                
+
+                
+                    
+                
+
+                
+                    <li>
+                        <article>
+                            <header>
+                                <h3><a href="http://vermeerlt.com/blog/release-0.2.0/">Release 0.2.0</a></h3>
+                                
+                                    
+                                
+                                <time class="published" datetime=
+                                    '2016-10-10'>
+                                    October 10, 2016</time>
+                            </header>
+                        </article>
+                    </li>
+                
+                    <li>
+                        <article>
+                            <header>
+                                <h3><a href="http://vermeerlt.com/blog/release-0.1.0/">Release 0.1.0</a></h3>
+                                
+                                    
+                                
+                                <time class="published" datetime=
+                                    '2016-08-03'>
+                                    August 3, 2016</time>
+                            </header>
+                        </article>
+                    </li>
+                
+
+                
+                    <li>
+                        <ul class="actions">
+                            <li><a href=
+                            
+                                /blog/
+                            
+                            class="button">View more posts</a></li>
+                        </ul>
+                    </li>
+                
+            </ul>
+        </section>
+
+    
+    
+    
+    
+        <section id="categories">
+            <ul class="posts">
+                <header>
+                    <h3><a href="/categories/">Categories</a></h3>
+                </header>
+
+                
+                    
+                
+
+                
+                    <li>
+                        <article>
+                            <header>
+                                <a href="/categories/release/">Release</a>
+                                <span style="float:right;">2</span>
+                            </header>
+                        </article>
+                    </li>
+                
+            </ul>
+        </section>
+    
+
+    
+        
+        <section class="blurb">
+            <h2>About</h2>
+            <p>Vermeer Light Tools is a physically plausible renderer written in Go.</p>
+
+            <ul class="actions">
+                <li><a href="/about/" class="button">Learn More</a></li>
+            </ul>
+        </section>
+        
+
+    
+        <section id="footer">
+            <ul class="icons">
+                
+                
+                    
+<li><a href="//github.com/jamiec7919/vermeer/" target="_blank" title="GitHub" class="fa fa-github"></a></li>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<li><a href="//facebook.com/Vermeer-Light-Tools-764097793665652/" target="_blank" title="Facebook" class="fa fa-facebook"></a></li>
+
+
+
+
+
+
+                
+            </ul>
+
+            <p class="copyright">&copy; Vermeer Light Tools. Design: <a href="http://html5up.net" target="_blank">HTML5 UP</a>. Ported by <a href="//github.com/jpescador" target="_blank">Julio Pescador</a>. Powered by <a href="//gohugo.io" target="_blank">Hugo</a></p>
+        </section>
+
+</section>
+
+            </div>
+        <a id="back-to-top" href="#" class="fa fa-arrow-up fa-border fa-2x"></a>
+        
+
+        
+        
+            
+        
+
+        
+        
+
+        
+            
+                
+                    <script src="/js/main.min.js"></script>
+                
+            
+        
+
+            
+            <script>hljs.initHighlightingOnLoad();</script>
+            
+    </body>
+</html>
+
