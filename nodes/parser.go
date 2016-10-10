@@ -11,10 +11,13 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/jamiec7919/vermeer/builtin/maps"
 	"github.com/jamiec7919/vermeer/core"
+	"github.com/jamiec7919/vermeer/core/param"
 	m "github.com/jamiec7919/vermeer/math"
 	"os"
 	"reflect"
+	"strings"
 )
 
 // Token types returned by lexer.
@@ -36,11 +39,23 @@ var typeUInt32 = reflect.TypeOf(uint32(0))
 var typeVec3 = reflect.TypeOf(m.Vec3{})
 var typeVec2 = reflect.TypeOf(m.Vec2{})
 var typeMatrix = reflect.TypeOf(m.Matrix4{})
-var typePointArray = reflect.TypeOf(core.PointArray{})
-var typeVec2Array = reflect.TypeOf(core.Vec2Array{})
-var typeVec3Array = reflect.TypeOf(core.Vec3Array{})
-var typeFloat32Array = reflect.TypeOf(core.Float32Array{})
-var typeMatrixArray = reflect.TypeOf(core.MatrixArray{})
+var typePointArray = reflect.TypeOf(param.PointArray{})
+var typeVec2Array = reflect.TypeOf(param.Vec2Array{})
+var typeVec3Array = reflect.TypeOf(param.Vec3Array{})
+var typeFloat32Array = reflect.TypeOf(param.Float32Array{})
+var typeMatrixArray = reflect.TypeOf(param.MatrixArray{})
+
+var keywords = []string{"int", "float", "vec2", "vec3", "point", "rgb", "rgbtex", "matrix"}
+
+func isInKeywords(v string) bool {
+	for _, k := range keywords {
+		if k == v {
+			return true
+		}
+	}
+
+	return false
+}
 
 // SymType is the type of symbols returned from lexer (shouldn't be public)
 type SymType struct {
@@ -53,19 +68,19 @@ type SymType struct {
 type parser struct {
 	filename string
 	lex      *Lex
-	rc       *core.RenderContext
+	nerrors  int
 }
 
 func init() {
 	Register("Globals", func() (core.Node, error) {
 
-		return &core.Globals{XRes: 256, YRes: 256, MaxGoRoutines: core.MAXGOROUTINES}, nil
+		return &core.Globals{XRes: 256, YRes: 256, MaxGoRoutines: 5}, nil
 	})
 }
 
 // Parse attempts to open filename and parse the contents, adding nodes to rc.  Returns
 // nil on success or an appropriate error.
-func Parse(rc *core.RenderContext, filename string) error {
+func Parse(filename string) error {
 
 	f, err := os.Open(filename)
 
@@ -81,7 +96,7 @@ func Parse(rc *core.RenderContext, filename string) error {
 	l.LineNumber = 0
 	l.ColNumber = 1
 
-	parser := parser{filename: filename, lex: &l, rc: rc}
+	parser := parser{filename: filename, lex: &l}
 
 	//	l.error = parser.error
 
@@ -127,7 +142,7 @@ func (p *parser) rgb(field reflect.Value) error {
 		return errors.New("Expected field type.")
 	}
 
-	v := &core.ConstantMap{}
+	v := &maps.Constant{}
 
 	for i := range v.C {
 		switch t := p.lex.Lex(&sym); t {
@@ -154,7 +169,7 @@ func (p *parser) floatmap(field reflect.Value) error {
 		return errors.New("Expected field type.")
 	}
 
-	v := &core.ConstantMap{}
+	v := &maps.Constant{}
 
 	switch t := p.lex.Lex(&sym); t {
 	case TokInt:
@@ -182,7 +197,7 @@ func (p *parser) rgbtex(field reflect.Value) error {
 		return errors.New("Expected field type.")
 	}
 
-	v := &core.TextureMap{}
+	v := &maps.Texture{}
 
 	if t := p.lex.Lex(&sym); t != TokString {
 		return errors.New("Expected RGB texture filename.")
@@ -222,7 +237,7 @@ func (p *parser) pointarray(field reflect.Value) error {
 
 	var sym SymType
 
-	v := core.PointArray{}
+	v := param.PointArray{}
 
 	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
@@ -274,7 +289,7 @@ func (p *parser) vec3array(field reflect.Value) error {
 
 	var sym SymType
 
-	v := core.Vec3Array{}
+	v := param.Vec3Array{}
 
 	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
@@ -326,7 +341,7 @@ func (p *parser) vec2array(field reflect.Value) error {
 
 	var sym SymType
 
-	v := core.Vec2Array{}
+	v := param.Vec2Array{}
 
 	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
@@ -378,7 +393,7 @@ func (p *parser) matrixarray(field reflect.Value) error {
 
 	var sym SymType
 
-	v := core.MatrixArray{}
+	v := param.MatrixArray{}
 
 	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
@@ -411,8 +426,9 @@ func (p *parser) matrixarray(field reflect.Value) error {
 				return errors.New("Expected matrix component.")
 			}
 
-			v.Elems = append(v.Elems, m.Matrix4Transpose(mat))
 		}
+
+		v.Elems = append(v.Elems, m.Matrix4Transpose(mat))
 	}
 
 	field.Set(reflect.ValueOf(v))
@@ -424,7 +440,7 @@ func (p *parser) float32array(field reflect.Value) error {
 
 	var sym SymType
 
-	v := core.Float32Array{}
+	v := param.Float32Array{}
 
 	if t := p.lex.Lex(&sym); t != TokInt {
 		return errors.New("Expected number of motion keys.")
@@ -498,6 +514,10 @@ func (p *parser) matrix(field reflect.Value) error {
 }
 
 func (p *parser) param(field reflect.Value) error {
+	return p.parseParam(field, false)
+}
+
+func (p *parser) parseParam(field reflect.Value, skip bool) error {
 
 	if !field.CanSet() {
 		return errors.New("Can't set field")
@@ -586,13 +606,69 @@ func (p *parser) param(field reflect.Value) error {
 	return nil
 }
 
+type nodeField struct {
+	required bool
+	name     string
+	value    reflect.Value
+	present  bool // Has this field been parsed already
+}
+
+func getFields(node core.Node) (fields map[string]nodeField) {
+	rv := reflect.ValueOf(node)
+
+	relem := rv.Elem()
+
+	if relem.Kind() != reflect.Struct {
+		return nil
+
+	}
+
+	fields = map[string]nodeField{}
+
+	ty := relem.Type()
+
+	for i := 0; i < relem.NumField(); i++ {
+		f := ty.Field(i)
+
+		if !relem.Field(i).CanSet() {
+			continue
+		}
+
+		required := true
+		name := f.Name
+
+		tag := f.Tag.Get("node")
+
+		prts := strings.Split(tag, ",")
+
+		//fmt.Printf("Parts: %v", prts)
+
+		if prts[0] == "-" {
+			continue // field should be skipped
+		}
+
+		if prts[0] != "" {
+			name = prts[0]
+		}
+
+		if len(prts) > 1 && prts[1] == "opt" {
+			required = false
+		}
+
+		fields[name] = nodeField{name: f.Name, value: relem.Field(i), required: required}
+
+	}
+
+	return fields
+}
+
 func lookupParam(node core.Node, fieldName string) (reflect.Value, error) {
 	rv := reflect.ValueOf(node)
 
 	relem := rv.Elem()
 
 	if relem.Kind() != reflect.Struct {
-		return reflect.Value{}, errors.New("node is no a struct")
+		return reflect.Value{}, errors.New("node is not a struct")
 
 	}
 
@@ -618,6 +694,21 @@ func lookupParam(node core.Node, fieldName string) (reflect.Value, error) {
 	return reflect.Value{}, errors.New("Field " + fieldName + " not found.")
 }
 
+// skipToToken skips all tokens up to next non-keyword token or close brace.
+func (p *parser) skipToToken() {
+	var v SymType
+
+	for {
+		t := p.lex.Peek(&v)
+
+		if t == TokCloseCurlyBrace || (t == TokToken && !isInKeywords(v.str)) {
+			return
+		}
+
+		p.lex.Skip()
+	}
+}
+
 func (p *parser) node(name string) (core.Node, error) {
 
 	var v SymType
@@ -629,6 +720,8 @@ func (p *parser) node(name string) (core.Node, error) {
 		return nil, err
 	}
 
+	fields := getFields(node)
+
 	for {
 		t := p.lex.Lex(&v)
 		// log.Printf("%v", t)
@@ -636,27 +729,53 @@ func (p *parser) node(name string) (core.Node, error) {
 		case TokToken:
 			paramName := v.str
 
-			field, err := lookupParam(node, paramName)
+			field, present := fields[paramName]
 
-			if err != nil {
-				return nil, err
+			if field.present {
+				p.errorf("Field %v already found in %v", paramName, name)
+				return nil, nil
+
 			}
 
-			if !field.IsValid() {
-				p.errorf("Field %v not found/invalid in %v", paramName, name)
+			if !present {
+				p.errorf("Field \"%v\" not found in node %v", paramName, name)
+
+				// Simple error recovery, just skip through until we find a non-keyword
+				p.skipToToken()
+				continue
+
+			}
+			//			field, err := lookupParam(node, paramName)
+			//
+			//			if err != nil {
+			//				return nil, err
+			//			}
+
+			if !field.value.IsValid() {
+				p.errorf("Field %v invalid in %v", paramName, name)
 				return nil, nil
 			}
 
-			if err := p.param(field); err != nil {
+			if err := p.param(field.value); err != nil {
 				p.errorf("Error parsing field: %v", err)
 			}
 
+			field.present = true
+			fields[paramName] = field
+
 		case TokCloseCurlyBrace:
 			//log.Printf("Got obj %v %v", objtype, params)
+			for _, v := range fields {
+				if v.required && !v.present {
+					p.errorf("node: required field %v not found in %v", v.name, name)
+					return nil, nil
+				}
+			}
+
 			return node, nil
 
 		default:
-			p.errorf("parseNode: Error, invalid token in object \"%v\" %v", t, v)
+			p.errorf("node: Parse error, invalid token in object \"%v\" %v", t, v)
 
 		}
 	}
@@ -665,9 +784,13 @@ func (p *parser) node(name string) (core.Node, error) {
 
 func (p *parser) errorf(msg string, v ...interface{}) {
 	line := p.lex.LineNumber
-	col := p.lex.ColNumber
-	if err := p.rc.Error(fmt.Errorf("%v:%v:%v: %v", p.filename, line, col, fmt.Sprintf(msg, v...))); err != nil {
-		panic(err)
+	col := p.lex.BeginColNumber
+	fmt.Printf("%v:%v:%v: %v\n", p.filename, line, col, fmt.Sprintf(msg, v...))
+	p.nerrors++
+
+	if p.nerrors > 10 {
+		fmt.Printf("Too many errors, stopping.\n")
+		os.Exit(1)
 	}
 }
 
@@ -699,7 +822,7 @@ L:
 			}
 
 			if node != nil {
-				p.rc.AddNode(node)
+				core.AddNode(node)
 			}
 
 		// ERROR

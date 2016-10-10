@@ -114,3 +114,14 @@ func (b *BoundingBox) Grow(X, Y, Z float32) {
 	b.Bounds[1][2] = Max(Z, b.Bounds[1][2])
 
 }
+
+// BoundingBoxLerp linearly interpolates between two boxes.
+func BoundingBoxLerp(box0, box1 BoundingBox, t float32) (out BoundingBox) {
+	for i := 0; i < 2; i++ {
+		for k := 0; k < 3; k++ {
+			out.Bounds[i][k] = (1-t)*box0.Bounds[i][k] + t*box1.Bounds[i][k]
+		}
+	}
+
+	return
+}

@@ -8,8 +8,16 @@ Package qbvh implements the Quad-BVH data structure.
 package qbvh
 
 import (
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 )
+
+// Primitive is the interface passed into the Trace functions which is called when a non-empty leaf is
+// encountered.  Should return true for a valid ray hit on one of the elements between base&base+count and
+// fill the sg and ray structure with hit data, false otherwise.
+type Primitive interface {
+	TraceElems(ray *core.Ray, sg *core.ShaderContext, base, count int) bool
+}
 
 // MaxLeafCount is the maximum leaf size supported by data structure.
 // Users of QBVH may request smaller leafs.
@@ -22,7 +30,7 @@ type Index int32
 // 128 byte struct
 type Node struct {
 	Boxes               [4 * 3 * 2]float32
-	Axis0, Axis1, Axis2 int32
+	Axis0, Axis1, Axis2 uint32
 	Children            [4]int32
 	Parent              int32
 }
@@ -60,7 +68,7 @@ func (n *Node) SetEmptyLeaf(idx int) {
 	n.Children[idx] = -1
 	b := m.InfBox
 	//b := m.BoundingBox{}
-	b.Reset() // setting it like this will not stop rays hitting!
+	//b.Reset() // setting it like this will not stop rays hitting!
 	/*	b.Bounds[0][0] = m.Inf(1)
 		b.Bounds[0][1] = 50000
 		b.Bounds[0][1] = 50000
@@ -91,17 +99,17 @@ func (n *Node) SetChild(idx int, ch int32) {
 
 // SetAxis0 sets the split axis for first split.
 func (n *Node) SetAxis0(axis int32) {
-	n.Axis0 = axis
+	n.Axis0 = uint32(axis)
 }
 
 // SetAxis1 sets the split axis for left most split.
 func (n *Node) SetAxis1(axis int32) {
-	n.Axis1 = axis
+	n.Axis1 = uint32(axis)
 }
 
 // SetAxis2 sets the split axis for right most split.
 func (n *Node) SetAxis2(axis int32) {
-	n.Axis2 = axis
+	n.Axis2 = uint32(axis)
 }
 
 // Walk will recursively walk the tree and call the functions nodef and leaf for each node/leaf.

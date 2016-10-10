@@ -46,15 +46,15 @@ func (wv *Spectrum) Set(v float32) {
 }
 
 // FromRGB ses the spectrum from the RGB values.
-func (wv *Spectrum) FromRGB(r, g, b float32) error {
+func (wv *Spectrum) FromRGB(rgb RGB) error {
 	for k := 0; k < 4; k++ {
-		wv.C[k] = RGBToSpectrumSmits99(r, g, b, wv.Wavelength(k))
+		wv.C[k] = RGBToSpectrumSmits99(rgb[0], rgb[1], rgb[2], wv.Wavelength(k))
 	}
 	return nil
 }
 
 // ToRGB converts the spectrum to RGB.
-func (wv *Spectrum) ToRGB() (r, g, b float32) {
+func (wv *Spectrum) ToRGB() (rgb RGB) {
 	var x, y, z float32
 
 	// Treat s as a line spectrum, therefore integrals required are: Glassner 1987
@@ -67,8 +67,7 @@ func (wv *Spectrum) ToRGB() (r, g, b float32) {
 	}
 
 	// Now transform XYZ to RGB.  Should make this selectable as to which RGB.
-	r, g, b = sRGB.XYZToRGB(x, y, z)
-	return
+	return sRGB.XYZToRGB(x, y, z)
 }
 
 // Mul multiplies the spectrum by other.  Both spectra must represent the same wavelength.

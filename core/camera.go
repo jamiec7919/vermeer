@@ -4,14 +4,8 @@
 
 package core
 
-import (
-	"math/rand"
-)
-
 // Camera represents a 3D camera.
 type Camera interface {
-	Name() string
-
-	// ComputeRay should return a world-space ray.
-	ComputeRay(u, v, time float32, rnd *rand.Rand, ray *RayData, sg *ShaderGlobals)
+	// ComputeRay should return a world-space ray within the given pixel.
+	ComputeRay(x, y, lensU, lensV, lambda, time float64, ray *Ray)
 }

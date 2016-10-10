@@ -22,6 +22,7 @@ import (
 // Lex represents a lexical analyser for the vnf parser. (shouldn't be public)
 type Lex struct {
 	LineNumber, ColNumber int
+	BeginColNumber        int // Start of token
 
 	line []byte
 	peek rune
@@ -71,6 +72,8 @@ func (x *Lex) lex(yylval *SymType) int {
 
 	for {
 		c := x.next()
+
+		x.BeginColNumber = x.ColNumber
 
 		if isAlpha(c) {
 			return x.token(c, yylval)

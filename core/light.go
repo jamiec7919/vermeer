@@ -4,16 +4,35 @@
 
 package core
 
+import (
+	"github.com/jamiec7919/vermeer/colour"
+	m "github.com/jamiec7919/vermeer/math"
+)
+
+// LightSample is used for direct lighting samples.
+type LightSample struct {
+	P      m.Vec3
+	Weight float32
+	Liu    colour.Spectrum
+	Ld     m.Vec3
+	Ldist  float32
+}
+
 // Light represents a light that can be sampled by the system.
 type Light interface {
-	//	SamplePoint(*rand.Rand, *SurfacePoint, *float64) error                                // Sample a point on the surface
 
-	// SampleArea samples a point on the surface of the light by area.
+	// SampleArea samples n points on the surface of the light by area as seen from given ShaderGlobals point.
+	// sg.Lsamples should be filled with the samples using append.
 	// Returns nil on successful sample.
-	SampleArea(*ShaderGlobals) error
-
-	//	SampleDirection(*SurfacePoint, *rand.Rand, *m.Vec3, *colour.Spectrum, *float64) error // Sample direction given point
+	SampleArea(sg *ShaderContext, n int) error
 
 	// DiffuseShadeMult returns the diffuse lighting multiplier.
 	DiffuseShadeMult() float32
+
+	// NumSamples returns the number of samples that should be taken from this light for the
+	// given context.
+	NumSamples(sg *ShaderContext) int
+
+	// Geom returns the Geom associated with this light.
+	Geom() Geom
 }

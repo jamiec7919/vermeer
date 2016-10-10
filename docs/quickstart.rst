@@ -1,10 +1,11 @@
 Quickstart
 ==========
 
-Vermeer is meant to be run as a command line program.  After installation you should be able to (in a terminal/command prompt) type 'vermeer <file>.vnf' and a window will pop up.  After a short while 
-the first iteration should appear and then gradually improve.  If you haven't specified a maximum
-number of iterations then closing the window should result in the last frame being completed and 
-written out to any output nodes (you may need to be patient after clicking close, the final iteration will be completed before the application exits). 
+Vermeer is meant to be run as a command line program.  After installation you should be able to (in a terminal/command prompt) type 'vermeer <file>.vnf' and the render will start. If you haven't specified a maximum number of iterations then Ctrl-C will result in the last frame being completed and 
+written out to any output nodes.
+
+(preview is disabled in v0.2.0) Preview - A window will pop up.  After a short while 
+the first iteration should appear and then gradually improve. Closing the window should have the same effect as Ctrl-C (you may need to be patient after clicking close, the final iteration will be completed before the application exits). 
 
 Command line parameters
 -----------------------
@@ -55,12 +56,17 @@ Available Nodes
 ---------------
 
 - Globals_
-- Meshfile_
-- Polymesh_
-- Material_
+- PolyMesh_
+- ShaderStd_
+- DebugShader_
 - Camera_
 - DiskLight_
+- SphereLight_
+- QuadLight_
+- TriLight_
 - OutputHDR_
+- AiryFilter_
+- GaussFilter_
 
 Globals
 +++++++
@@ -80,44 +86,17 @@ XRes
 YRes
   Height of image in pixels.  Int.
 
-Meshfile
-++++++++
-
-Meshfile nodes represent a triangular mesh loaded from a file.  This node is temporary as conversion
-to Polymesh will eventually be preferred.  The system will load and .mtl files and will
-translate materials as best as possible into the default shader.  Materials defined in vnf files
-will override those with the same name in the .mtl libraries::
-
-  Meshfile {
-	Name "mesh03"
-	Filename "gopher.obj"
-	Transform matrix 0.1 0 0 0.5
-	          0 0.1 0 0.5
-	          0 0 0.1 2
-	          0 0 0 1
-
-	CalcNormals 0
-  }
-
-Name
-  You should give each node a recognizable name to aid debugging.
-
-Filename
-  Filename of the mesh to load.  Only Alias Wavefront .obj files are supported currently.
-
-Transform
-  Specifies a transformation matrix to apply after loading.  Matrix4.
-
-CalcNormals
-  Boolean value controlling whether vertex normals should be calculated (e.g. if not supplied in the
-  model file).
+MaxGoRoutines 
+  Maximum number of goroutines (essentially screen tile/buckets) to execute simultaneously.  As Go multiplexes
+  goroutines into system threads it can be helpful to have slightly more goroutines than threads to avoid wasting time
+  waiting on texture locks.
 
 .. _polymesh-def:
 
-Polymesh
+PolyMesh
 ++++++++
 
-::
+The PolyMesh is the default mesh type::
 
   PolyMesh {
 	UV 1 4 vec2 0 0 1 0 1 1 0 1
@@ -127,11 +106,11 @@ Polymesh
 	Verts 2 4 point -1 0.5 0  -1 1 0   0 1 0  0 0.5 0    -1 0.53 0  -1 1.03 0   0 1.03 0  0 0.53 0 
 	PolyCount 1 int 4
 	FaceIdx 4 int 3 2 1 0
-	ModelToWorld 1 matrix 1 0 0 0 
+	Transform 1 matrix 1 0 0 0 
 	             0 1 0 0
 	             0 0 1 0 
 	             0 0 0 1
-    Material "mtl2"
+    Shader "mtl2"
     CalcNormals 1
   }
 
@@ -155,38 +134,36 @@ FaceIdx
   Each entry in this array indexes into the Verts array.  The PolyCount array determines the meaning
   of this array, each polygon will take a certain number of indices as specified in the PolyCount.  Int Array.
 
-ModelToWorld
-  Transform into worldspace.  Matrix4 array.
+Transform
+  Transform into worldspace. Transform motion blur is supported by providing multiple matrices which are
+  interpolated. Matrix4 array.
 
-Material
-  The material to use.  String.
+Shader
+  The shader to use.  String.
 
 CalcNormals
   Specify whether to calculate vertex normals.
 
-Material
-++++++++
+ShaderStd
++++++++++
 
-The Material node is the default shader and consists of a multi-layered physical model using an OrenNayar model for diffuse and Microfacet GGX models for the specular and transmission components. It also supports
+The ShaderStd node is the default shader and consists of a multi-layered physical model using an OrenNayar model for diffuse and Microfacet GGX models for the specular and transmission components. It also supports
 mirror reflection and perfect transmission with SpecularRoughness set to 0. 
 
 As an example::
 
-  Material {
+  ShaderStd {
 	Name "material1"
-	Roughness float 0.5
-	SpecularRoughness float 0.6
+	DiffuseRoughness float 0.5
+	Spec1Roughness float 0.6
 
 	DiffuseStrength float 0
-	SpecularStrength float 1
+	Spec1Strength float 1
 
-	Kd rgbtex "maps/cuadricula.jpg"
-	Ks rgb 0.9 0.9 0.9
+	DiffuseColour rgbtex "maps/cuadricula.jpg"
+	Spec1Colour rgb 0.9 0.9 0.9
 
 	IOR float 1.5
-	TransStrength float 0
-	Kt rgb 0.9 0.9 0.9
-	TransThin 0
 
 	Spec1FresnelModel "Metal"
 	Spec1FresnelRefl rgb 0.6 0.6 0.6
@@ -197,28 +174,28 @@ As an example::
 Name
   Every shader material must have a name as this is referred to by other nodes.
 
-Roughness 
+DiffuseRoughness 
   Roughness of the diffuse part. float, may be textured.
 
-SpecularRoughness
+Spec1Roughness
   Roughness of the specular part. float, may be textured.
 
 DiffuseStrength
   The weight of the diffuse component. float, may be textured.
 
-SpecularStrength
+Spec1Strength
   The weight of the specular part. float, may be textured.
 
 TransStrength
   The weight of the transmissive part (set to 0 for no transmission). float, may be textured.
 
-Kd
+DiffuseColour
  The colour of the diffuse part.  Colour, may be textured.
 
-Ks
+Spec1Colour
   The colour of the specular part. Colour, may be textured.
 
-Kt
+TransColour
   The colour of the transmissive part.  Colour, may be textured.
 
 TransThin
@@ -237,6 +214,24 @@ Spec1FresnelRefl
 
 Spec1FresnelEdge
   For the metal mode this is the edge tint.  Colour, may be textured.
+
+DebugShader
++++++++++
+
+DebugShader is a simple shader for debugging, a single colour is returned for any surface/lighting combo::
+
+  DebugShader {
+  Name "material1"
+
+  Colour rgbtex "maps/cuadricula.jpg"
+  }
+
+
+Name
+  Every shader material must have a name as this is referred to by other nodes.
+
+Colour
+  The colour to use (may be textured).
 
 Camera
 ++++++
@@ -293,17 +288,18 @@ The DiskLight node creates a flat circular disk light in the scene::
 
   DiskLight {
 	Name "light01"
-	Material "lightmtl"
+	Shader "lightmtl"
 	P 0 1.57 0
 	LookAt 0 0 0
 	Up 0 0 1
 	Radius 0.15
+  Samples 1
   }
 
 Name
   You should give the node a recognizable name to aid debugging.
 
-Material
+Shader
   Specify the material shader to use. String.
 
 P
@@ -318,6 +314,101 @@ Up
 Radius
   Radius of the disk in world units.
 
+Samples
+  Number of samples to take from this light.  This value is squared to give actual number taken. Default is 1.
+
+SphereLight
++++++++++
+
+The SphereLight node creates a sphere light in the scene::
+
+  SphereLight {
+  Name "light01"
+  Shader "lightmtl"
+  P 0 1.57 0
+  Radius 0.15
+  Samples 2
+  }
+
+Name
+  You should give the node a recognizable name to aid debugging.
+
+Shader
+  Specify the material shader to use. String.
+
+P
+  Position of the centre of the sphere.  Point.
+
+Radius
+  Radius of the disk in world units.
+
+Samples
+  Number of samples to take from this light.  This value is squared to give actual number taken. Default is 1.
+
+QuadLight
++++++++++
+
+The QuadLight node creates a quadrilateral light in the scene.  Quad is formed from the points [P, P+U, P+U+V, P+V]::
+
+  QuadLight {
+  Name "light01"
+  Shader "lightmtl"
+  P 0 1.57 0
+  U 0.15 0 1
+  V 1 0 0.15
+  Samples 2
+  }
+
+Name
+  You should give the node a recognizable name to aid debugging.
+
+Shader
+  Specify the material shader to use. String.
+
+P
+  Position of the first point of the quad.  Point.
+
+U
+  Vector representing first side of quad.
+
+V
+  Vector representing other side of quad.
+
+Samples
+  Number of samples to take from this light.  This value is squared to give actual number taken. Default is 1.
+
+TriLight
++++++++++
+
+The TriLight node creates a triangular light in the scene::
+
+  TriLight {
+  Name "light01"
+  Shader "lightmtl"
+  P0 0 1.57 0
+  P1 0.15 0 1
+  P2 1 0 0.15
+  Samples 2
+  }
+
+Name
+  You should give the node a recognizable name to aid debugging.
+
+Shader
+  Specify the material shader to use. String.
+
+P0
+  Position of the first point of the triangle.  Point.
+
+P1
+  Position of the second point of the triangle.  Point.
+
+P2
+  Position of the third point of the triangle.  Point.
+
+Samples
+  Number of samples to take from this light.  This value is squared to give actual number taken. Default is 1.
+
 OutputHDR
 +++++++++
 
@@ -327,3 +418,45 @@ only takes one parameter::
   OutputHDR {
 	Filename "myfile.hdr"
   }
+
+AiryFilter
++++++++++
+
+The AiryFilter node represents a pixel filter based on the Airy disk::
+
+  AiryFilter {
+  Name "filter1"
+  Res 61
+  Width 4
+  }
+
+Name
+  You should give the filter a name to aid debugging.
+
+Width
+  Filter support width in pixels.  4 is a decent starting point.
+
+Res
+  Res is the resolution of the pre-computed importance sampling CDF inversion.  A value of 61 is reasonable but for extremely
+  high number of iterations it might be worth increasing this.  
+
+GaussFilter
++++++++++
+
+The GaussFilter node represents a pixel filter based on the 2D Gaussian::
+
+  GaussFilter {
+  Name "filter1"
+  Res 61
+  Width 4
+  }
+
+Name
+  You should give the filter a name to aid debugging.
+
+Width
+  Filter support width in pixels.  4 is a decent starting point.
+
+Res
+  Res is the resolution of the pre-computed importance sampling CDF inversion.  A value of 61 is reasonable but for extremely
+  high number of iterations it might be worth increasing this.  
