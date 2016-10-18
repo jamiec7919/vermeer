@@ -20,7 +20,34 @@ package ldseq
 
 // VanDerCorput computes the Van der Corput radical inverse in base 2 with 52 bits precision.
 // Returns a float64 in [0,1)
-func VanDerCorput(i, scramble uint64) float64 {
+func VanDerCorput(i, r uint64) float64 {
+	bits := uint32((i << 16) | (i >> 16))
+	bits = ((bits & 0x00ff00ff) << 8) | ((bits & 0xff00ff00) >> 8)
+	bits = ((bits & 0x0f0f0f0f) << 4) | ((bits & 0xf0f0f0f0) >> 4)
+	bits = ((bits & 0x33333333) << 2) | ((bits & 0xcccccccc) >> 2)
+	bits = ((bits & 0x55555555) << 1) | ((bits & 0xaaaaaaaa) >> 1)
+	bits ^= uint32(r)
+	return float64(bits) / float64(0x100000000)
+}
+
+// Sobol calculates the Sobol sequence radical inverse in base 2 with 52 bits precision.
+// Returns a float64 in [0,1)
+func Sobol(_i, r uint64) float64 {
+	q := uint32(r)
+	i := uint32(_i)
+	for v := uint32(1 << 31); i != 0; i >>= 1 {
+		if i&1 != 0 {
+			q ^= v
+		}
+		v ^= v >> 1
+	}
+
+	return float64(q) / float64(0x100000000)
+}
+
+// TODO: BROKEN VanDerCorput computes the Van der Corput radical inverse in base 2 with 52 bits precision.
+// Returns a float64 in [0,1)
+func _VanDerCorput(i, scramble uint64) float64 {
 	return float64(vanDerCorput(i, scramble)) / float64(uint64(1)<<52)
 
 }
@@ -47,9 +74,9 @@ func vanDerCorput(i, scramble uint64) uint64 {
 
 }
 
-// Sobol calculates the Sobol sequence radical inverse in base 2 with 52 bits precision.
+// TODO: BROKEN Sobol calculates the Sobol sequence radical inverse in base 2 with 52 bits precision.
 // Returns a float64 in [0,1)
-func Sobol(i, scramble uint64) float64 {
+func _Sobol(i, scramble uint64) float64 {
 	return float64(sobol(i, scramble)) / float64(uint64(1)<<52)
 }
 
