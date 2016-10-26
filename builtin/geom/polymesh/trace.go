@@ -102,7 +102,7 @@ func (mesh *PolyMesh) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 }
 
 // TraceElems implements qbvh.Primitive.
-//go:nosplit
+///go:nosplit
 func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, count int) bool {
 
 	// NOTES: by unrolling many of the vector ops we avoid storing vec3's on the stack and allows it to fit
@@ -347,6 +347,132 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 		sg.V = V
 	}
 
+	// Differential calculation
+	// Construct barycentric planes
+	//nalphax := m.Vec3Cross(sg.Ng, m.Vec3Sub(mesh.Verts.Elems[i2], mesh.Verts.Elems[i1]))
+	nalphax := sg.Ng[1]*(mesh.Verts.Elems[i2][2]-mesh.Verts.Elems[i1][2]) - sg.Ng[2]*(mesh.Verts.Elems[i2][1]-mesh.Verts.Elems[i1][1])
+	nalphay := sg.Ng[2]*(mesh.Verts.Elems[i2][0]-mesh.Verts.Elems[i1][0]) - sg.Ng[0]*(mesh.Verts.Elems[i2][2]-mesh.Verts.Elems[i1][2])
+	nalphaz := sg.Ng[0]*(mesh.Verts.Elems[i2][1]-mesh.Verts.Elems[i1][1]) - sg.Ng[1]*(mesh.Verts.Elems[i2][0]-mesh.Verts.Elems[i1][0])
+	//nalphad := mesh.Verts.Elems[i1][0]*nalphax + mesh.Verts.Elems[i1][1]*nalphay + mesh.Verts.Elems[i1][2]*nalphaz
+	nalphad := -mesh.Verts.Elems[i1][0]*nalphax - mesh.Verts.Elems[i1][1]*nalphay - mesh.Verts.Elems[i1][2]*nalphaz
+
+	l := mesh.Verts.Elems[i0][0]*nalphax + mesh.Verts.Elems[i0][1]*nalphay + mesh.Verts.Elems[i0][2]*nalphaz + nalphad
+
+	// Normalize
+	nalphax /= l
+	nalphay /= l
+	nalphaz /= l
+	nalphad /= l
+	/*
+		udot := mesh.Verts.Elems[i1][0]*nalphax + mesh.Verts.Elems[i1][1]*nalphay + mesh.Verts.Elems[i1][2]*nalphaz + nalphad
+		vdot := mesh.Verts.Elems[i0][0]*nalphax + mesh.Verts.Elems[i0][1]*nalphay + mesh.Verts.Elems[i0][2]*nalphaz + nalphad
+		wdot := mesh.Verts.Elems[i2][0]*nalphax + mesh.Verts.Elems[i2][1]*nalphay + mesh.Verts.Elems[i2][2]*nalphaz + nalphad
+		fmt.Printf("%v %v %v\n", udot, vdot, wdot)
+	*/
+	//l := nalphax*sg.P[0] + nalphay*sg.P[1] + nalphaz*sg.P[2] + nalphad
+
+	//fmt.Printf("a: %v %v %v %v %v %v %v\n", nalphax, nalphay, nalphaz, nalphad, l, sg.Ng, (mesh.Verts.Elems[i2][2] - mesh.Verts.Elems[i1][2]))
+
+	//	nalphad /= l
+
+	nbetax := sg.Ng[1]*(mesh.Verts.Elems[i2][2]-mesh.Verts.Elems[i0][2]) - sg.Ng[2]*(mesh.Verts.Elems[i2][1]-mesh.Verts.Elems[i0][1])
+	nbetay := sg.Ng[2]*(mesh.Verts.Elems[i2][0]-mesh.Verts.Elems[i0][0]) - sg.Ng[0]*(mesh.Verts.Elems[i2][2]-mesh.Verts.Elems[i0][2])
+	nbetaz := sg.Ng[0]*(mesh.Verts.Elems[i2][1]-mesh.Verts.Elems[i0][1]) - sg.Ng[1]*(mesh.Verts.Elems[i2][0]-mesh.Verts.Elems[i0][0])
+
+	nbetad := -mesh.Verts.Elems[i0][0]*nbetax - mesh.Verts.Elems[i0][1]*nbetay - mesh.Verts.Elems[i0][2]*nbetaz
+
+	l = nbetax*mesh.Verts.Elems[i1][0] + nbetay*mesh.Verts.Elems[i1][1] + nbetaz*mesh.Verts.Elems[i1][2] + nbetad
+
+	// Normalize
+	nbetax /= l
+	nbetay /= l
+	nbetaz /= l
+	nbetad /= l
+
+	ngammax := sg.Ng[1]*(mesh.Verts.Elems[i1][2]-mesh.Verts.Elems[i0][2]) - sg.Ng[2]*(mesh.Verts.Elems[i1][1]-mesh.Verts.Elems[i0][1])
+	ngammay := sg.Ng[2]*(mesh.Verts.Elems[i1][0]-mesh.Verts.Elems[i0][0]) - sg.Ng[0]*(mesh.Verts.Elems[i1][2]-mesh.Verts.Elems[i0][2])
+	ngammaz := sg.Ng[0]*(mesh.Verts.Elems[i1][1]-mesh.Verts.Elems[i0][1]) - sg.Ng[1]*(mesh.Verts.Elems[i1][0]-mesh.Verts.Elems[i0][0])
+
+	ngammad := -mesh.Verts.Elems[i0][0]*ngammax - mesh.Verts.Elems[i0][1]*ngammay - mesh.Verts.Elems[i0][2]*ngammaz
+
+	l = ngammax*mesh.Verts.Elems[i2][0] + ngammay*mesh.Verts.Elems[i2][1] + ngammaz*mesh.Verts.Elems[i2][2] + ngammad
+
+	// Normalize
+	ngammax /= l
+	ngammay /= l
+	ngammaz /= l
+	ngammad /= l
+
+	ray.DifferentialTransfer(sg)
+	/*
+		nbeta := m.Vec3Cross(sg.Ng, m.Vec3Sub(mesh.Verts.Elems[i2], mesh.Verts.Elems[i0]))
+		Lbeta := [4]float32{nbeta[0], nbeta[1], nbeta[2], -m.Vec3Dot(mesh.Verts.Elems[i0], nbeta)}
+
+		l = Lbeta[0]*sg.P[0] + Lbeta[1]*sg.P[1] + Lbeta[2]*sg.P[2] + Lbeta[3]
+
+		// Normalize
+		Lbeta[0] /= l
+		Lbeta[1] /= l
+		Lbeta[2] /= l
+		Lbeta[3] /= l
+	*/
+
+	alphax := nalphax*sg.DdPdx[0] + nalphay*sg.DdPdx[1] + nalphaz*sg.DdPdx[2]
+	betax := nbetax*sg.DdPdx[0] + nbetay*sg.DdPdx[1] + nbetaz*sg.DdPdx[2]
+	gammax := ngammax*sg.DdPdx[0] + ngammay*sg.DdPdx[1] + ngammaz*sg.DdPdx[2]
+
+	var dndx0, dndx1, dndx2 float32
+
+	if mesh.Normals.Elems != nil {
+		//fmt.Printf("%v %v %v\n", alphax, betax, gammax)
+		dndx0 = alphax*mesh.Normals.Elems[mesh.normalidx[(idx*3)+0]][0] + betax*mesh.Normals.Elems[mesh.normalidx[(idx*3)+1]][0] + gammax*mesh.Normals.Elems[mesh.normalidx[(idx*3)+2]][0]
+		dndx1 = alphax*mesh.Normals.Elems[mesh.normalidx[(idx*3)+0]][1] + betax*mesh.Normals.Elems[mesh.normalidx[(idx*3)+1]][1] + gammax*mesh.Normals.Elems[mesh.normalidx[(idx*3)+2]][1]
+		dndx2 = alphax*mesh.Normals.Elems[mesh.normalidx[(idx*3)+0]][2] + betax*mesh.Normals.Elems[mesh.normalidx[(idx*3)+1]][2] + gammax*mesh.Normals.Elems[mesh.normalidx[(idx*3)+2]][2]
+	}
+
+	var Ng m.Vec3
+
+	Ng[0] = e01*e12 - e02*e11
+	Ng[1] = e02*e10 - e00*e12
+	Ng[2] = e00*e11 - e01*e10
+
+	sg.DdNdx = m.Vec3Sub(m.Vec3Scale(m.Vec3Dot(Ng, Ng), m.Vec3{dndx0, dndx1, dndx2}), m.Vec3Scale(m.Vec3Dot(Ng, m.Vec3{dndx0, dndx1, dndx2}), Ng))
+	sg.DdNdx = m.Vec3Scale(1/(m.Vec3Dot(Ng, Ng)*m.Sqrt(m.Vec3Dot(Ng, Ng))), sg.DdNdx)
+
+	alphay := nalphax*sg.DdPdy[0] + nalphay*sg.DdPdy[1] + nalphaz*sg.DdPdy[2]
+	betay := nbetax*sg.DdPdy[0] + nbetay*sg.DdPdy[1] + nbetaz*sg.DdPdy[2]
+	gammay := ngammax*sg.DdPdy[0] + ngammay*sg.DdPdy[1] + ngammaz*sg.DdPdy[2]
+
+	var dndy0, dndy1, dndy2 float32
+	if mesh.Normals.Elems != nil {
+		dndy0 = alphay*mesh.Normals.Elems[mesh.normalidx[(idx*3)+0]][0] + betay*mesh.Normals.Elems[mesh.normalidx[(idx*3)+1]][0] + gammay*mesh.Normals.Elems[mesh.normalidx[(idx*3)+2]][0]
+		dndy1 = alphay*mesh.Normals.Elems[mesh.normalidx[(idx*3)+0]][1] + betay*mesh.Normals.Elems[mesh.normalidx[(idx*3)+1]][1] + gammay*mesh.Normals.Elems[mesh.normalidx[(idx*3)+2]][1]
+		dndy2 = alphay*mesh.Normals.Elems[mesh.normalidx[(idx*3)+0]][2] + betay*mesh.Normals.Elems[mesh.normalidx[(idx*3)+1]][2] + gammay*mesh.Normals.Elems[mesh.normalidx[(idx*3)+2]][2]
+	}
+
+	sg.DdNdy = m.Vec3Sub(m.Vec3Scale(m.Vec3Dot(Ng, Ng), m.Vec3{dndy0, dndy1, dndy2}), m.Vec3Scale(m.Vec3Dot(Ng, m.Vec3{dndy0, dndy1, dndy2}), Ng))
+	sg.DdNdy = m.Vec3Scale(1/(m.Vec3Dot(Ng, Ng)*m.Sqrt(m.Vec3Dot(Ng, Ng))), sg.DdNdy)
+
+	//talpha :=x nalphax*sg.P[0] + nalphay*sg.P[1] + nalphaz*sg.P[2] + nalphad
+	//tbeta := nbetax*sg.P[0] + nbetay*sg.P[1] + nbetaz*sg.P[2] + nbetad
+	//tgamma := ngammax*sg.P[0] + ngammay*sg.P[1] + ngammaz*sg.P[2] + ngammad
+
+	//fmt.Printf("%v %v %v -> %v %v %v\n", U, V, W, talpha, tbeta, tgamma)
+	if mesh.UV.Elems != nil {
+		for k := range sg.Dduvdx {
+			sg.Dduvdx[k] = alphax*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][k] + betax*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][k] + gammax*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][k]
+			sg.Dduvdy[k] = alphay*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][k] + betay*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][k] + gammay*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][k]
+
+		} //	sg.U = talpha*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][0] + tbeta*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][0] + tgamma*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][0]
+		//	sg.V = talpha*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][1] + tbeta*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][1] + tgamma*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][1]
+	} else {
+		sg.Dduvdx[0] = alphax*0 + betax*1 + gammax*0
+		sg.Dduvdx[1] = alphax*0 + betax*0 + gammax*1
+
+		sg.Dduvdy[0] = alphay*0 + betay*1 + gammay*0
+		sg.Dduvdy[1] = alphay*0 + betay*0 + gammay*1
+	}
+	//fmt.Printf("%v %v \n", sg.Dduvdx, sg.Dduvdy)
 	sg.DdPdu[0] = e00
 	sg.DdPdu[1] = e01
 	sg.DdPdu[2] = e02

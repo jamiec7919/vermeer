@@ -5,8 +5,10 @@
 package maps
 
 import (
+	//"fmt"
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
+	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/texture"
 )
 
@@ -20,6 +22,16 @@ func (c *Texture) Float32(sg *core.ShaderContext) float32 {
 }
 
 func (c *Texture) RGB(sg *core.ShaderContext) colour.RGB {
-	return colour.RGB(texture.SampleRGB(c.Filename, sg.U, sg.V, 1, 1))
+	deltaTx := m.Vec2Scale(sg.Image.PixelDelta[0], sg.Dduvdx)
+	deltaTy := m.Vec2Scale(sg.Image.PixelDelta[1], sg.Dduvdy)
+
+	ds := m.Max(m.Abs(deltaTx[0]), m.Abs(deltaTy[0]))
+	dt := m.Max(m.Abs(deltaTx[1]), m.Abs(deltaTy[1]))
+
+	ds = m.Vec2Length(deltaTx)
+	dt = m.Vec2Length(deltaTy)
+
+	//fmt.Printf("x: %v y: %v\n", deltaTx, deltaTy)
+	return colour.RGB(texture.SampleRGB(c.Filename, sg.U, sg.V, ds, dt))
 
 }

@@ -75,6 +75,22 @@ func (sh *ShaderStd) PostRender() error { return nil }
 // rays and shadow rays.
 func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 
+	//fmt.Printf("%v %v %v %v\n", sg.DdDdx, sg.DdNdx, sg.DdDdy, sg.DdNdy)
+	/*	deltaTx := m.Vec2Scale(sg.Image.PixelDelta[0], sg.Dduvdx)
+		deltaTy := m.Vec2Scale(sg.Image.PixelDelta[1], sg.Dduvdy)
+
+		lod := m.Log2(m.Max(m.Vec2Length(deltaTx), m.Vec2Length(deltaTy)))
+		//return
+		fmt.Printf("lod: %v\n", lod)
+
+		if lod >= 0 {
+			sg.OutRGB[0] = m.Floor(lod) * 10
+		} else {
+			sg.OutRGB[0] = 100
+			sg.OutRGB[1] = 100
+		}
+		return
+	*/
 	if sg.Level > 3 {
 		return
 	}
@@ -220,10 +236,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 			}
 			//fmt.Printf("%v %v\n", spec1Omega, m.Vec3Length(spec1Omega))
 
-			ray.Init(0, sg.OffsetP(1), spec1Omega, m.Inf(1), sg.Level+1, sg.Lambda, sg.Time)
-			ray.Scramble[0] = sg.Scramble[0] // ^ math.Float64bits(pdf)
-			ray.Scramble[1] = sg.Scramble[1] // ^ math.Float64bits(pdf)
-			ray.I = sg.I
+			ray.Init(core.RayTypeReflected, sg.OffsetP(1), spec1Omega, m.Inf(1), sg.Level+1, sg)
 
 			if core.Trace(ray, &samp) {
 
