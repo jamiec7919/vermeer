@@ -34,6 +34,7 @@ const (
 	TokComma
 )
 
+var typeString = reflect.TypeOf("")
 var typeInt32 = reflect.TypeOf(int32(0))
 var typeUInt32 = reflect.TypeOf(uint32(0))
 var typeVec3 = reflect.TypeOf(m.Vec3{})
@@ -127,6 +128,36 @@ func (p *parser) int32slice(field reflect.Value) error {
 		}
 
 		s = append(s, int32(sym.numInt))
+	}
+
+	field.Set(reflect.ValueOf(s))
+
+	return nil
+}
+
+func (p *parser) stringslice(field reflect.Value) error {
+	var sym SymType
+
+	count := -1
+
+	if t := p.lex.Lex(&sym); t != TokInt {
+		return errors.New("Expected slice length.")
+	}
+
+	count = int(sym.numInt)
+
+	if t := p.lex.Lex(&sym); t != TokToken && sym.str != "string" {
+		return errors.New("Expected slice type.")
+	}
+
+	s := make([]string, 0, count)
+
+	for i := 0; i < count; i++ {
+		if t := p.lex.Lex(&sym); t != TokString {
+			return errors.New("Expected string.")
+		}
+
+		s = append(s, sym.str)
 	}
 
 	field.Set(reflect.ValueOf(s))
@@ -564,6 +595,14 @@ func (p *parser) parseParam(field reflect.Value, skip bool) error {
 			switch t := p.lex.Peek(&v); t {
 			case TokInt:
 				p.int32slice(field)
+			default:
+				p.errorf("Invalid token for param (expecting length of slice)")
+				p.lex.Skip()
+			}
+		case typeString:
+			switch t := p.lex.Peek(&v); t {
+			case TokInt:
+				p.stringslice(field)
 			default:
 				p.errorf("Invalid token for param (expecting length of slice)")
 				p.lex.Skip()
