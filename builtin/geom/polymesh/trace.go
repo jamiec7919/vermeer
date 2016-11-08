@@ -295,7 +295,13 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 	//yAbsSum = m.Max(yAbsSum, 0.8)
 	//zAbsSum = m.Max(zAbsSum, 0.8)
 
-	sg.Shader = mesh.shader
+	shaderIdx := uint8(0)
+
+	if mesh.shaderidx != nil {
+		shaderIdx = mesh.shaderidx[idx]
+	}
+
+	sg.Shader = mesh.shader[shaderIdx]
 
 	e00 := mesh.Verts.Elems[i1][0] - mesh.Verts.Elems[i0][0]
 	e01 := mesh.Verts.Elems[i1][1] - mesh.Verts.Elems[i0][1]
@@ -643,7 +649,13 @@ func (mesh *PolyMesh) TraceMotionElems(time float32, key, key2 int, ray *core.Ra
 		return false
 	}
 
-	sg.Shader = mesh.shader
+	shaderIdx := uint8(0)
+
+	if mesh.shaderidx != nil {
+		shaderIdx = mesh.shaderidx[idx]
+	}
+
+	sg.Shader = mesh.shader[shaderIdx]
 
 	sg.P = sg.Po
 

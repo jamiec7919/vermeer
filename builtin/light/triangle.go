@@ -303,7 +303,7 @@ func (d *Tri) createMesh() *polymesh.PolyMesh {
 
 	msh := polymesh.PolyMesh{NodeDef: d.NodeDef, NodeName: d.NodeName + ":<mesh>",
 		IsVisible: true,
-		Shader:    d.Shader}
+		Shader:    []string{d.Shader}}
 
 	//msh.ModelToWorld.Elems = []m.Matrix4{m.Matrix4Identity}
 	//msh.ModelToWorld.MotionKeys = 1
