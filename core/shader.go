@@ -68,11 +68,10 @@ type ShaderContext struct {
 	U, V               float32 // Surface params
 
 	// Ray differentials
-	DdPdx, DdPdy m.Vec3 // Ray differential
-	DdDdx, DdDdy m.Vec3 // Ray differential
-	DdNdx, DdNdy m.Vec3 // Normal derivatives
-	Ddudx, Ddudy m.Vec3 // texture/surface param derivs
-	Ddvdx, Ddvdy m.Vec3 // texture/surface param derivs
+	DdPdx, DdPdy   m.Vec3 // Ray differential
+	DdDdx, DdDdy   m.Vec3 // Ray differential
+	DdNdx, DdNdy   m.Vec3 // Normal derivatives
+	Dduvdx, Dduvdy m.Vec2 // texture/surface param derivs
 
 	Lights   []Light // Array of active lights in this shading context
 	Lidx     int     // Index of current light
@@ -84,6 +83,8 @@ type ShaderContext struct {
 	Liu      colour.Spectrum // unoccluded incoming
 
 	Area float32
+
+	Image *Image // Image constant values stored here
 
 	OutRGB colour.RGB
 
@@ -98,7 +99,9 @@ type shaderPrivate struct {
 
 // NewShaderContext returns a new context from the pool.  Should not create these manually.
 func (sc *ShaderContext) NewShaderContext() *ShaderContext {
-	return sc.task.NewShaderContext()
+	s := sc.task.NewShaderContext()
+	s.Image = sc.Image
+	return s
 }
 
 // ReleaseShaderContext returns a context to the pool.
@@ -205,9 +208,9 @@ func (sc *ShaderContext) EvaluateLightSample(brdf BSDF) colour.RGB {
 		fmt.Printf("%v %v\n", sc.P, sc.OffsetP(1))
 	}
 	if m.Vec3Dot(sc.Ld, sc.Ng) < 0 {
-		ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(sc.Ldist*(1.0-ShadowRayEpsilon), sc.Ld), 1.0, 0, sc.Lambda, sc.Time)
+		ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(sc.Ldist*(1.0-ShadowRayEpsilon), sc.Ld), 1.0, 0, sc)
 	} else {
-		ray.Init(RayTypeShadow, sc.OffsetP(1), m.Vec3Scale(sc.Ldist*(1.0-ShadowRayEpsilon), sc.Ld), 1.0, 0, sc.Lambda, sc.Time)
+		ray.Init(RayTypeShadow, sc.OffsetP(1), m.Vec3Scale(sc.Ldist*(1.0-ShadowRayEpsilon), sc.Ld), 1.0, 0, sc)
 
 	}
 

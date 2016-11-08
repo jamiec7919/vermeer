@@ -15,6 +15,8 @@ package texture
 
 import (
 	//_ "github.com/ftrvxmtrx/tga"
+	//"fmt"
+	m "github.com/jamiec7919/vermeer/math"
 	_ "golang.org/x/image/tiff" // Imported for effect
 	"image"
 	_ "image/jpeg" // Imported for effect
@@ -27,10 +29,11 @@ import (
 
 // Texture represents a texture image.  (shouldn't be public)
 type Texture struct {
-	url  string
-	fmt  int
-	w, h int
-	data []byte
+	url    string
+	fmt    int
+	w, h   int
+	data   []byte
+	mipmap mipmap
 }
 
 // TexStore is the type of the cache.
@@ -90,6 +93,11 @@ func LoadTexture(url string) (*Texture, error) {
 			//				tex.Set(i, m.Bounds().Max.Y-1-j, byte(r), byte(g), byte(b))
 		}
 	}
+
+	mipmap := stdfilter(t.w, t.h, t.data, 3)
+
+	t.mipmap = mipmap
+
 	/*
 		t.rset = make(map[int]*TexImage)
 		t.rset[t.genHash(log2(tex.w), log2(tex.h))] = tex
@@ -116,6 +124,7 @@ func LoadTexture(url string) (*Texture, error) {
 		tex3.Resample(tex2)
 		return tex3.Texture(), nil
 	*/
+
 	return t, nil
 }
 
@@ -169,7 +178,10 @@ func cacheMiss(filename string) (*Texture, error) {
 // SampleRGB samples an RGB value from the given file using the coords s,t and footprint ds,dt.
 func SampleRGB(filename string, s, t, ds, dt float32) (out [3]float32) {
 	// This uses an atomic copy-on-write for the textures store
+	//ds = m.Max(1, 1/ds)
+	//dt = m.Max(1, 1/dt)
 
+	//fmt.Printf("%v %v\n", ds, dt)
 	//loadMutex.Lock()
 	textures := texStore.Load().(TexStore)
 	img := textures[filename]
@@ -184,23 +196,48 @@ func SampleRGB(filename string, s, t, ds, dt float32) (out [3]float32) {
 		img = img2
 	}
 	//	loadMutex.Unlock()
+	/*
+		deltaTx := m.Vec2Scale(sg.Image.PixelDelta[0], sg.Dduvdx)
+		deltaTy := m.Vec2Scale(sg.Image.PixelDelta[1], sg.Dduvdy)
+	*/
+	lod := m.Log2(m.Max(ds, dt))
+	/*
+		l := int(lod)
 
-	x := int(s * float32(img.w))
-	y := int(t * float32(img.h))
+		if l > len(img.mipmap.mipmap)-1 {
+			l = len(img.mipmap.mipmap) - 1
+		}
 
-	x = x % img.w
-	y = y % img.h
+		if l < 0 {
+			l = 0
+		}
 
-	if x < 0 {
-		x += img.w
-	}
-	if y < 0 {
-		y += img.h
-	}
+		w := img.mipmap.mipmap[l].w
+		h := img.mipmap.mipmap[l].h
+		x := int(s * float32(w))
+		y := int(t * float32(h))
 
-	out[0] = float32(img.data[(x+(y*img.w))*3+0]) / 255.0
-	out[1] = float32(img.data[(x+(y*img.w))*3+1]) / 255.0
-	out[2] = float32(img.data[(x+(y*img.w))*3+2]) / 255.0
+		//fmt.Printf("%v %v %v %v\n", x, y, img.mipmap.mipmap[l].w, img.mipmap.mipmap[l].h)
+
+		x = x % w
+		y = y % h
+
+		//fmt.Printf("%v %v\n", x, y)
+		if x < 0 {
+			x += w
+		}
+		if y < 0 {
+			y += h
+		}
+
+		out[0] = float32(img.mipmap.mipmap[l].mipmap[(x+(y*img.mipmap.mipmap[l].w))*3+0]) / 255.0
+		out[1] = float32(img.mipmap.mipmap[l].mipmap[(x+(y*img.mipmap.mipmap[l].w))*3+1]) / 255.0
+		out[2] = float32(img.mipmap.mipmap[l].mipmap[(x+(y*img.mipmap.mipmap[l].w))*3+2]) / 255.0
+	*/
+	out = img.mipmap.TrilinearSample(s, t, lod)
+	out[0] /= 255.0
+	out[1] /= 255.0
+	out[2] /= 255.0
 
 	return
 }

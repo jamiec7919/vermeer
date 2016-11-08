@@ -52,6 +52,7 @@ func Trace(ray *Ray, samp *TraceSample) bool {
 		I:        ray.I,
 		Time:     ray.Time,
 		task:     ray.Task,
+		Image:    image,
 		Scramble: ray.Scramble,
 	}
 
@@ -60,6 +61,8 @@ func Trace(ray *Ray, samp *TraceSample) bool {
 		if sg.Shader == nil { // can't do much with no material
 			return false
 		}
+
+		ray.DifferentialTransfer(sg)
 
 		sg.Shader.Eval(sg)
 
