@@ -17,6 +17,7 @@ import (
 	_ "github.com/jamiec7919/vermeer/builtin/camera"
 	_ "github.com/jamiec7919/vermeer/builtin/driver"
 	_ "github.com/jamiec7919/vermeer/builtin/filter"
+	_ "github.com/jamiec7919/vermeer/builtin/geom/instance"
 	_ "github.com/jamiec7919/vermeer/builtin/geom/polymesh"
 	_ "github.com/jamiec7919/vermeer/builtin/geom/proc"
 	_ "github.com/jamiec7919/vermeer/builtin/geom/proc/vnf"
