@@ -319,6 +319,8 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 	sg.Ng[2] = e00*e11 - e01*e10
 	sg.Ng = m.Vec3Normalize(sg.Ng)
 
+	var N m.Vec3
+
 	if mesh.Normals.Elems != nil {
 		for k := range sg.N {
 			sg.N[k] = U*mesh.Normals.Elems[mesh.normalidx[(idx*3)+0]][k] +
@@ -326,8 +328,10 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 				W*mesh.Normals.Elems[mesh.normalidx[(idx*3)+2]][k]
 		}
 
+		N = sg.N
 		sg.N = m.Vec3Normalize(sg.N)
 	} else {
+		N = sg.Ng
 		sg.N = sg.Ng
 	}
 
@@ -353,6 +357,8 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 		sg.V = V
 	}
 
+	ray.DifferentialTransfer(sg)
+
 	// Differential calculation
 	// Construct barycentric planes
 	//nalphax := m.Vec3Cross(sg.Ng, m.Vec3Sub(mesh.Verts.Elems[i2], mesh.Verts.Elems[i1]))
@@ -369,12 +375,7 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 	nalphay /= l
 	nalphaz /= l
 	nalphad /= l
-	/*
-		udot := mesh.Verts.Elems[i1][0]*nalphax + mesh.Verts.Elems[i1][1]*nalphay + mesh.Verts.Elems[i1][2]*nalphaz + nalphad
-		vdot := mesh.Verts.Elems[i0][0]*nalphax + mesh.Verts.Elems[i0][1]*nalphay + mesh.Verts.Elems[i0][2]*nalphaz + nalphad
-		wdot := mesh.Verts.Elems[i2][0]*nalphax + mesh.Verts.Elems[i2][1]*nalphay + mesh.Verts.Elems[i2][2]*nalphaz + nalphad
-		fmt.Printf("%v %v %v\n", udot, vdot, wdot)
-	*/
+
 	//l := nalphax*sg.P[0] + nalphay*sg.P[1] + nalphaz*sg.P[2] + nalphad
 
 	//fmt.Printf("a: %v %v %v %v %v %v %v\n", nalphax, nalphay, nalphaz, nalphad, l, sg.Ng, (mesh.Verts.Elems[i2][2] - mesh.Verts.Elems[i1][2]))
@@ -408,8 +409,12 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 	ngammay /= l
 	ngammaz /= l
 	ngammad /= l
-
-	ray.DifferentialTransfer(sg)
+	/*
+		udot := sg.P[0]*nalphax + sg.P[1]*nalphay + sg.P[2]*nalphaz + nalphad
+		vdot := sg.P[0]*nbetax + sg.P[1]*nbetay + sg.P[2]*nbetaz + nbetad
+		wdot := sg.P[0]*ngammax + sg.P[1]*ngammay + sg.P[2]*ngammaz + ngammad
+		fmt.Printf("%v %v %v > %v %v %v\n", udot, vdot, wdot, U, V, W)
+	*/
 	/*
 		nbeta := m.Vec3Cross(sg.Ng, m.Vec3Sub(mesh.Verts.Elems[i2], mesh.Verts.Elems[i0]))
 		Lbeta := [4]float32{nbeta[0], nbeta[1], nbeta[2], -m.Vec3Dot(mesh.Verts.Elems[i0], nbeta)}
@@ -441,9 +446,10 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 	Ng[0] = e01*e12 - e02*e11
 	Ng[1] = e02*e10 - e00*e12
 	Ng[2] = e00*e11 - e01*e10
+	Ng = m.Vec3Normalize(Ng)
 
-	sg.DdNdx = m.Vec3Sub(m.Vec3Scale(m.Vec3Dot(Ng, Ng), m.Vec3{dndx0, dndx1, dndx2}), m.Vec3Scale(m.Vec3Dot(Ng, m.Vec3{dndx0, dndx1, dndx2}), Ng))
-	sg.DdNdx = m.Vec3Scale(1/(m.Vec3Dot(Ng, Ng)*m.Sqrt(m.Vec3Dot(Ng, Ng))), sg.DdNdx)
+	sg.DdNdx = m.Vec3Sub(m.Vec3Scale(m.Vec3Dot(N, N), m.Vec3{dndx0, dndx1, dndx2}), m.Vec3Scale(m.Vec3Dot(N, m.Vec3{dndx0, dndx1, dndx2}), N))
+	sg.DdNdx = m.Vec3Scale(1/(m.Vec3Dot(N, N)*m.Sqrt(m.Vec3Dot(N, N))), sg.DdNdx)
 
 	alphay := nalphax*sg.DdPdy[0] + nalphay*sg.DdPdy[1] + nalphaz*sg.DdPdy[2]
 	betay := nbetax*sg.DdPdy[0] + nbetay*sg.DdPdy[1] + nbetaz*sg.DdPdy[2]
@@ -456,8 +462,8 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 		dndy2 = alphay*mesh.Normals.Elems[mesh.normalidx[(idx*3)+0]][2] + betay*mesh.Normals.Elems[mesh.normalidx[(idx*3)+1]][2] + gammay*mesh.Normals.Elems[mesh.normalidx[(idx*3)+2]][2]
 	}
 
-	sg.DdNdy = m.Vec3Sub(m.Vec3Scale(m.Vec3Dot(Ng, Ng), m.Vec3{dndy0, dndy1, dndy2}), m.Vec3Scale(m.Vec3Dot(Ng, m.Vec3{dndy0, dndy1, dndy2}), Ng))
-	sg.DdNdy = m.Vec3Scale(1/(m.Vec3Dot(Ng, Ng)*m.Sqrt(m.Vec3Dot(Ng, Ng))), sg.DdNdy)
+	sg.DdNdy = m.Vec3Sub(m.Vec3Scale(m.Vec3Dot(N, N), m.Vec3{dndy0, dndy1, dndy2}), m.Vec3Scale(m.Vec3Dot(N, m.Vec3{dndy0, dndy1, dndy2}), N))
+	sg.DdNdy = m.Vec3Scale(1/(m.Vec3Dot(N, N)*m.Sqrt(m.Vec3Dot(N, N))), sg.DdNdy)
 
 	//talpha :=x nalphax*sg.P[0] + nalphay*sg.P[1] + nalphaz*sg.P[2] + nalphad
 	//tbeta := nbetax*sg.P[0] + nbetay*sg.P[1] + nbetaz*sg.P[2] + nbetad
@@ -478,6 +484,7 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 		sg.Dduvdy[0] = alphay*0 + betay*1 + gammay*0
 		sg.Dduvdy[1] = alphay*0 + betay*0 + gammay*1
 	}
+
 	//fmt.Printf("%v %v \n", sg.Dduvdx, sg.Dduvdy)
 	sg.DdPdu[0] = e00
 	sg.DdPdu[1] = e01

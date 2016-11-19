@@ -24,9 +24,12 @@ C= Cnn/F
 // WRL-99-1
 func SampleFeline(filename string, sc *core.ShaderContext) (c [3]float32) {
 
-	Ann := sc.Dduvdx[1]*sc.Dduvdx[1] + sc.Dduvdy[1]*sc.Dduvdy[1] + 1
-	Bnn := -2 * (sc.Dduvdx[0]*sc.Dduvdx[1] + sc.Dduvdy[0]*sc.Dduvdy[1])
-	Cnn := sc.Dduvdx[0]*sc.Dduvdx[0] + sc.Dduvdy[0]*sc.Dduvdy[0] + 1
+	Dduvdx := m.Vec2Scale(sc.Image.PixelDelta[0], sc.Dduvdx)
+	Dduvdy := m.Vec2Scale(sc.Image.PixelDelta[1], sc.Dduvdy)
+
+	Ann := Dduvdx[1]*Dduvdx[1] + Dduvdy[1]*Dduvdy[1] + 1
+	Bnn := -2 * (Dduvdx[0]*Dduvdx[1] + Dduvdy[0]*Dduvdy[1])
+	Cnn := Dduvdx[0]*Dduvdx[0] + Dduvdy[0]*Dduvdy[0] + 1
 	F := Ann*Cnn - (Bnn * Bnn / 4)
 
 	A := Ann / F
@@ -107,8 +110,8 @@ func SampleFeline(filename string, sc *core.ShaderContext) (c [3]float32) {
 	var accumWeight float32
 
 	for i := 0; i < nProbes; i++ {
-		u := sc.U + float32(n)/2*dU
-		v := sc.V + float32(n)/2*dV
+		u := sc.U + (float32(n)/2)*dU
+		v := sc.V + (float32(n)/2)*dV
 
 		//d := float32(n) / 2 * m.Sqrt(sqr(dU)+sqr(dV)) / majorRadius
 		d2 := (sqr(float32(n)) / 4) * (sqr(dU) + sqr(dV)) / sqr(majorRadius)
@@ -130,6 +133,7 @@ func SampleFeline(filename string, sc *core.ShaderContext) (c [3]float32) {
 		c[k] = accum[k] / accumWeight
 	}
 
+	//c[0] = levelOfDetail * 10.0
 	return
 
 }

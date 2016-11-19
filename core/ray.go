@@ -88,8 +88,8 @@ func (r *Ray) Init(ty uint32, P, D m.Vec3, maxdist float32, level uint8, sc *Sha
 }
 
 func (r *Ray) DifferentialTransfer(sc *ShaderContext) {
-	dtdx := m.Vec3Dot(m.Vec3Mad(r.DdPdx, r.DdDdx, r.Tclosest), sc.Ng) / m.Vec3Dot(r.D, sc.Ng)
-	dtdy := m.Vec3Dot(m.Vec3Mad(r.DdPdy, r.DdDdy, r.Tclosest), sc.Ng) / m.Vec3Dot(r.D, sc.Ng)
+	dtdx := -m.Vec3Dot(m.Vec3Mad(r.DdPdx, r.DdDdx, r.Tclosest), sc.Ng) / m.Vec3Dot(r.D, sc.Ng)
+	dtdy := -m.Vec3Dot(m.Vec3Mad(r.DdPdy, r.DdDdy, r.Tclosest), sc.Ng) / m.Vec3Dot(r.D, sc.Ng)
 
 	sc.DdPdx = m.Vec3Add(m.Vec3Mad(r.DdPdx, r.DdDdx, r.Tclosest), m.Vec3Scale(dtdx, r.D))
 	sc.DdPdy = m.Vec3Add(m.Vec3Mad(r.DdPdy, r.DdDdy, r.Tclosest), m.Vec3Scale(dtdy, r.D))
