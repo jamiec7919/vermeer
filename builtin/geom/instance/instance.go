@@ -12,6 +12,28 @@ import (
 	"github.com/jamiec7919/vermeer/nodes"
 )
 
+type TransformSRTArray []m.TransformDecomp
+
+func (t *TransformSRTArray) TimeKey(time float32) m.TransformDecomp {
+	if len(*t) > 1 {
+		k := time * float32(len(*t)-1)
+
+		timeFrac := k - m.Floor(k)
+
+		key := int(m.Floor(k))
+		key2 := int(m.Ceil(k))
+
+		if key > len(*t)-1 || key2 > len(*t)-1 {
+			panic(fmt.Sprintf("TransformSRTArray.TimeKey: %v %v %v", time, key, key2))
+		}
+		//fmt.Printf("%v %v %v %v %v %v %v", ray.Time, len(mesh.Transform.Elems), time, key, key2, len(mesh.transformSRT), mesh.transformSRT)
+
+		return m.TransformDecompLerp((*t)[key], (*t)[key2], timeFrac)
+	}
+
+	return (*t)[0]
+}
+
 // Instance duplicates an existing geom but with a new transform.
 type Instance struct {
 	NodeDef  core.NodeDef `node:"-"`
@@ -23,7 +45,7 @@ type Instance struct {
 	BMax param.PointArray
 
 	Transform    param.MatrixArray
-	transformSRT []m.TransformDecomp
+	transformSRT TransformSRTArray
 
 	geom core.Geom
 
@@ -64,7 +86,7 @@ func (ins *Instance) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 	Kz = ray.Kz
 
 	//			transformSRT := m.TransformDecompLerp(mesh.transformSRT[key], mesh.transformSRT[key2], time)
-	transform = m.TransformDecompToMatrix4(ins.transformSRT[0])
+	transform = m.TransformDecompToMatrix4(ins.transformSRT.TimeKey(ray.Time))
 
 	invTransform, _ = m.Matrix4Inverse(transform)
 
