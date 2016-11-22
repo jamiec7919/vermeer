@@ -114,6 +114,10 @@ func (proc *Proc) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 	for _, geom := range proc.Geom {
 		if geom.Trace(ray, sg) {
 			hit = true
+
+			if ray.Type&core.RayTypeShadow == 0 {
+				break
+			}
 		}
 	}
 
@@ -144,7 +148,11 @@ func (proc *Proc) PreRender() error {
 	}
 
 	// lookup handler
-	proc.handler.Init(proc, proc.DataString, proc.Userdata)
+	err := proc.handler.Init(proc, proc.DataString, proc.Userdata)
+
+	if err != nil {
+		fmt.Printf("Proc.Prerender: %v\n", err)
+	}
 
 	if proc.Transform.Elems == nil {
 		proc.Transform.Elems = append(proc.Transform.Elems, m.Matrix4Identity)
@@ -209,5 +217,5 @@ func RegisterHandler(name string, create func() (Handler, error)) error {
 }
 
 func init() {
-	nodes.Register("GeomProc", create)
+	nodes.Register("Proc", create)
 }

@@ -19,6 +19,8 @@ import (
 	_ "github.com/jamiec7919/vermeer/builtin/filter"
 	_ "github.com/jamiec7919/vermeer/builtin/geom/polymesh"
 	_ "github.com/jamiec7919/vermeer/builtin/geom/proc"
+	_ "github.com/jamiec7919/vermeer/builtin/geom/proc/vnf"
+	_ "github.com/jamiec7919/vermeer/builtin/geom/proc/wfobj"
 	_ "github.com/jamiec7919/vermeer/builtin/light"
 	_ "github.com/jamiec7919/vermeer/builtin/misc"
 	"github.com/jamiec7919/vermeer/builtin/scene"
