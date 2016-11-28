@@ -122,10 +122,10 @@ func (sc *ShaderContext) ReleaseRay(ray *Ray) {
 // ApplyTransform applies Transfomrm to appropriate fields to go from object space into world space.
 func (sc *ShaderContext) ApplyTransform() {
 	sc.P = m.Matrix4MulPoint(sc.Transform, sc.Po)
-	sc.N = m.Matrix4MulVec(m.Matrix4Transpose(sc.InvTransform), sc.N)
-	sc.Ng = m.Matrix4MulVec(m.Matrix4Transpose(sc.InvTransform), sc.Ng)
-	sc.DdPdu = m.Matrix4MulVec(sc.Transform, sc.DdPdu)
-	sc.DdPdv = m.Matrix4MulVec(sc.Transform, sc.DdPdv)
+	sc.N = m.Vec3Normalize(m.Matrix4MulVec(m.Matrix4Transpose(sc.InvTransform), sc.N))
+	sc.Ng = m.Vec3Normalize(m.Matrix4MulVec(m.Matrix4Transpose(sc.InvTransform), sc.Ng))
+	sc.DdPdu = m.Vec3Normalize(m.Matrix4MulVec(sc.Transform, sc.DdPdu))
+	sc.DdPdv = m.Vec3Normalize(m.Matrix4MulVec(sc.Transform, sc.DdPdv))
 }
 
 // OffsetP returns the intersection point pushed out from surface by about 1 ulp.
