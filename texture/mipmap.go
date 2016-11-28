@@ -161,6 +161,11 @@ func stdfilter(w, h int, img []byte, components int) (out mipmap) {
 						// wrap mode
 						if x0 < 0 {
 							x0 += width
+							x0 = mini(x0, maxi(1, width-1))
+						}
+						if x2 > width-1 {
+							x2 -= width
+							x2 = maxi(x2, -maxi(1, width-1))
 						}
 
 						w0 := float32(nwidth-x-1) / float32(2*nwidth-1)
@@ -168,7 +173,6 @@ func stdfilter(w, h int, img []byte, components int) (out mipmap) {
 						w2 := float32(x) / float32(2*nwidth-1)
 
 						for k := 0; k < components; k++ {
-
 							c00 := float32(out.mipmap[l-1].mipmap[(x0+y0*width)*components+k])
 							c10 := float32(out.mipmap[l-1].mipmap[(x1+y0*width)*components+k])
 							c20 := float32(out.mipmap[l-1].mipmap[(x2+y0*width)*components+k])
@@ -239,6 +243,10 @@ func stdfilter(w, h int, img []byte, components int) (out mipmap) {
 						if x0 < 0 {
 							x0 += width
 							x0 = mini(x0, maxi(1, width-1))
+						}
+						if x2 > width-1 {
+							x2 -= width
+							x2 = maxi(x2, -maxi(1, width-1))
 						}
 
 						w0 := float32(nwidth-x-1) / float32(2*nwidth-1)

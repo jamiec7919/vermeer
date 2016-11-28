@@ -14,7 +14,7 @@ textures are used in shaders. */
 package texture
 
 import (
-	//_ "github.com/ftrvxmtrx/tga"
+	"github.com/blezek/tga"
 	//"fmt"
 	m "github.com/jamiec7919/vermeer/math"
 	_ "golang.org/x/image/tiff" // Imported for effect
@@ -23,6 +23,7 @@ import (
 	_ "image/png"  // Imported for effect
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 )
@@ -49,9 +50,13 @@ func init() {
 	tmp := CreateRGBTexture(2, 2)
 	tmp.url = "test"
 	tmp.SetRGB(0, 0, 250, 250, 250)
-	tmp.SetRGB(1, 0, 250, 5, 250)
-	tmp.SetRGB(0, 1, 250, 5, 250)
+	tmp.SetRGB(1, 0, 250, 150, 250)
+	tmp.SetRGB(0, 1, 250, 150, 250)
 	tmp.SetRGB(1, 1, 250, 250, 250)
+	mipmap := stdfilter(tmp.w, tmp.h, tmp.data, 3)
+
+	tmp.mipmap = mipmap
+
 	testTexture = tmp
 	texStore.Store(make(TexStore))
 }
@@ -73,8 +78,17 @@ func LoadTexture(url string) (*Texture, error) {
 	}
 	defer file.Close()
 
-	// Decode the image.
-	m, _, err := image.Decode(file)
+	var m image.Image
+
+	if filepath.Ext(url) == ".tga" || filepath.Ext(url) == ".TGA" {
+		// Decode the image.
+		m, err = tga.Decode(file)
+
+	} else {
+		// Decode the image.
+		m, _, err = image.Decode(file)
+	}
+
 	if err != nil {
 		return testTexture, err
 	}
@@ -158,9 +172,9 @@ func cacheMiss(filename string) (*Texture, error) {
 	tex, err := LoadTexture(filename)
 
 	if err != nil {
-		loadMutex.Unlock()
+		//loadMutex.Unlock()
 		log.Printf("texture.SampleRGB: \"%v\": %v", filename, err)
-		return nil, err
+		//return nil, err
 	}
 
 	texturesNew := make(TexStore)
