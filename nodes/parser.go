@@ -79,6 +79,30 @@ func init() {
 	})
 }
 
+// Parse2 attempts to open filename and parse the contents, returning nodes in slice.  Returns
+// nil error on success or an appropriate error.
+func Parse2(filename string) (nodes []core.Node, err error) {
+	f, err := os.Open(filename)
+
+	if err != nil {
+		return nil, err
+
+	}
+
+	in := bufio.NewReader(f)
+
+	var l Lex
+	l.in = in
+	l.LineNumber = 0
+	l.ColNumber = 1
+
+	parser := parser{filename: filename, lex: &l}
+
+	//	l.error = parser.error
+
+	return parser.parse2()
+}
+
 // Parse attempts to open filename and parse the contents, adding nodes to rc.  Returns
 // nil on success or an appropriate error.
 func Parse(filename string) error {
@@ -871,4 +895,44 @@ L:
 	}
 
 	return nil
+}
+
+func (p *parser) parse2() (nodes []core.Node, err error) {
+	var v SymType
+L:
+	for {
+		t := p.lex.Lex(&v)
+		switch t {
+		case TokToken:
+			token := v.str
+			if t := p.lex.Lex(&v); t != TokOpenCurlyBrace {
+				p.errorf("Invalid token in node preamble")
+			}
+
+			node, err := p.node(token)
+
+			if err != nil || node == nil {
+				p.errorf("Node is nil: %v", err)
+
+				for {
+					t := p.lex.Lex(&v)
+					// skip until closing brace
+					if t == TokCloseCurlyBrace {
+						break
+					}
+				}
+
+			}
+
+			if node != nil {
+				nodes = append(nodes, node)
+			}
+
+		// ERROR
+		default:
+			break L
+		}
+	}
+
+	return
 }

@@ -75,8 +75,9 @@ func (mesh *PolyMesh) initAccel() error {
 			centroids[i][k] = (V0[k] + V1[k] + V2[k]) / 3
 		}
 
+		//fmt.Printf("%v %v\n", boxes[i], centroids[i])
 		if V0 == V1 && V0 == V2 {
-			//log.Printf("nil triangle: %v %v %v %v %v\n", i, boxes[i], mesh.idxp[i*3+0], mesh.idxp[i*3+1], mesh.idxp[i*3+2])
+			//fmt.Printf("nil triangle: %v %v %v %v %v\n", i, boxes[i], mesh.idxp[i*3+0], mesh.idxp[i*3+1], mesh.idxp[i*3+2])
 		}
 		idxs[i] = int32(i)
 	}
@@ -92,6 +93,14 @@ func (mesh *PolyMesh) initAccel() error {
 		idxp[i*3+0] = mesh.idxp[idxs[i]*3+0]
 		idxp[i*3+1] = mesh.idxp[idxs[i]*3+1]
 		idxp[i*3+2] = mesh.idxp[idxs[i]*3+2]
+	}
+
+	if mesh.shaderidx != nil {
+		shaderidx := make([]byte, len(mesh.shaderidx))
+		for i := range idxs {
+			shaderidx[i] = mesh.shaderidx[idxs[i]]
+		}
+		mesh.shaderidx = shaderidx
 	}
 
 	if mesh.uvtriidx != nil {
