@@ -95,6 +95,14 @@ func (mesh *PolyMesh) initAccel() error {
 		idxp[i*3+2] = mesh.idxp[idxs[i]*3+2]
 	}
 
+	if mesh.shaderidx != nil {
+		shaderidx := make([]byte, len(mesh.shaderidx))
+		for i := range idxs {
+			shaderidx[i] = mesh.shaderidx[idxs[i]]
+		}
+		mesh.shaderidx = shaderidx
+	}
+
 	if mesh.uvtriidx != nil {
 
 		uvidx := make([]uint32, len(mesh.uvtriidx))
