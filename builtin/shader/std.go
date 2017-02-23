@@ -144,13 +144,13 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 
 		sg.LightsPrepare()
 
-		for sg.LightsGetSample() {
+		for sg.NextLight() {
 
 			if sg.Lp.DiffuseShadeMult() > 0.0 {
 
 				// In this example the brdf passed is an interface
 				// allowing sampling, pdf and bsdf eval
-				col := sg.EvaluateLightSample(diffBrdf)
+				col := sg.EvaluateLightSamples(diffBrdf)
 				col.Mul(diffColour)
 				diffContrib.Add(col)
 			}

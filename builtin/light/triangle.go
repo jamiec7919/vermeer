@@ -94,13 +94,15 @@ func (d *Tri) SampleArea(sg *core.ShaderContext, n int) error {
 		//fmt.Printf("\n%v %v %v %v\n", x, t, N, P)
 		D := m.Vec3Sub(P, sg.P)
 
-		sg.Ldist = m.Vec3Length(D)
-		sg.Ld = m.Vec3Normalize(D)
+		var ls core.LightSample
 
-		if m.Vec3Dot(sg.Ld, N) > 0 {
+		ls.Ldist = m.Vec3Length(D)
+		ls.Ld = m.Vec3Normalize(D)
+
+		if m.Vec3Dot(ls.Ld, N) > 0 {
 			continue
 		}
-		sg.Liu.Lambda = sg.Lambda
+		ls.Liu.Lambda = sg.Lambda
 
 		lsg := sg.NewShaderContext()
 
@@ -111,16 +113,18 @@ func (d *Tri) SampleArea(sg *core.ShaderContext, n int) error {
 		lsg.Ng = N
 		lsg.P = P
 
-		E := d.shader.EvalEmission(lsg, m.Vec3Neg(sg.Ld))
+		E := d.shader.EvalEmission(lsg, m.Vec3Neg(ls.Ld))
 
 		sg.ReleaseShaderContext(lsg)
 		//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
 		//E.Scale(m.Abs(omegaO[2]))
-		sg.Liu.FromRGB(E)
+		ls.Liu.FromRGB(E)
 
 		// geometry term / pdf, lots of cancellations
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
-		sg.Weight = m.Abs(m.Vec3Dot(sg.Ld, sg.N)) / /* m.Abs(m.Vec3Dot(sg.Ld, N)) / (sg.Ldist * sg.Ldist */ float32(pdf)
+		ls.Weight = m.Abs(m.Vec3Dot(ls.Ld, sg.N)) / /* m.Abs(m.Vec3Dot(sg.Ld, N)) / (sg.Ldist * sg.Ldist */ float32(pdf)
+
+		sg.Lsamples = append(sg.Lsamples, ls)
 	}
 	return nil
 }

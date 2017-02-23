@@ -5,7 +5,6 @@
 package core
 
 import (
-	"fmt"
 	"github.com/jamiec7919/vermeer/colour"
 	m "github.com/jamiec7919/vermeer/math"
 )
@@ -21,6 +20,11 @@ type BSDF interface {
 	Eval(omegaO m.Vec3) colour.Spectrum
 	// PDF returns the probability density function for the given sample. NOTE: omegaO is in WORLD space.
 	PDF(omegaO m.Vec3) float64
+}
+
+type BSDFSample struct {
+	D   m.Vec3
+	Pdf float64
 }
 
 // Fresnel represents a Fresnel model.
@@ -76,17 +80,14 @@ type ShaderContext struct {
 	Lights   []Light // Array of active lights in this shading context
 	Lidx     int     // Index of current light
 	Lsamples []LightSample
-	Lp       Light           // Light pointer (current light)
-	Ldist    float32         // distance from P to light source
-	Ld       m.Vec3          // Incident direction
-	Li       colour.Spectrum // incoming intensity
-	Liu      colour.Spectrum // unoccluded incoming
+	Lp       Light // Light pointer (current light)
 
 	Area float32
 
 	Image *Image // Image constant values stored here
 
-	OutRGB colour.RGB
+	OutRGB      colour.RGB
+	OutSpectrum colour.Spectrum
 
 	task *RenderTask
 	next *ShaderContext // Pool link
@@ -166,82 +167,130 @@ func (sc *ShaderContext) LightsPrepare() {
 	if sc.Lsamples != nil {
 		sc.Lsamples = sc.Lsamples[:0]
 	}
-	// Should take light.NumSamples samples from each light
 }
 
-// LightsGetSample should be called in a loop and will setup the context for the next light
-// sample and return true.  False will be returned when no more samples are available.
-func (sc *ShaderContext) LightsGetSample() bool {
+// NextLight sets up the ShaderContext for the next relevant light and returns true.  If there are
+// no further lights will return false.
+func (sc *ShaderContext) NextLight() bool {
+	sc.Lidx++
 
-	if sc.Sample >= len(sc.Lsamples) {
-		sc.Lidx++
+	if sc.Lidx < len(sc.Lights) {
+		sc.Lp = sc.Lights[sc.Lidx]
+		sc.Sample = 0
+		// Should take light.NumSamples samples from each light
+		sc.NSamples = sc.Lp.NumSamples(sc)
 
-		if sc.Lidx >= len(sc.Lights) { // All done
-			return false
+		// Unless we're after first bounce
+		if sc.Level > 1 {
+			sc.NSamples = 1
 		}
 
-		n := sc.Lights[sc.Lidx].NumSamples(sc)
+		return true
+	}
 
-		if cap(sc.Lsamples) < n {
-			sc.Lsamples = make([]LightSample, 0, n)
+	return false
+}
+
+// EvaluateLightSamples will evaluate direct lighting for the current light using MIS and
+// return total contribution.  This can be weighted by albedo (colour).
+// Will do MIS for diffuse too but just discard any that miss light. Can do BRDF first up to NSamples/2
+// then any left over samples will be given to light sampling.
+func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) (col colour.RGB) {
+	var bsdfSamples []BSDFSample
+
+	if sc.NSamples > 1 {
+
+		for i := 0; i < sc.NSamples/2; i++ {
+
+		}
+
+		if cap(sc.Lsamples) < sc.NSamples {
+			sc.Lsamples = make([]LightSample, 0, sc.NSamples)
 		} else {
 			sc.Lsamples = sc.Lsamples[:0]
 		}
 
-		sc.Sample = 0
-		sc.Lp = sc.Lights[sc.Lidx]
-		sc.Lp.SampleArea(sc, n)
+		sc.Lp.SampleArea(sc, sc.NSamples)
 
-	}
+		for i := 0; i < sc.NSamples-len(bsdfSamples); i++ {
 
-	if sc.Sample >= len(sc.Lsamples) {
-		// This will only happen if there is a problem in sc.Lp.SampleArea. Recursing
-		// will hit the test at the top and break the recursion if we run out of lights.
-		return sc.LightsGetSample()
-	}
+		}
 
-	sc.Liu = sc.Lsamples[sc.Sample].Liu
-	sc.Ld = sc.Lsamples[sc.Sample].Ld
-	sc.Ldist = sc.Lsamples[sc.Sample].Ldist
-	sc.Weight = float32(sc.Lsamples[sc.Sample].Weight)
-	sc.Sample++
-	return true
-}
+		for _, ls := range sc.Lsamples {
+			ray := sc.NewRay()
+			chsc := sc.NewShaderContext()
 
-// EvaluateLightSample will evaluate the MIS sample for the current light sample and given BRDF.
-func (sc *ShaderContext) EvaluateLightSample(brdf BSDF) colour.RGB {
-	// The brdf returns directions in the tangent space
-	ray := sc.NewRay()
-	chsc := sc.NewShaderContext()
-	if false {
-		fmt.Printf("%v %v\n", sc.P, sc.OffsetP(1))
-	}
-	if m.Vec3Dot(sc.Ld, sc.Ng) < 0 {
-		ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(sc.Ldist*(1.0-ShadowRayEpsilon), sc.Ld), 1.0, 0, sc)
+			if m.Vec3Dot(ls.Ld, sc.Ng) < 0 {
+				ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(ls.Ldist*(1.0-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
+			} else {
+				ray.Init(RayTypeShadow, sc.OffsetP(1), m.Vec3Scale(ls.Ldist*(1.0-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
+
+			}
+
+			if !TraceProbe(ray, chsc) {
+
+				rho := bsdf.Eval(ls.Ld)
+
+				//fmt.Printf("%v %v %v : \n", rho, sc.Liu, sc.Weight)
+
+				rho.Mul(ls.Liu)
+				rho.Scale(ls.Weight / float32(len(sc.Lsamples)))
+
+				//fmt.Printf("%v\n\n", rho)
+				rgb := rho.ToRGB()
+
+				col.Add(rgb)
+
+				sc.ReleaseRay(ray)
+				sc.ReleaseShaderContext(chsc)
+			}
+		}
+
 	} else {
-		ray.Init(RayTypeShadow, sc.OffsetP(1), m.Vec3Scale(sc.Ldist*(1.0-ShadowRayEpsilon), sc.Ld), 1.0, 0, sc)
+		// Probabilistically decide whether to take BSDF or not.
+		if cap(sc.Lsamples) < sc.NSamples {
+			sc.Lsamples = make([]LightSample, 0, sc.NSamples)
+		} else {
+			sc.Lsamples = sc.Lsamples[:0]
+		}
+
+		sc.Lp.SampleArea(sc, sc.NSamples)
+
+		for i := 0; i < sc.NSamples-len(bsdfSamples); i++ {
+
+		}
+
+		for _, ls := range sc.Lsamples {
+			ray := sc.NewRay()
+			chsc := sc.NewShaderContext()
+
+			if m.Vec3Dot(ls.Ld, sc.Ng) < 0 {
+				ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(ls.Ldist*(1.0-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
+			} else {
+				ray.Init(RayTypeShadow, sc.OffsetP(1), m.Vec3Scale(ls.Ldist*(1.0-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
+
+			}
+
+			if !TraceProbe(ray, chsc) {
+
+				rho := bsdf.Eval(ls.Ld)
+
+				//fmt.Printf("%v %v %v : \n", rho, sc.Liu, sc.Weight)
+
+				rho.Mul(ls.Liu)
+				rho.Scale(ls.Weight / float32(len(sc.Lsamples)))
+
+				//fmt.Printf("%v\n\n", rho)
+				rgb := rho.ToRGB()
+
+				col.Add(rgb)
+
+				sc.ReleaseRay(ray)
+				sc.ReleaseShaderContext(chsc)
+			}
+		}
 
 	}
 
-	if !TraceProbe(ray, chsc) {
-
-		rho := brdf.Eval(sc.Ld)
-
-		//fmt.Printf("%v %v %v : \n", rho, sc.Liu, sc.Weight)
-
-		rho.Mul(sc.Liu)
-		rho.Scale(sc.Weight / float32(len(sc.Lsamples)))
-
-		//fmt.Printf("%v\n\n", rho)
-		rgb := rho.ToRGB()
-
-		sc.ReleaseRay(ray)
-		sc.ReleaseShaderContext(chsc)
-		return rgb
-	}
-
-	sc.ReleaseShaderContext(chsc)
-	sc.ReleaseRay(ray)
-	return colour.RGB{}
-
+	return col
 }

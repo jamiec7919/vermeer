@@ -84,41 +84,43 @@ func (d *Disk) PostRender() error { return nil }
 
 // SampleArea implements core.Light.
 func (d *Disk) SampleArea(sg *core.ShaderContext, n int) error {
-	panic("builtin/light/disk.go: SampleArea not implemented")
-	idx := uint64(sg.I*d.NumSamples(sg) + sg.Sample)
-	r0 := ldseq.VanDerCorput(idx, sg.Scramble[0])
-	r1 := ldseq.Sobol(idx, sg.Scramble[1])
+	for i := 0; i < n; i++ {
+		idx := uint64(sg.I*d.NumSamples(sg) + sg.Sample + i)
+		r0 := ldseq.VanDerCorput(idx, sg.Scramble[0])
+		r1 := ldseq.Sobol(idx, sg.Scramble[1])
 
-	u := d.Radius * m.Sqrt(float32(r0)) * m.Cos(2*m.Pi*float32(r1))
-	v := d.Radius * m.Sqrt(float32(r0)) * m.Sin(2*m.Pi*float32(r1))
+		u := d.Radius * m.Sqrt(float32(r0)) * m.Cos(2*m.Pi*float32(r1))
+		v := d.Radius * m.Sqrt(float32(r0)) * m.Sin(2*m.Pi*float32(r1))
 
-	pdf := float64(1.0 / (m.Pi * d.Radius * d.Radius))
+		pdf := float64(1.0 / (m.Pi * d.Radius * d.Radius))
 
-	P := m.Vec3Add3(d.P, m.Vec3Scale(u, d.B), m.Vec3Scale(v, d.T))
+		P := m.Vec3Add3(d.P, m.Vec3Scale(u, d.B), m.Vec3Scale(v, d.T))
 
-	V := m.Vec3Sub(P, sg.P)
+		V := m.Vec3Sub(P, sg.P)
 
-	if m.Vec3Dot(V, sg.Ng) > 0.0 && m.Vec3Dot(V, d.N) < 0.0 {
-		sg.Ldist = m.Vec3Length(V)
-		sg.Ld = m.Vec3Normalize(V)
+		var ls core.LightSample
 
-		sg.Liu.Lambda = sg.Lambda
-		omegaO := m.Vec3BasisProject(d.B, d.T, d.N, m.Vec3Neg(sg.Ld))
-		//ODotN := omegaO[2]
-		E := d.shader.EvalEmission(sg, omegaO)
-		//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
-		//E.Scale(m.Abs(omegaO[2]))
-		sg.Liu.FromRGB(E)
+		if m.Vec3Dot(V, sg.Ng) > 0.0 && m.Vec3Dot(V, d.N) < 0.0 {
+			ls.Ldist = m.Vec3Length(V)
+			ls.Ld = m.Vec3Normalize(V)
 
-		// geometry term / pdf
-		sg.Weight = m.Abs(m.Vec3Dot(sg.Ld, sg.N)) * m.Abs(m.Vec3Dot(sg.Ld, d.N)) / (sg.Ldist * sg.Ldist)
-		sg.Weight /= float32(pdf)
+			ls.Liu.Lambda = sg.Lambda
+			omegaO := m.Vec3BasisProject(d.B, d.T, d.N, m.Vec3Neg(ls.Ld))
+			//ODotN := omegaO[2]
+			E := d.shader.EvalEmission(sg, omegaO)
+			//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
+			//E.Scale(m.Abs(omegaO[2]))
+			ls.Liu.FromRGB(E)
 
-		//		fmt.Printf("%v %v %v %v\n", sg.Poffset, sg.P, pdf, sg.Weight)
-		return nil
+			// geometry term / pdf
+			ls.Weight = m.Abs(m.Vec3Dot(ls.Ld, sg.N)) * m.Abs(m.Vec3Dot(ls.Ld, d.N)) / (ls.Ldist * ls.Ldist)
+			ls.Weight /= float32(pdf)
+
+			//		fmt.Printf("%v %v %v %v\n", sg.Poffset, sg.P, pdf, sg.Weight)
+			sg.Lsamples = append(sg.Lsamples, ls)
+		}
 	}
-
-	return fmt.Errorf("nosample")
+	return nil
 }
 
 // DiffuseShadeMult implements core.Light.
