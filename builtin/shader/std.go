@@ -110,6 +110,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 		diffRoughness = sh.DiffuseRoughness.Float32(sg)
 	}
 
+	var _ = diffRoughness
 	diffBrdf := bsdf.NewOrenNayar(sg.Lambda, m.Vec3Neg(sg.Rd), diffRoughness, U, V, sg.N)
 	//diffBrdf := bsdf.NewLambert(sg.Lambda, m.Vec3Neg(sg.Rd), U, V, sg.N)
 
@@ -225,22 +226,20 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 			r0 := ldseq.VanDerCorput(idx, sg.Scramble[0])
 			r1 := ldseq.Sobol(idx, sg.Scramble[1])
 
-			omegaO := spec1BRDF.Sample(r0, r1)
-			pdf := spec1BRDF.PDF(omegaO)
+			spec1OmegaO := spec1BRDF.Sample(r0, r1)
+			pdf := spec1BRDF.PDF(spec1OmegaO)
 
-			spec1Omega := m.Vec3BasisExpand(U, V, sg.N, omegaO)
-
-			if m.Vec3Dot(spec1Omega, sg.Ng) <= 0.0 {
+			if m.Vec3Dot(spec1OmegaO, sg.Ng) <= 0.0 {
 				continue
 
 			}
 			//fmt.Printf("%v %v\n", spec1Omega, m.Vec3Length(spec1Omega))
 
-			ray.Init(core.RayTypeReflected, sg.OffsetP(1), spec1Omega, m.Inf(1), sg.Level+1, sg)
+			ray.Init(core.RayTypeReflected, sg.OffsetP(1), spec1OmegaO, m.Inf(1), sg.Level+1, sg)
 
 			if core.Trace(ray, &samp) {
 
-				rho := spec1BRDF.Eval(omegaO)
+				rho := spec1BRDF.Eval(spec1OmegaO)
 
 				rho.Scale(1.0 / float32(pdf))
 

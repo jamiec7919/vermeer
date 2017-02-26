@@ -27,7 +27,7 @@ func NewOrenNayar(lambda float32, omegaI m.Vec3, roughness float32, U, V, N m.Ve
 
 // Sample implements core.BSDF.
 func (b *OrenNayar) Sample(r0, r1 float64) m.Vec3 {
-	return sample.CosineHemisphere(r0, r1)
+	return m.Vec3BasisExpand(b.U, b.V, b.N, sample.CosineHemisphere(r0, r1))
 }
 
 // PDF implements core.BSDF.
