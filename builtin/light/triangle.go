@@ -72,6 +72,12 @@ func (d *Tri) NumSamples(sg *core.ShaderContext) int {
 // Geom implements core.Light
 func (d *Tri) Geom() core.Geom { return d.geom }
 
+// ValidSample implements core.Light.
+func (d *Tri) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool {
+	panic("light/Tri.ValidSample: unimplemented.")
+	return false
+}
+
 // SampleArea implements core.Light.
 func (d *Tri) SampleArea(sg *core.ShaderContext, n int) error {
 

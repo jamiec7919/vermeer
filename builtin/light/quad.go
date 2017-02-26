@@ -83,6 +83,12 @@ func (d *Quad) NumSamples(sg *core.ShaderContext) int {
 // Geom implements core.Light
 func (d *Quad) Geom() core.Geom { return d.geom }
 
+// ValidSample implements core.Light.
+func (d *Quad) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool {
+	panic("light/Quad.ValidSample: unimplemented.")
+	return false
+}
+
 // SampleArea implements core.Light.
 func (d *Quad) SampleArea(sg *core.ShaderContext, n int) error {
 

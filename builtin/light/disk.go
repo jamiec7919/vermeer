@@ -82,6 +82,12 @@ func (d *Disk) Geom() core.Geom { return d.geom }
 // PostRender implelments core.Node.
 func (d *Disk) PostRender() error { return nil }
 
+// ValidSample implements core.Light.
+func (d *Disk) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool {
+	panic("light/Disk.ValidSample: unimplemented.")
+	return false
+}
+
 // SampleArea implements core.Light.
 func (d *Disk) SampleArea(sg *core.ShaderContext, n int) error {
 	for i := 0; i < n; i++ {

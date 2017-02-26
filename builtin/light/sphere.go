@@ -125,6 +125,57 @@ func raySphereIntersect(Ro, Rd, P m.Vec3, radius float32) (float32, bool) {
 
 func sqr(x float32) float32 { return x * x }
 
+// ValidSample implements core.Light.
+func (d *Sphere) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool {
+	// Intersect ray x+ta with sphere.
+	t, ok := raySphereIntersect(sg.P, sample.D, d.P, d.Radius)
+
+	if !ok {
+		//return fmt.Errorf("nosample")
+		return false
+	}
+
+	x := m.Vec3Mad(sg.P, sample.D, t)
+
+	D := m.Vec3Sub(x, sg.P)
+
+	sample.Ldist = m.Vec3Length(D)
+	sample.Ld = m.Vec3Normalize(D)
+
+	sample.Liu.Lambda = sg.Lambda
+
+	lsg := sg.NewShaderContext()
+	lsg.Lambda = sg.Lambda
+
+	N := m.Vec3Normalize(m.Vec3Sub(x, d.P))
+
+	lsg.U = 0.5 + m.Atan2(N[2], N[0])/(2*m.Pi)
+	lsg.V = 0.5 - m.Asin(N[1])/m.Pi
+	lsg.Shader = d.shader
+
+	E := d.shader.EvalEmission(lsg, m.Vec3Neg(sample.D))
+
+	sg.ReleaseShaderContext(lsg)
+
+	//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
+	//E.Scale(m.Abs(omegaO[2]))
+	sample.Liu.FromRGB(E)
+
+	V := m.Vec3Sub(d.P, sg.P)
+
+	l := m.Vec3Length(V)
+
+	//	sample.Weight = m.Abs(m.Vec3Dot(sample.Ld, sg.N)) * 2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))
+	sample.Weight = 1 / (2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))) // q_2 from Shirley96
+
+	if false {
+		fmt.Printf("weight(b): %v (%v / %v) %v %v %v %v\n", sample.Weight, d.Radius, l, d.Radius/l, sqr(d.Radius/l), 1-sqr(d.Radius/l), m.Sqrt(1-sqr(d.Radius/l)))
+	}
+	//sample.Weight /= m.Vec3DotAbs(sample.Ld, N)
+
+	return true
+}
+
 // SampleArea implements core.Light.
 func (d *Sphere) SampleArea(sg *core.ShaderContext, n int) error {
 
@@ -136,8 +187,14 @@ func (d *Sphere) SampleArea(sg *core.ShaderContext, n int) error {
 	v := m.Vec3Normalize(m.Vec3Cross(w, sg.Ng))
 	u := m.Vec3Cross(w, v)
 
+	dist := m.Vec3Dot(sg.Ng, d.P) - m.Vec3Dot(sg.Ng, sg.P)
+
+	if m.Abs(dist) < d.Radius {
+		return nil
+	}
+
 	for i := 0; i < n; i++ {
-		idx := uint64(sg.I*d.NumSamples(sg) + sg.Sample + i)
+		idx := uint64(sg.I*n + sg.Sample + i)
 		r0 := ldseq.VanDerCorput(idx, sg.Scramble[0])
 		r1 := ldseq.Sobol(idx, sg.Scramble[1])
 
@@ -195,7 +252,13 @@ func (d *Sphere) SampleArea(sg *core.ShaderContext, n int) error {
 
 		// geometry term / pdf, lots of cancellations
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
-		ls.Weight = m.Abs(m.Vec3Dot(ls.Ld, sg.N)) * 2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))
+		//ls.Weight = m.Abs(m.Vec3Dot(ls.Ld, sg.N)) * 2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))
+		ls.Weight = 1 / (2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))) // q_2 from Shirley96
+
+		if false {
+			fmt.Printf("weight: %v (%v / %v) %v %v %v %v %v\n", ls.Weight, d.Radius, l, d.Radius/l, sqr(d.Radius/l), 1-sqr(d.Radius/l), m.Sqrt(1-sqr(d.Radius/l)), 2*m.Pi*(1-m.Sqrt(1-sqr(d.Radius/l))))
+		}
+		//ls.Weight /= m.Vec3DotAbs(ls.Ld, N)
 
 		sg.Lsamples = append(sg.Lsamples, ls)
 	}
@@ -204,7 +267,7 @@ func (d *Sphere) SampleArea(sg *core.ShaderContext, n int) error {
 
 // NumSamples implements core.Light
 func (d *Sphere) NumSamples(sg *core.ShaderContext) int {
-	return d.Samples * d.Samples
+	return 1 << uint(d.Samples)
 }
 
 // PotentialContrib implements core.Light.
