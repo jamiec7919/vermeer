@@ -13,6 +13,7 @@ import (
 type LightSample struct {
 	P      m.Vec3
 	Weight float32
+	Pdf    float32
 	Liu    colour.Spectrum
 	Ld     m.Vec3
 	Ldist  float32
@@ -32,6 +33,10 @@ type Light interface {
 	// NumSamples returns the number of samples that should be taken from this light for the
 	// given context.
 	NumSamples(sg *ShaderContext) int
+
+	// ValidSample returns true if the BSDF sample will hit light and fills in sample with the unoccluded light
+	// value.
+	ValidSample(sg *ShaderContext, sample *BSDFSample) bool
 
 	// Geom returns the Geom associated with this light.
 	Geom() Geom

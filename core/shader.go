@@ -5,15 +5,17 @@
 package core
 
 import (
+	"fmt"
 	"github.com/jamiec7919/vermeer/colour"
 	m "github.com/jamiec7919/vermeer/math"
+	"github.com/jamiec7919/vermeer/math/ldseq"
 )
 
 // BSDF represents a BRDF or BTDF that can be sampled.  The core API only considers the incoming direction
 // so all other parameters should be stored in the concrete instance of the individual BRDFs.
 // This is used for Multiple Importance Sampling with light sources.
 type BSDF interface {
-	// Sample returns a direction given two (quasi)random numbers.
+	// Sample returns a direction given two (quasi)random numbers. NOTE: returned vector in WORLD space.
 	Sample(r0, r1 float64) m.Vec3
 	// Eval evaluates the BSDF given the incoming direction. Returns value multiplied by cosine
 	// of angle between omegaO and the normal. NOTE: omegaO is in WORLD space.
@@ -23,8 +25,12 @@ type BSDF interface {
 }
 
 type BSDFSample struct {
-	D   m.Vec3
-	Pdf float64
+	D      m.Vec3
+	Pdf    float64
+	Weight float32
+	Liu    colour.Spectrum
+	Ld     m.Vec3
+	Ldist  float32
 }
 
 // Fresnel represents a Fresnel model.
@@ -181,7 +187,7 @@ func (sc *ShaderContext) NextLight() bool {
 		sc.NSamples = sc.Lp.NumSamples(sc)
 
 		// Unless we're after first bounce
-		if sc.Level > 1 {
+		if sc.Level > 0 {
 			sc.NSamples = 1
 		}
 
@@ -195,30 +201,59 @@ func (sc *ShaderContext) NextLight() bool {
 // return total contribution.  This can be weighted by albedo (colour).
 // Will do MIS for diffuse too but just discard any that miss light. Can do BRDF first up to NSamples/2
 // then any left over samples will be given to light sampling.
-func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) (col colour.RGB) {
+func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 	var bsdfSamples []BSDFSample
+	var col colour.RGB
 
 	if sc.NSamples > 1 {
+
+		for i := 0; i < sc.NSamples/2; i++ {
+			idx := uint64(sc.I*(sc.NSamples/2) + sc.Sample + i)
+			r0 := ldseq.VanDerCorput(idx, sc.Scramble[0])
+			r1 := ldseq.Sobol(idx, sc.Scramble[1])
+
+			omegaO := bsdf.Sample(r0, r1)
+
+			s := BSDFSample{D: omegaO, Pdf: bsdf.PDF(omegaO)}
+
+			//if sc.X == 178 && sc.Y == 437 {
+			//	fmt.Printf("test: %v\n", s)
+			//}
+
+			if sc.Lp.ValidSample(sc, &s) {
+
+				if sc.X == 178 && sc.Y == 437 {
+					fmt.Printf("valid: %v\n", s)
+				}
+
+				bsdfSamples = append(bsdfSamples, s)
+			}
+		}
+
+		if cap(sc.Lsamples) < sc.NSamples/2 {
+			sc.Lsamples = make([]LightSample, 0, sc.NSamples/2)
+		} else {
+			sc.Lsamples = sc.Lsamples[:0]
+		}
+
+		sc.Lp.SampleArea(sc, sc.NSamples/2)
 
 		for i := 0; i < sc.NSamples/2; i++ {
 
 		}
 
-		if cap(sc.Lsamples) < sc.NSamples {
-			sc.Lsamples = make([]LightSample, 0, sc.NSamples)
-		} else {
-			sc.Lsamples = sc.Lsamples[:0]
+		totalSamples := len(sc.Lsamples) + len(bsdfSamples)
+
+		if totalSamples == 0 {
+			return colour.RGB{}
 		}
 
-		sc.Lp.SampleArea(sc, sc.NSamples)
+		//totalSamples = sc.NSamples
 
-		for i := 0; i < sc.NSamples-len(bsdfSamples); i++ {
-
-		}
+		ray := sc.NewRay()
+		chsc := sc.NewShaderContext()
 
 		for _, ls := range sc.Lsamples {
-			ray := sc.NewRay()
-			chsc := sc.NewShaderContext()
 
 			if m.Vec3Dot(ls.Ld, sc.Ng) < 0 {
 				ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(ls.Ldist*(1.0-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
@@ -234,19 +269,71 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) (col colour.RGB) {
 				//fmt.Printf("%v %v %v : \n", rho, sc.Liu, sc.Weight)
 
 				rho.Mul(ls.Liu)
-				rho.Scale(ls.Weight / float32(len(sc.Lsamples)))
+
+				p_hat := float32(len(bsdfSamples)) * float32(bsdf.PDF(ls.Ld)) / float32(totalSamples)
+
+				p_hat += float32(len(sc.Lsamples)) * ls.Weight / float32(totalSamples)
+
+				rho.Scale(1.0 / p_hat)
 
 				//fmt.Printf("%v\n\n", rho)
 				rgb := rho.ToRGB()
 
 				col.Add(rgb)
 
-				sc.ReleaseRay(ray)
-				sc.ReleaseShaderContext(chsc)
 			}
 		}
 
+		for _, bs := range bsdfSamples {
+
+			if m.Vec3Dot(bs.Ld, sc.Ng) < 0 {
+				ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(bs.Ldist*(1.0-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
+			} else {
+				ray.Init(RayTypeShadow /*m.Vec3Mad(sc.P, sc.Ng, 0.1) */, sc.OffsetP(1), m.Vec3Scale(bs.Ldist*(1.0-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
+
+			}
+
+			if !TraceProbe(ray, chsc) {
+
+				rho := bsdf.Eval(bs.Ld)
+
+				//fmt.Printf("%v %v %v : \n", rho, sc.Liu, sc.Weight)
+
+				rho.Mul(bs.Liu)
+				//rho.Scale(ls.Weight / float32(len(sc.Lsamples)))
+
+				p_hat := float32(len(bsdfSamples)) * float32(bs.Pdf) / float32(totalSamples)
+
+				p_hat += float32(len(sc.Lsamples)) * bs.Weight / float32(totalSamples)
+				//if sc.X == 178 && sc.Y == 437 {
+				//}
+
+				rho.Scale(1.0 / p_hat)
+
+				//fmt.Printf("%v\n\n", rho)
+				rgb := rho.ToRGB()
+
+				//fmt.Printf("%v %v %v %v %v %v %v\n", sc.X, sc.Y, totalSamples, bs.Pdf, p_hat, rho, rgb)
+
+				for k := range rgb {
+					if rgb[k] < 0 {
+						rgb[k] = 0
+					}
+				}
+				col.Add(rgb)
+
+			}
+
+			//fmt.Printf("col: %v\n", col)
+		}
+
+		sc.ReleaseRay(ray)
+		sc.ReleaseShaderContext(chsc)
+
+		col.Scale(1.0 / float32(totalSamples))
+
 	} else {
+		return colour.RGB{}
 		// Probabilistically decide whether to take BSDF or not.
 		if cap(sc.Lsamples) < sc.NSamples {
 			sc.Lsamples = make([]LightSample, 0, sc.NSamples)
