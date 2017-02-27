@@ -110,7 +110,13 @@ func (b *MicrofacetGGX) PDF(_omegaO m.Vec3) float64 {
 	omegaM = m.Vec3Scale(sign(b.OmegaR[2]), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omegaO)))
 
 	//log.Printf("D: %v", ggxD(omegaM, alpha))
-	return float64(ggxD(omegaM, alpha) * omegaM[2])
+	pdf := float64(ggxD(omegaM, alpha) * omegaM[2])
+
+	if math.IsNaN(pdf) {
+		return 0
+	}
+
+	return pdf
 }
 
 // Eval implements core.BSDF.
@@ -129,6 +135,13 @@ func (b *MicrofacetGGX) Eval(_omegaO m.Vec3) (rho colour.Spectrum) {
 	rho.Lambda = b.Lambda
 	rho.FromRGB(fresnel)
 	rho.Scale(m.Abs(omegaI[2]) * numer / denom)
+
+	for k := range rho.C {
+		if rho.C[k] < 0 || math.IsNaN(float64(rho.C[k])) {
+			rho.C[k] = 0
+		}
+	}
+
 	return
 }
 

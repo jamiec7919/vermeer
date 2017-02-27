@@ -18,6 +18,7 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/ldseq"
 	"github.com/jamiec7919/vermeer/nodes"
+	"math"
 )
 
 // ShaderStd is the default surface shader.
@@ -248,6 +249,12 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 				//fmt.Printf("%v %v\n", col, samp.Colour)
 				col.Mul(spec1Colour)
 				col.Mul(samp.Colour)
+
+				for k := range col {
+					if col[k] < 0 || math.IsNaN(float64(col[k])) {
+						col[k] = 0
+					}
+				}
 				spec1Contrib.Add(col)
 			}
 
@@ -256,6 +263,21 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 		sg.ReleaseRay(ray)
 
 		spec1Contrib.Scale(spec1Weight / float32(spec1Samples))
+
+		sg.LightsPrepare()
+
+		for sg.NextLight() {
+
+			//			if sg.Lp.DiffuseShadeMult() > 0.0 {
+
+			// In this example the brdf passed is an interface
+			// allowing sampling, pdf and bsdf eval
+			col := sg.EvaluateLightSamples(spec1BRDF)
+			col.Mul(spec1Colour)
+			spec1Contrib.Add(col)
+			//			}
+
+		}
 
 	}
 

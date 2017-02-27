@@ -5,7 +5,6 @@
 package core
 
 import (
-	"fmt"
 	"github.com/jamiec7919/vermeer/colour"
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/ldseq"
@@ -216,15 +215,7 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 
 			s := BSDFSample{D: omegaO, Pdf: bsdf.PDF(omegaO)}
 
-			//if sc.X == 178 && sc.Y == 437 {
-			//	fmt.Printf("test: %v\n", s)
-			//}
-
 			if sc.Lp.ValidSample(sc, &s) {
-
-				if sc.X == 178 && sc.Y == 437 {
-					fmt.Printf("valid: %v\n", s)
-				}
 
 				bsdfSamples = append(bsdfSamples, s)
 			}
@@ -242,7 +233,14 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 
 		}
 
-		totalSamples := len(sc.Lsamples) + len(bsdfSamples)
+		nBSDFSamples := sc.NSamples / 2
+		nLightSamples := sc.NSamples / 2
+
+		if len(sc.Lsamples) == 0 { // NOTE this needs thinking about, if we take any samples at all then should count all of them, otherwise use BSDF.
+			nLightSamples = 0
+		}
+
+		totalSamples := nBSDFSamples + nLightSamples
 
 		if totalSamples == 0 {
 			return colour.RGB{}
@@ -270,14 +268,20 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 
 				rho.Mul(ls.Liu)
 
-				p_hat := float32(len(bsdfSamples)) * float32(bsdf.PDF(ls.Ld)) / float32(totalSamples)
+				p_hat := float32(nBSDFSamples) * float32(bsdf.PDF(ls.Ld)) / float32(totalSamples)
 
-				p_hat += float32(len(sc.Lsamples)) * ls.Weight / float32(totalSamples)
+				p_hat += float32(nLightSamples) * ls.Weight / float32(totalSamples)
 
 				rho.Scale(1.0 / p_hat)
 
 				//fmt.Printf("%v\n\n", rho)
 				rgb := rho.ToRGB()
+
+				for k := range rgb {
+					if rgb[k] < 0 {
+						rgb[k] = 0
+					}
+				}
 
 				col.Add(rgb)
 
@@ -289,7 +293,7 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 			if m.Vec3Dot(bs.Ld, sc.Ng) < 0 {
 				ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(bs.Ldist*(1.0-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
 			} else {
-				ray.Init(RayTypeShadow /*m.Vec3Mad(sc.P, sc.Ng, 0.1) */, sc.OffsetP(1), m.Vec3Scale(bs.Ldist*(1.0-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
+				ray.Init(RayTypeShadow, sc.OffsetP(1), m.Vec3Scale(bs.Ldist*(1.0-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
 
 			}
 
@@ -297,20 +301,14 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 
 				rho := bsdf.Eval(bs.Ld)
 
-				//fmt.Printf("%v %v %v : \n", rho, sc.Liu, sc.Weight)
-
 				rho.Mul(bs.Liu)
-				//rho.Scale(ls.Weight / float32(len(sc.Lsamples)))
 
-				p_hat := float32(len(bsdfSamples)) * float32(bs.Pdf) / float32(totalSamples)
+				p_hat := float32(nBSDFSamples) * float32(bs.Pdf) / float32(totalSamples)
 
-				p_hat += float32(len(sc.Lsamples)) * bs.Weight / float32(totalSamples)
-				//if sc.X == 178 && sc.Y == 437 {
-				//}
+				p_hat += float32(nLightSamples) * bs.Weight / float32(totalSamples)
 
 				rho.Scale(1.0 / p_hat)
 
-				//fmt.Printf("%v\n\n", rho)
 				rgb := rho.ToRGB()
 
 				//fmt.Printf("%v %v %v %v %v %v %v\n", sc.X, sc.Y, totalSamples, bs.Pdf, p_hat, rho, rgb)
@@ -320,6 +318,7 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 						rgb[k] = 0
 					}
 				}
+
 				col.Add(rgb)
 
 			}
@@ -333,7 +332,6 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 		col.Scale(1.0 / float32(totalSamples))
 
 	} else {
-		return colour.RGB{}
 		// Probabilistically decide whether to take BSDF or not.
 		if cap(sc.Lsamples) < sc.NSamples {
 			sc.Lsamples = make([]LightSample, 0, sc.NSamples)
@@ -365,7 +363,7 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 				//fmt.Printf("%v %v %v : \n", rho, sc.Liu, sc.Weight)
 
 				rho.Mul(ls.Liu)
-				rho.Scale(ls.Weight / float32(len(sc.Lsamples)))
+				rho.Scale(1.0 / ls.Weight)
 
 				//fmt.Printf("%v\n\n", rho)
 				rgb := rho.ToRGB()
