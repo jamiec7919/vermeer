@@ -24,12 +24,12 @@ type BSDF interface {
 }
 
 type BSDFSample struct {
-	D      m.Vec3
-	Pdf    float64
-	Weight float32
-	Liu    colour.Spectrum
-	Ld     m.Vec3
-	Ldist  float32
+	D        m.Vec3
+	Pdf      float64
+	PdfLight float32
+	Liu      colour.Spectrum
+	Ld       m.Vec3
+	Ldist    float32
 }
 
 // Fresnel represents a Fresnel model.
@@ -270,7 +270,7 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 
 				p_hat := float32(nBSDFSamples) * float32(bsdf.PDF(ls.Ld)) / float32(totalSamples)
 
-				p_hat += float32(nLightSamples) * ls.Weight / float32(totalSamples)
+				p_hat += float32(nLightSamples) * ls.Pdf / float32(totalSamples)
 
 				rho.Scale(1.0 / p_hat)
 
@@ -305,7 +305,7 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 
 				p_hat := float32(nBSDFSamples) * float32(bs.Pdf) / float32(totalSamples)
 
-				p_hat += float32(nLightSamples) * bs.Weight / float32(totalSamples)
+				p_hat += float32(nLightSamples) * bs.PdfLight / float32(totalSamples)
 
 				rho.Scale(1.0 / p_hat)
 
@@ -363,7 +363,7 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 				//fmt.Printf("%v %v %v : \n", rho, sc.Liu, sc.Weight)
 
 				rho.Mul(ls.Liu)
-				rho.Scale(1.0 / ls.Weight)
+				rho.Scale(1.0 / ls.Pdf)
 
 				//fmt.Printf("%v\n\n", rho)
 				rgb := rho.ToRGB()

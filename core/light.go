@@ -11,12 +11,11 @@ import (
 
 // LightSample is used for direct lighting samples.
 type LightSample struct {
-	P      m.Vec3
-	Weight float32
-	Pdf    float32
-	Liu    colour.Spectrum
-	Ld     m.Vec3
-	Ldist  float32
+	P     m.Vec3
+	Pdf   float32
+	Liu   colour.Spectrum
+	Ld    m.Vec3
+	Ldist float32
 }
 
 // Light represents a light that can be sampled by the system.
