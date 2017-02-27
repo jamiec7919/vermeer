@@ -80,6 +80,7 @@ func (d *Tri) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool 
 
 // SampleArea implements core.Light.
 func (d *Tri) SampleArea(sg *core.ShaderContext, n int) error {
+	panic("light/Tri.ValidSample: unimplemented.")
 
 	for i := 0; i < n; i++ {
 		idx := uint64(sg.I*d.NumSamples(sg) + sg.Sample + i)
@@ -128,7 +129,7 @@ func (d *Tri) SampleArea(sg *core.ShaderContext, n int) error {
 
 		// geometry term / pdf, lots of cancellations
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
-		ls.Weight = m.Abs(m.Vec3Dot(ls.Ld, sg.N)) / /* m.Abs(m.Vec3Dot(sg.Ld, N)) / (sg.Ldist * sg.Ldist */ float32(pdf)
+		ls.Pdf = /* m.Abs(m.Vec3Dot(sg.Ld, N)) / (sg.Ldist * sg.Ldist */ float32(pdf)
 
 		sg.Lsamples = append(sg.Lsamples, ls)
 	}

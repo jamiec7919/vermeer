@@ -149,6 +149,10 @@ func (d *Sphere) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bo
 
 	N := m.Vec3Normalize(m.Vec3Sub(x, d.P))
 
+	lsg.N = N
+	lsg.Ng = N
+	lsg.P = x
+
 	lsg.U = 0.5 + m.Atan2(N[2], N[0])/(2*m.Pi)
 	lsg.V = 0.5 - m.Asin(N[1])/m.Pi
 	lsg.Shader = d.shader
@@ -166,10 +170,10 @@ func (d *Sphere) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bo
 	l := m.Vec3Length(V)
 
 	//	sample.Weight = m.Abs(m.Vec3Dot(sample.Ld, sg.N)) * 2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))
-	sample.Weight = 1 / (2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))) // q_2 from Shirley96
+	sample.PdfLight = 1 / (2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))) // q_2 from Shirley96
 
 	if false {
-		fmt.Printf("weight(b): %v (%v / %v) %v %v %v %v\n", sample.Weight, d.Radius, l, d.Radius/l, sqr(d.Radius/l), 1-sqr(d.Radius/l), m.Sqrt(1-sqr(d.Radius/l)))
+		fmt.Printf("weight(b): %v (%v / %v) %v %v %v %v\n", sample.PdfLight, d.Radius, l, d.Radius/l, sqr(d.Radius/l), 1-sqr(d.Radius/l), m.Sqrt(1-sqr(d.Radius/l)))
 	}
 	//sample.Weight /= m.Vec3DotAbs(sample.Ld, N)
 
@@ -238,6 +242,9 @@ func (d *Sphere) SampleArea(sg *core.ShaderContext, n int) error {
 
 		N := m.Vec3Normalize(m.Vec3Sub(x, d.P))
 
+		lsg.N = N
+		lsg.Ng = N
+		lsg.P = x
 		lsg.U = 0.5 + m.Atan2(N[2], N[0])/(2*m.Pi)
 		lsg.V = 0.5 - m.Asin(N[1])/m.Pi
 		lsg.Shader = d.shader
@@ -253,10 +260,10 @@ func (d *Sphere) SampleArea(sg *core.ShaderContext, n int) error {
 		// geometry term / pdf, lots of cancellations
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
 		//ls.Weight = m.Abs(m.Vec3Dot(ls.Ld, sg.N)) * 2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))
-		ls.Weight = 1 / (2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))) // q_2 from Shirley96
+		ls.Pdf = 1 / (2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))) // q_2 from Shirley96
 
 		if false {
-			fmt.Printf("weight: %v (%v / %v) %v %v %v %v %v\n", ls.Weight, d.Radius, l, d.Radius/l, sqr(d.Radius/l), 1-sqr(d.Radius/l), m.Sqrt(1-sqr(d.Radius/l)), 2*m.Pi*(1-m.Sqrt(1-sqr(d.Radius/l))))
+			fmt.Printf("weight: %v (%v / %v) %v %v %v %v %v\n", ls.Pdf, d.Radius, l, d.Radius/l, sqr(d.Radius/l), 1-sqr(d.Radius/l), m.Sqrt(1-sqr(d.Radius/l)), 2*m.Pi*(1-m.Sqrt(1-sqr(d.Radius/l))))
 		}
 		//ls.Weight /= m.Vec3DotAbs(ls.Ld, N)
 

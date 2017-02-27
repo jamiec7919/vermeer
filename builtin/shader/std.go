@@ -308,7 +308,7 @@ func (sh *ShaderStd) EvalEmission(sg *core.ShaderContext, omegaO m.Vec3) colour.
 		return colour.RGB{}
 	}
 
-	emissColour.Scale(emissStrength)
+	emissColour.Scale(emissStrength * m.Vec3DotClamp(sg.N, omegaO))
 	return emissColour
 }
 
