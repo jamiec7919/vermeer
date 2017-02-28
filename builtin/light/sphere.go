@@ -191,11 +191,11 @@ func (d *Sphere) SampleArea(sg *core.ShaderContext, n int) error {
 	v := m.Vec3Normalize(m.Vec3Cross(w, sg.Ng))
 	u := m.Vec3Cross(w, v)
 
-	dist := m.Vec3Dot(sg.Ng, d.P) - m.Vec3Dot(sg.Ng, sg.P)
+	//	dist := m.Vec3Dot(sg.Ng, d.P) - m.Vec3Dot(sg.Ng, sg.P)
 
-	if m.Abs(dist) < d.Radius {
-		return nil
-	}
+	//	if m.Abs(dist) < d.Radius {
+	//		return nil
+	//	}
 
 	for i := 0; i < n; i++ {
 		idx := uint64(sg.I*n + sg.Sample + i)

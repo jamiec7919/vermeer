@@ -11,6 +11,7 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/ldseq"
 	"github.com/jamiec7919/vermeer/nodes"
+	"math"
 )
 
 // Tri represents a triangular light node.
@@ -19,6 +20,8 @@ type Tri struct {
 	NodeName   string       `node:"Name"`
 	P0, P1, P2 m.Vec3
 	Shader     string
+
+	Samples int
 
 	shader core.Shader
 	geom   core.Geom
@@ -66,39 +69,179 @@ func (d *Tri) PotentialContrib(sg *core.ShaderContext) float32 {
 
 // NumSamples implements core.Light
 func (d *Tri) NumSamples(sg *core.ShaderContext) int {
-	return 1
+	return 1 << uint(d.Samples)
 }
 
 // Geom implements core.Light
 func (d *Tri) Geom() core.Geom { return d.geom }
 
-// ValidSample implements core.Light.
-func (d *Tri) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool {
-	panic("light/Tri.ValidSample: unimplemented.")
-	return false
+// https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
+func rayTriangleIntersect(Ro, Rd, P0, P1, P2 m.Vec3) (m.Vec3, float32, bool) {
+
+	//Find vectors for two edges sharing V1
+	e1 := m.Vec3Sub(P1, P0)
+	e2 := m.Vec3Sub(P2, P0)
+
+	//Begin calculating determinant - also used to calculate u parameter
+	P := m.Vec3Cross(Rd, e2)
+
+	//if determinant is near zero, ray lies in plane of triangle or ray is parallel to plane of triangle
+	det := m.Vec3Dot(e1, P)
+
+	//NOT CULLING
+	if det > -1e-6 && det < 1e-6 {
+		return m.Vec3{}, 0, false
+	}
+
+	inv_det := 1 / det
+
+	//calculate distance from V1 to ray origin
+	T := m.Vec3Sub(Ro, P0)
+
+	//Calculate u parameter and test bound
+	u := m.Vec3Dot(T, P) * inv_det
+
+	//The intersection lies outside of the triangle
+	if u < 0 || u > 1 {
+		return m.Vec3{}, 0, false
+	}
+
+	//Prepare to test v parameter
+	Q := m.Vec3Cross(T, e1)
+
+	//Calculate V parameter and test bound
+	v := m.Vec3Dot(Rd, Q) * inv_det
+
+	//The intersection lies outside of the triangle
+	if v < 0 || u+v > 1 {
+		return m.Vec3{}, 0, false
+	}
+
+	t := m.Vec3Dot(e2, Q) * inv_det
+
+	if t > 1e-6 { //ray intersection
+		p := m.Vec3Add3(m.Vec3Scale(1-u-v, P0), m.Vec3Scale(u, P1), m.Vec3Scale(v, P2))
+		return p, t, true
+	}
+
+	// No hit, no win
+	return m.Vec3{}, 0, false
 }
 
-// SampleArea implements core.Light.
-func (d *Tri) SampleArea(sg *core.ShaderContext, n int) error {
-	panic("light/Tri.ValidSample: unimplemented.")
+func triangleArea(P0, P1, P2 m.Vec3) float32 {
+	return 0.5 * m.Vec3Length(m.Vec3Cross(m.Vec3Sub(P1, P0), m.Vec3Sub(P2, P0)))
+}
+
+// ValidSample implements core.Light.
+func (d *Tri) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool {
+
+	P, _, ok := rayTriangleIntersect(sg.P, sample.D, d.P0, d.P1, d.P2)
+
+	if !ok {
+		return false
+	}
+
+	// Check if we can do spherical:
+	if true || m.Vec3Dot(sg.Ng, m.Vec3Sub(d.P0, P)) < 0 ||
+		m.Vec3Dot(sg.Ng, m.Vec3Sub(d.P1, P)) < 0 ||
+		m.Vec3Dot(sg.Ng, m.Vec3Sub(d.P2, P)) < 0 {
+
+		// Area only
+		pdf := float64(1 / triangleArea(d.P0, d.P1, d.P2))
+
+		D := m.Vec3Sub(P, sg.P)
+
+		sample.Ldist = m.Vec3Length(D)
+		sample.Ld = m.Vec3Normalize(D)
+
+		N := m.Vec3Normalize(m.Vec3Cross(m.Vec3Sub(d.P1, d.P0), m.Vec3Sub(d.P2, d.P0)))
+
+		if m.Vec3Dot(sample.Ld, N) > 0 || m.Vec3Dot(sample.Ld, sg.Ng) < 0 {
+			return false
+		}
+
+		sample.Liu.Lambda = sg.Lambda
+
+		lsg := sg.NewShaderContext()
+
+		lsg.Lambda = sg.Lambda
+		lsg.U = 0
+		lsg.V = 0
+		lsg.N = N
+		lsg.Ng = N
+		lsg.P = P
+
+		E := d.shader.EvalEmission(lsg, m.Vec3Neg(sample.Ld))
+
+		sg.ReleaseShaderContext(lsg)
+		//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
+		//E.Scale(m.Abs(omegaO[2]))
+		sample.Liu.FromRGB(E)
+
+		sample.PdfLight = float32(pdf) * m.Vec3DotAbs(sample.Ld, N) / sqr(sample.Ldist)
+
+	} else {
+		pa := m.Vec3Normalize(m.Vec3Sub(d.P0, sg.P))
+		pb := m.Vec3Normalize(m.Vec3Sub(d.P1, sg.P))
+		pc := m.Vec3Normalize(m.Vec3Sub(d.P2, sg.P))
+
+		a, b, c := triangleVerticesToSides(pa, pb, pc)
+
+		alpha, beta, gamma := triangleSidesToAngles(a, b, c)
+
+		area := alpha + beta + gamma - m.Pi
+
+		pdf := float64(1 / area)
+
+		D := m.Vec3Sub(P, sg.P)
+
+		sample.Ldist = m.Vec3Length(D)
+		sample.Ld = m.Vec3Normalize(D)
+
+		N := m.Vec3Normalize(m.Vec3Cross(m.Vec3Sub(d.P1, d.P0), m.Vec3Sub(d.P2, d.P0)))
+
+		if m.Vec3Dot(sample.Ld, N) > 0 || m.Vec3Dot(sample.Ld, sg.Ng) < 0 {
+			return false
+		}
+
+		sample.Liu.Lambda = sg.Lambda
+
+		lsg := sg.NewShaderContext()
+
+		lsg.Lambda = sg.Lambda
+		lsg.U = 0
+		lsg.V = 0
+		lsg.N = N
+		lsg.Ng = N
+		lsg.P = P
+
+		E := d.shader.EvalEmission(lsg, m.Vec3Neg(sample.Ld))
+
+		sg.ReleaseShaderContext(lsg)
+		//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
+		//E.Scale(m.Abs(omegaO[2]))
+		sample.Liu.FromRGB(E)
+
+		sample.PdfLight = float32(pdf)
+
+	}
+
+	return true
+}
+
+func (d *Tri) sampleByArea(sg *core.ShaderContext, n int) error {
+	// Area only
+	pdf := float64(1 / triangleArea(d.P0, d.P1, d.P2))
+
+	N := m.Vec3Normalize(m.Vec3Cross(m.Vec3Sub(d.P1, d.P0), m.Vec3Sub(d.P2, d.P0)))
 
 	for i := 0; i < n; i++ {
-		idx := uint64(sg.I*d.NumSamples(sg) + sg.Sample + i)
+		idx := uint64(sg.I*n + i)
 		r0 := ldseq.VanDerCorput(idx, sg.Scramble[0])
 		r1 := ldseq.Sobol(idx, sg.Scramble[1])
 
-		x, pdf := sampleSphericalTriangle(d.P0, d.P1, d.P2, sg.P, r0, r1)
+		P := m.Vec3Add3(d.P0, m.Vec3Scale(float32(r1*math.Sqrt(1-r0)), m.Vec3Sub(d.P1, d.P0)), m.Vec3Scale(float32(1-math.Sqrt(1-r0)), m.Vec3Sub(d.P2, d.P0)))
 
-		// x is point on sphere, do a ray-plane intersection
-		N := m.Vec3Normalize(m.Vec3Cross(m.Vec3Sub(d.P2, d.P0), m.Vec3Sub(d.P1, d.P0)))
-
-		planeD := -m.Vec3Dot(N, d.P0)
-
-		t := -(m.Vec3Dot(sg.P, N) + planeD) / m.Vec3Dot(x, N)
-
-		P := m.Vec3Mad(sg.P, x, t)
-
-		//fmt.Printf("\n%v %v %v %v\n", x, t, N, P)
 		D := m.Vec3Sub(P, sg.P)
 
 		var ls core.LightSample
@@ -106,9 +249,10 @@ func (d *Tri) SampleArea(sg *core.ShaderContext, n int) error {
 		ls.Ldist = m.Vec3Length(D)
 		ls.Ld = m.Vec3Normalize(D)
 
-		if m.Vec3Dot(ls.Ld, N) > 0 {
+		if m.Vec3Dot(ls.Ld, N) > 0 || m.Vec3Dot(ls.Ld, sg.Ng) < 0 {
 			continue
 		}
+
 		ls.Liu.Lambda = sg.Lambda
 
 		lsg := sg.NewShaderContext()
@@ -129,7 +273,71 @@ func (d *Tri) SampleArea(sg *core.ShaderContext, n int) error {
 
 		// geometry term / pdf, lots of cancellations
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
-		ls.Pdf = /* m.Abs(m.Vec3Dot(sg.Ld, N)) / (sg.Ldist * sg.Ldist */ float32(pdf)
+		ls.Pdf = float32(pdf) * m.Vec3DotAbs(ls.Ld, N) / sqr(ls.Ldist)
+
+		sg.Lsamples = append(sg.Lsamples, ls)
+
+	}
+
+	return nil
+}
+
+// SampleArea implements core.Light.
+func (d *Tri) SampleArea(sg *core.ShaderContext, n int) error {
+	// If whole triangle is above horizon then use spherical triangle sampling, otherwise
+	// fall back on area sampling.
+	if m.Vec3Dot(sg.Ng, m.Vec3Sub(d.P0, sg.P)) < 0 ||
+		m.Vec3Dot(sg.Ng, m.Vec3Sub(d.P1, sg.P)) < 0 ||
+		m.Vec3Dot(sg.Ng, m.Vec3Sub(d.P2, sg.P)) < 0 {
+		return d.sampleByArea(sg, n)
+	}
+	return d.sampleByArea(sg, n)
+
+	for i := 0; i < n; i++ {
+		idx := uint64(sg.I*n + i)
+		r0 := ldseq.VanDerCorput(idx, sg.Scramble[0])
+		r1 := ldseq.Sobol(idx, sg.Scramble[1])
+
+		x, pdf := sampleSphericalTriangle(d.P0, d.P1, d.P2, sg.P, r0, r1)
+
+		// x is point on sphere, do a ray-plane intersection
+		N := m.Vec3Normalize(m.Vec3Cross(m.Vec3Sub(d.P1, d.P0), m.Vec3Sub(d.P2, d.P0)))
+
+		t, _ := rayPlaneIntersect(sg.P, x, d.P0, N)
+
+		P := m.Vec3Mad(sg.P, x, t)
+
+		D := m.Vec3Sub(P, sg.P)
+
+		var ls core.LightSample
+
+		ls.Ldist = m.Vec3Length(D)
+		ls.Ld = m.Vec3Normalize(D)
+
+		if m.Vec3Dot(ls.Ld, N) > 0 || m.Vec3Dot(ls.Ld, sg.Ng) < 0 {
+			continue
+		}
+
+		ls.Liu.Lambda = sg.Lambda
+
+		lsg := sg.NewShaderContext()
+
+		lsg.Lambda = sg.Lambda
+		lsg.U = 0
+		lsg.V = 0
+		lsg.N = N
+		lsg.Ng = N
+		lsg.P = P
+
+		E := d.shader.EvalEmission(lsg, m.Vec3Neg(ls.Ld))
+
+		sg.ReleaseShaderContext(lsg)
+		//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
+		//E.Scale(m.Abs(omegaO[2]))
+		ls.Liu.FromRGB(E)
+
+		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
+		ls.Pdf = float32(pdf)
 
 		sg.Lsamples = append(sg.Lsamples, ls)
 	}
@@ -144,7 +352,7 @@ func (d *Tri) DiffuseShadeMult() float32 {
 func init() {
 	nodes.Register("TriLight", func() (core.Node, error) {
 
-		return &Tri{}, nil
+		return &Tri{Samples: 1}, nil
 
 	})
 }
@@ -223,9 +431,27 @@ func acosapprox(x float32) float32 {
 //go:nosplit
 func triangleVerticesToSides(pa, pb, pc m.Vec3) (a, b, c float32) {
 
-	a = m.Acos(m.Vec3Dot(pb, pc))
-	b = m.Acos(m.Vec3Dot(pc, pa))
-	c = m.Acos(m.Vec3Dot(pa, pb))
+	adot := m.Vec3Dot(pb, pc)
+
+	if adot < -1 || adot > 1 {
+		//fmt.Printf("adot: %v", adot)
+	}
+
+	bdot := m.Vec3Dot(pc, pa)
+
+	if bdot < -1 || bdot > 1 {
+		//fmt.Printf("bdot: %v", bdot)
+	}
+
+	cdot := m.Vec3Dot(pa, pb)
+
+	if cdot < -1 || cdot > 1 {
+		//fmt.Printf("cdot: %v", cdot)
+	}
+
+	a = m.Acos(adot)
+	b = m.Acos(bdot)
+	c = m.Acos(cdot)
 	/*
 		a = acosapprox(m.Vec3Dot(pb, pc))
 		b = acosapprox(m.Vec3Dot(pc, pa))
@@ -322,7 +548,7 @@ func (d *Tri) createMesh() *polymesh.PolyMesh {
 	msh.Verts.MotionKeys = 1
 	msh.Normals.MotionKeys = 1
 
-	N := m.Vec3Normalize(m.Vec3Cross(m.Vec3Sub(d.P2, d.P0), m.Vec3Sub(d.P1, d.P0)))
+	N := m.Vec3Normalize(m.Vec3Cross(m.Vec3Sub(d.P1, d.P0), m.Vec3Sub(d.P2, d.P0)))
 
 	msh.Verts.Elems = append(msh.Verts.Elems, d.P0)
 	msh.Verts.Elems = append(msh.Verts.Elems, d.P1)

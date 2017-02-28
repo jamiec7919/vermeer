@@ -36,7 +36,7 @@ func rayPlaneIntersect(Ro, Rd, P, N m.Vec3) (float32, bool) {
 	// assuming vectors are all normalized
 	denom := m.Vec3Dot(N, Rd)
 
-	if denom > 1e-6 {
+	if m.Abs(denom) > 1e-6 {
 		p0l0 := m.Vec3Sub(P, Ro)
 
 		t := m.Vec3Dot(p0l0, N) / denom
