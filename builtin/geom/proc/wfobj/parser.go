@@ -158,21 +158,21 @@ func (wfobj *File) parse(r io.Reader) (mesh *polymesh.PolyMesh, shaders []*shade
 			x, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			if err != nil {
-				log.Printf("Error parsing vertex %v: %v", len(mesh.Verts)+1, err)
+				log.Printf("Error parsing vertex %v: %v", len(mesh.Verts.Elems)+1, err)
 
 			}
 
 			y, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			if err != nil {
-				log.Printf("Error parsing vertex %v: %v", len(mesh.Verts)+1, err)
+				log.Printf("Error parsing vertex %v: %v", len(mesh.Verts.Elems)+1, err)
 
 			}
 
 			z, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			if err != nil {
-				log.Printf("Error parsing vertex %v: %v", len(mesh.Verts)+1, err)
+				log.Printf("Error parsing vertex %v: %v", len(mesh.Verts.Elems)+1, err)
 
 			}
 
