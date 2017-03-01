@@ -56,6 +56,10 @@ type mipmap struct {
 	mipmap     []miplevel
 }
 
+func (mip *mipmap) MaxLevelOfDetail() int {
+	return len(mip.mipmap) - 1
+}
+
 func (mip *mipmap) TrilinearSample(s, t, lod float32) (c [3]float32) {
 	l0 := int(m.Ceil(lod))
 	l1 := int(m.Floor(lod))

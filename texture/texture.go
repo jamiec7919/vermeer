@@ -253,5 +253,6 @@ func SampleRGB(filename string, s, t, ds, dt float32) (out [3]float32) {
 	out[1] /= 255.0
 	out[2] /= 255.0
 
+	out[0] = lod * 10
 	return
 }
