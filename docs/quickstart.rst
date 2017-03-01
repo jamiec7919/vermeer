@@ -4,7 +4,7 @@ Quickstart
 Vermeer is meant to be run as a command line program.  After installation you should be able to (in a terminal/command prompt) type 'vermeer <file>.vnf' and the render will start. If you haven't specified a maximum number of iterations then Ctrl-C will result in the last frame being completed and 
 written out to any output nodes.
 
-(preview is disabled in v0.2.0) Preview - A window will pop up.  After a short while 
+(preview is disabled in v0.3.0) Preview - A window will pop up.  After a short while 
 the first iteration should appear and then gradually improve. Closing the window should have the same effect as Ctrl-C (you may need to be patient after clicking close, the final iteration will be completed before the application exits). 
 
 Command line parameters
@@ -50,7 +50,7 @@ A parameter may have one of the following types:
 - Vec2
 - Vec3
 
-And also arrays of a subset of these types (Matrix4, Vec2, Point, Vec3).  When specifying an array this is often for motion blur keys and hence need both the count of element types and count of motion keys.  All elements of one key are then listed, followed by the next key and so on.  For matrix arrays this doesn't apply as the matrix has a fixed number of elements per key.
+And also arrays of a subset of these types (Matrix4, Vec2, Point, Vec3, String, Int).  When specifying an array this is often for motion blur keys and hence need both the count of element types and count of motion keys.  All elements of one key are then listed, followed by the next key and so on.  For matrix, string and int arrays this doesn't apply as the matrix has a fixed number of elements per key and string and int arrays don't change over a frame.
 
 Available Nodes
 ---------------
@@ -67,6 +67,7 @@ Available Nodes
 - OutputHDR_
 - AiryFilter_
 - GaussFilter_
+- Proc_
 
 Globals
 +++++++
@@ -139,7 +140,10 @@ Transform
   interpolated. Matrix4 array.
 
 Shader
-  The shader to use.  String.
+  The shaders to use.  String array.
+
+ShadeIdx
+  (optional) Index into shader array for each face.
 
 CalcNormals
   Specify whether to calculate vertex normals.
@@ -460,3 +464,38 @@ Width
 Res
   Res is the resolution of the pre-computed importance sampling CDF inversion.  A value of 61 is reasonable but for extremely
   high number of iterations it might be worth increasing this.  
+
+Proc
+++++++
+
+Procedure node.
+
+ Proc {
+  Name "proc1"
+  Handler "wfobj"
+  Data "amodel.obj"
+  BMin 1 1 point -100 -100 -100
+  BMax 1 1 point 100 100 100
+  Transform 1 matrix 1 0 0 0
+                     0 1 0 0
+                     0 0 1 0
+                     0 0 0 1
+ }
+
+Name
+  Name for the Proce node.
+
+Handler
+  Which handler to use (currently 'wfobj' or 'vnf').
+
+Data
+  Data string passed into handler init function (usually filename of model to load).
+
+BMin
+  Point array for bounding box min.
+
+BMax
+  Point array for bounding box max.
+
+Transform
+  Matrix array for world space transform.
