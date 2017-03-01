@@ -13,6 +13,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -89,7 +90,7 @@ func parseFace(lscan *lineScanner, mesh *polymesh.PolyMesh, mtl byte) error {
 	return nil
 }
 
-func parse(r io.Reader) (mesh *polymesh.PolyMesh, shaders []*shader.ShaderStd, err error) {
+func (wfobj *File) parse(r io.Reader) (mesh *polymesh.PolyMesh, shaders []*shader.ShaderStd, err error) {
 
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 1024*1024*64), 64)
@@ -115,26 +116,28 @@ func parse(r io.Reader) (mesh *polymesh.PolyMesh, shaders []*shader.ShaderStd, e
 		switch cmd {
 		case "mtllib":
 			filename := lscan.Rest()
-			f, err := os.Open(filename)
+
+			path := filepath.Join(filepath.Dir(wfobj.Filename), filename)
+			f, err := os.Open(path)
 
 			if err != nil {
-				log.Printf("wfobj.parse: Error opening \"%v\": %v", filename, err)
+				log.Printf("wfobj.parse: Error opening \"%v\": %v", path, err)
 				continue
 			}
 
-			s, err := parseMTL(f)
+			s, err := wfobj.parseMTL(f, filepath.Dir(wfobj.Filename))
 
 			f.Close()
 
 			if err != nil {
-				log.Printf("wfobj.parse: Error parsing \"%v\": %v", err)
+				log.Printf("wfobj.parse: Error parsing \"%v\": %v", path, err)
 				continue
 			}
 
 			shaders = append(shaders, s...)
 
 			if len(shaders) > 255 {
-				return nil, nil, fmt.Errorf("wfobj.parse: too many shaders.")
+				return nil, nil, fmt.Errorf("wfobj.parse: too many shaders")
 			}
 
 		case "usemtl":
@@ -155,21 +158,21 @@ func parse(r io.Reader) (mesh *polymesh.PolyMesh, shaders []*shader.ShaderStd, e
 			x, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			if err != nil {
-				log.Printf("Error parsing vertex %v: %v", err)
+				log.Printf("Error parsing vertex %v: %v", len(mesh.Verts)+1, err)
 
 			}
 
 			y, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			if err != nil {
-				log.Printf("Error parsing vertex %v: %v", err)
+				log.Printf("Error parsing vertex %v: %v", len(mesh.Verts)+1, err)
 
 			}
 
 			z, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			if err != nil {
-				log.Printf("Error parsing vertex %v: %v", err)
+				log.Printf("Error parsing vertex %v: %v", len(mesh.Verts)+1, err)
 
 			}
 
@@ -180,21 +183,21 @@ func parse(r io.Reader) (mesh *polymesh.PolyMesh, shaders []*shader.ShaderStd, e
 			x, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			if err != nil {
-				fmt.Printf("Error parsing vertex vn %v: %v\n", err)
+				fmt.Printf("Error parsing vertex vn %v: %v\n", len(mesh.Normals.Elems)+1, err)
 
 			}
 
 			y, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			if err != nil {
-				fmt.Printf("Error parsing vertex vn %v: %v\n", err)
+				fmt.Printf("Error parsing vertex vn %v: %v\n", len(mesh.Normals.Elems)+1, err)
 
 			}
 
 			z, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			if err != nil {
-				fmt.Printf("Error parsing vertex vn %v: %v\n", err)
+				fmt.Printf("Error parsing vertex vn %v: %v\n", len(mesh.Normals.Elems)+1, err)
 
 			}
 
@@ -205,14 +208,14 @@ func parse(r io.Reader) (mesh *polymesh.PolyMesh, shaders []*shader.ShaderStd, e
 			x, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			if err != nil {
-				fmt.Printf("Error parsing vertex vt %v: %v\n", err)
+				fmt.Printf("Error parsing vertex vt %v: %v\n", len(mesh.UV.Elems)+1, err)
 
 			}
 
 			y, err := strconv.ParseFloat(lscan.Token(), 32)
 
 			if err != nil {
-				fmt.Printf("Error parsing vertex vt %v: %v\n", err)
+				fmt.Printf("Error parsing vertex vt %v: %v\n", len(mesh.UV.Elems)+1, err)
 
 			}
 

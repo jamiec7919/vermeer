@@ -13,11 +13,13 @@ import (
 	"os"
 )
 
-type WFObjFile struct {
+// File represents a Wavefront Alias .obj file procedural loader.
+type File struct {
 	Filename string
 }
 
-func (f *WFObjFile) Init(p *proc.Proc, datastring string, userdata interface{}) error {
+// Init implements proc.Handler.
+func (f *File) Init(p *proc.Proc, datastring string, userdata interface{}) error {
 	f.Filename = datastring
 
 	r, err := os.Open(f.Filename)
@@ -27,7 +29,7 @@ func (f *WFObjFile) Init(p *proc.Proc, datastring string, userdata interface{}) 
 		return err
 	}
 
-	mesh, shaders, err := parse(r)
+	mesh, shaders, err := f.parse(r)
 
 	if err != nil {
 		return err
@@ -54,7 +56,7 @@ func (f *WFObjFile) Init(p *proc.Proc, datastring string, userdata interface{}) 
 }
 
 func create() (proc.Handler, error) {
-	mfile := WFObjFile{}
+	mfile := File{}
 
 	return &mfile, nil
 }

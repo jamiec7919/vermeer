@@ -12,6 +12,7 @@ import (
 	"github.com/jamiec7919/vermeer/colour"
 	"io"
 	"math"
+	"path/filepath"
 	"strconv"
 	"unicode/utf8"
 )
@@ -74,7 +75,7 @@ L2:
 	return buf.String()
 }
 
-func parseMTL(r io.Reader) (shaders []*shader.ShaderStd, err error) {
+func (wfobj *File) parseMTL(r io.Reader, path string) (shaders []*shader.ShaderStd, err error) {
 	//var mtlid int
 	scanner := bufio.NewScanner(r)
 	// bytes := make([]byte, DefaultBufferSize)
@@ -106,8 +107,8 @@ func parseMTL(r io.Reader) (shaders []*shader.ShaderStd, err error) {
 
 			if d == 0.0 {
 				// 'dissolve'
-				mtl.DiffuseColour = &maps.Constant{colour.RGB{0.5, 0.5, 0.5}, 0}
-				mtl.DiffuseStrength = &maps.Constant{colour.RGB{float32(0.5)}, 0}
+				mtl.DiffuseColour = &maps.Constant{C: colour.RGB{0.5, 0.5, 0.5}, Chan: 0}
+				mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
 			}
 		case "Ke":
 
@@ -128,8 +129,8 @@ func parseMTL(r io.Reader) (shaders []*shader.ShaderStd, err error) {
 			g /= strength
 			b /= strength
 
-			mtl.EmissionColour = &maps.Constant{colour.RGB{float32(r), float32(g), float32(b)}, 0}
-			mtl.EmissionStrength = &maps.Constant{colour.RGB{float32(strength)}, 0}
+			mtl.EmissionColour = &maps.Constant{C: colour.RGB{float32(r), float32(g), float32(b)}, Chan: 0}
+			mtl.EmissionStrength = &maps.Constant{C: colour.RGB{float32(strength)}, Chan: 0}
 			//mtl.params["EmissionColour"] = &rgbparam{[3]float32{float32(r), float32(g), float32(b)}}
 			//mtl.params["EmissionStrength"] = &floatparam{float32(strength)}
 
@@ -149,8 +150,8 @@ func parseMTL(r io.Reader) (shaders []*shader.ShaderStd, err error) {
 				return shaders, err
 			}
 
-			mtl.DiffuseColour = &maps.Constant{colour.RGB{float32(r), float32(g), float32(b)}, 0}
-			mtl.DiffuseStrength = &maps.Constant{colour.RGB{float32(0.5)}, 0}
+			mtl.DiffuseColour = &maps.Constant{C: colour.RGB{float32(r), float32(g), float32(b)}, Chan: 0}
+			mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
 
 		case "Ks":
 
@@ -167,9 +168,9 @@ func parseMTL(r io.Reader) (shaders []*shader.ShaderStd, err error) {
 				continue
 			}
 
-			mtl.Spec1Colour = &maps.Constant{colour.RGB{float32(r), float32(g), float32(b)}, 0}
-			mtl.Spec1Strength = &maps.Constant{colour.RGB{float32(0.5)}, 0}
-			mtl.Spec1Roughness = &maps.Constant{colour.RGB{float32(0.0)}, 0}
+			mtl.Spec1Colour = &maps.Constant{C: colour.RGB{float32(r), float32(g), float32(b)}, Chan: 0}
+			mtl.Spec1Strength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+			mtl.Spec1Roughness = &maps.Constant{C: colour.RGB{float32(0.0)}, Chan: 0}
 
 			//mtl.params["DiffuseColour"] = &rgbparam{[3]float32{float32(r), float32(g), float32(b)}}
 			//mtl.params["DiffuseStrength"] = &floatparam{float32(1)}
@@ -180,8 +181,8 @@ func parseMTL(r io.Reader) (shaders []*shader.ShaderStd, err error) {
 			//mtl.params["DiffuseStrength"] = &floatparam{float32(1)}
 			fname := lscan.Rest()
 			//fmt.Printf("diffmap: %v\n", fname)
-			mtl.DiffuseColour = &maps.Texture{fname, 0}
-			mtl.DiffuseStrength = &maps.Constant{colour.RGB{float32(0.5)}, 0}
+			mtl.DiffuseColour = &maps.Texture{Filename: filepath.Join(path, fname), Chan: 0}
+			mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
 
 		case "map_bump":
 		/*
