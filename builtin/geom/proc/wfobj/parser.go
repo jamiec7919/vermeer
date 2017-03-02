@@ -102,6 +102,8 @@ func (wfobj *File) parse(r io.Reader) (mesh *polymesh.PolyMesh, shaders []*shade
 	mesh.Normals.MotionKeys = 1
 	mesh.UV.MotionKeys = 1
 
+	mtllibs := map[string]bool{}
+
 	mtl := byte(0)
 
 	for scanner.Scan() {
@@ -118,6 +120,11 @@ func (wfobj *File) parse(r io.Reader) (mesh *polymesh.PolyMesh, shaders []*shade
 			filename := lscan.Rest()
 
 			path := filepath.Join(filepath.Dir(wfobj.Filename), filename)
+
+			if _, present := mtllibs[path]; present {
+				continue
+			}
+
 			f, err := os.Open(path)
 
 			if err != nil {
@@ -139,6 +146,8 @@ func (wfobj *File) parse(r io.Reader) (mesh *polymesh.PolyMesh, shaders []*shade
 			if len(shaders) > 255 {
 				return nil, nil, fmt.Errorf("wfobj.parse: too many shaders")
 			}
+
+			mtllibs[path] = true
 
 		case "usemtl":
 
