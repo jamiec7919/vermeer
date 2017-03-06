@@ -14,8 +14,9 @@ textures are used in shaders. */
 package texture
 
 import (
-	"github.com/blezek/tga"
 	//"fmt"
+	"github.com/blezek/tga"
+	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 	_ "golang.org/x/image/tiff" // Imported for effect
 	"image"
@@ -190,7 +191,8 @@ func cacheMiss(filename string) (*Texture, error) {
 }
 
 // SampleRGB samples an RGB value from the given file using the coords s,t and footprint ds,dt.
-func SampleRGB(filename string, s, t, ds, dt float32) (out [3]float32) {
+func SampleRGB(filename string, sg *core.ShaderContext) (out [3]float32) {
+
 	// This uses an atomic copy-on-write for the textures store
 	//ds = m.Max(1, 1/ds)
 	//dt = m.Max(1, 1/dt)
@@ -209,6 +211,21 @@ func SampleRGB(filename string, s, t, ds, dt float32) (out [3]float32) {
 
 		img = img2
 	}
+
+	deltaTx := m.Vec2Scale(sg.Image.PixelDelta[0], sg.Dduvdx)
+	deltaTy := m.Vec2Scale(sg.Image.PixelDelta[1], sg.Dduvdy)
+
+	deltaTx[0] = deltaTx[0] * float32(img.w)
+	deltaTy[0] = deltaTy[0] * float32(img.w)
+
+	deltaTx[1] = deltaTx[1] * float32(img.h)
+	deltaTy[1] = deltaTy[1] * float32(img.h)
+
+	ds := m.Max(m.Abs(deltaTx[0]), m.Abs(deltaTy[0]))
+	dt := m.Max(m.Abs(deltaTx[1]), m.Abs(deltaTy[1]))
+
+	ds = m.Vec2Length(deltaTx)
+	dt = m.Vec2Length(deltaTy)
 	//	loadMutex.Unlock()
 	/*
 		deltaTx := m.Vec2Scale(sg.Image.PixelDelta[0], sg.Dduvdx)
@@ -248,11 +265,21 @@ func SampleRGB(filename string, s, t, ds, dt float32) (out [3]float32) {
 		out[1] = float32(img.mipmap.mipmap[l].mipmap[(x+(y*img.mipmap.mipmap[l].w))*3+1]) / 255.0
 		out[2] = float32(img.mipmap.mipmap[l].mipmap[(x+(y*img.mipmap.mipmap[l].w))*3+2]) / 255.0
 	*/
-	out = img.mipmap.TrilinearSample(s, t, lod)
+	lod = lod
+
+	if lod > float32(img.mipmap.MaxLevelOfDetail()) {
+		lod = float32(img.mipmap.MaxLevelOfDetail())
+	}
+
+	if lod < 0 {
+		lod = 0
+	}
+
+	out = img.mipmap.TrilinearSample(sg.U, sg.V, lod)
 	out[0] /= 255.0
 	out[1] /= 255.0
 	out[2] /= 255.0
 
-	out[0] = lod * 10
+	//out[0] = lod * 10
 	return
 }

@@ -1,7 +1,6 @@
 package texture
 
 import (
-	"fmt"
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
 )
@@ -20,21 +19,47 @@ B= Bnn/F
 C= Cnn/F
 */
 
-// SampleFeline
+// SampleFeline returns the filtered RGB value for the given texture file.  Accepts
+// normalized texture coordinates in sc.U & sc.V and texture derivatives Dduvdx&dy.
 // WRL-99-1
 func SampleFeline(filename string, sc *core.ShaderContext) (c [3]float32) {
+	textures := texStore.Load().(TexStore)
+	img := textures[filename]
+
+	if img == nil {
+		img2, err := cacheMiss(filename)
+
+		if err != nil {
+			return
+		}
+
+		img = img2
+	}
 
 	Dduvdx := m.Vec2Scale(sc.Image.PixelDelta[0], sc.Dduvdx)
 	Dduvdy := m.Vec2Scale(sc.Image.PixelDelta[1], sc.Dduvdy)
 
-	Ann := Dduvdx[1]*Dduvdx[1] + Dduvdy[1]*Dduvdy[1] + 1
+	// NOTE: we need image coordinates for Feline to work.
+	// TODO: tidy this all up, the mip mapping and texture structures are
+	// a complete mess.
+
+	Dduvdx[0] = Dduvdx[0] * float32(img.w)
+	Dduvdy[0] = Dduvdy[0] * float32(img.w)
+
+	Dduvdx[1] = Dduvdx[1] * float32(img.h)
+	Dduvdy[1] = Dduvdy[1] * float32(img.h)
+
+	Ann := Dduvdx[1]*Dduvdx[1] + Dduvdy[1]*Dduvdy[1]
 	Bnn := -2 * (Dduvdx[0]*Dduvdx[1] + Dduvdy[0]*Dduvdy[1])
-	Cnn := Dduvdx[0]*Dduvdx[0] + Dduvdy[0]*Dduvdy[0] + 1
+	Cnn := Dduvdx[0]*Dduvdx[0] + Dduvdy[0]*Dduvdy[0]
 	F := Ann*Cnn - (Bnn * Bnn / 4)
 
 	A := Ann / F
 	B := Bnn / F
 	C := Cnn / F
+
+	// TODO: lots of this can be approximated as we don't need high accuracy due to
+	// the heavy weighted filter.
 
 	root := m.Sqrt(sqr(A-C) + sqr(B))
 	Aprm := (A + C - root) / 2
@@ -66,19 +91,6 @@ func SampleFeline(filename string, sc *core.ShaderContext) (c [3]float32) {
 
 	levelOfDetail := m.Log2(minorRadius)
 
-	textures := texStore.Load().(TexStore)
-	img := textures[filename]
-
-	if img == nil {
-		img2, err := cacheMiss(filename)
-
-		if err != nil {
-			return
-		}
-
-		img = img2
-	}
-
 	if levelOfDetail > float32(img.mipmap.MaxLevelOfDetail()) {
 		levelOfDetail = float32(img.mipmap.MaxLevelOfDetail())
 		iProbes = 1
@@ -96,28 +108,27 @@ func SampleFeline(filename string, sc *core.ShaderContext) (c [3]float32) {
 	nProbes := int(iProbes)
 
 	if nProbes == 1 {
+		// Avoid NaNs
 		dU = 0
 		dV = 0
 	}
-	if false {
-		fmt.Printf("%v %v %v %v %v\n", levelOfDetail, dU, dV, nProbes, theta)
-	}
-	n := -(nProbes - 1)
+
+	n := float32(-(nProbes - 1))
 
 	alpha := float32(0.6)
 
-	accum := [3]float32{}
+	var accum [3]float32
 	var accumWeight float32
 
 	for i := 0; i < nProbes; i++ {
-		u := sc.U + (float32(n)/2)*dU
-		v := sc.V + (float32(n)/2)*dV
+		u := float32(img.w)*sc.U + (n/2)*dU
+		v := float32(img.h)*sc.V + (n/2)*dV
 
 		//d := float32(n) / 2 * m.Sqrt(sqr(dU)+sqr(dV)) / majorRadius
-		d2 := (sqr(float32(n)) / 4) * (sqr(dU) + sqr(dV)) / sqr(majorRadius)
+		d2 := (sqr(n) / 4) * (sqr(dU) + sqr(dV)) / sqr(majorRadius)
 		relativeWeight := m.Exp(-alpha * d2)
 
-		sample := img.mipmap.TrilinearSample(u, v, levelOfDetail)
+		sample := img.mipmap.TrilinearSample(u/float32(img.w), v/float32(img.h), levelOfDetail)
 
 		for k := range accum {
 			accum[k] += (sample[k] / 255.0) * relativeWeight
@@ -133,7 +144,8 @@ func SampleFeline(filename string, sc *core.ShaderContext) (c [3]float32) {
 		c[k] = accum[k] / accumWeight
 	}
 
-	//c[0] = levelOfDetail * 10.0
+	//c[0] = levelOfDetail * 10 //m.Floor(levelOfDetail) / float32(img.mipmap.MaxLevelOfDetail())
+
 	return
 
 }

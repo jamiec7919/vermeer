@@ -101,6 +101,8 @@ func (mesh *PolyMesh) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 	return hit
 }
 
+func sqr(x float32) float32 { return x * x }
+
 // TraceElems implements qbvh.Primitive.
 ///go:nosplit
 func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, count int) bool {
@@ -366,6 +368,11 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 	nalphay := sg.Ng[2]*(mesh.Verts.Elems[i2][0]-mesh.Verts.Elems[i1][0]) - sg.Ng[0]*(mesh.Verts.Elems[i2][2]-mesh.Verts.Elems[i1][2])
 	nalphaz := sg.Ng[0]*(mesh.Verts.Elems[i2][1]-mesh.Verts.Elems[i1][1]) - sg.Ng[1]*(mesh.Verts.Elems[i2][0]-mesh.Verts.Elems[i1][0])
 	//nalphad := mesh.Verts.Elems[i1][0]*nalphax + mesh.Verts.Elems[i1][1]*nalphay + mesh.Verts.Elems[i1][2]*nalphaz
+	q := m.Sqrt(sqr(nalphax) + sqr(nalphay) + sqr(nalphaz))
+	nalphax /= q
+	nalphay /= q
+	nalphaz /= q
+
 	nalphad := -mesh.Verts.Elems[i1][0]*nalphax - mesh.Verts.Elems[i1][1]*nalphay - mesh.Verts.Elems[i1][2]*nalphaz
 
 	l := mesh.Verts.Elems[i0][0]*nalphax + mesh.Verts.Elems[i0][1]*nalphay + mesh.Verts.Elems[i0][2]*nalphaz + nalphad
@@ -385,6 +392,10 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 	nbetax := sg.Ng[1]*(mesh.Verts.Elems[i2][2]-mesh.Verts.Elems[i0][2]) - sg.Ng[2]*(mesh.Verts.Elems[i2][1]-mesh.Verts.Elems[i0][1])
 	nbetay := sg.Ng[2]*(mesh.Verts.Elems[i2][0]-mesh.Verts.Elems[i0][0]) - sg.Ng[0]*(mesh.Verts.Elems[i2][2]-mesh.Verts.Elems[i0][2])
 	nbetaz := sg.Ng[0]*(mesh.Verts.Elems[i2][1]-mesh.Verts.Elems[i0][1]) - sg.Ng[1]*(mesh.Verts.Elems[i2][0]-mesh.Verts.Elems[i0][0])
+	q = m.Sqrt(sqr(nbetax) + sqr(nbetay) + sqr(nbetaz))
+	nbetax /= q
+	nbetay /= q
+	nbetaz /= q
 
 	nbetad := -mesh.Verts.Elems[i0][0]*nbetax - mesh.Verts.Elems[i0][1]*nbetay - mesh.Verts.Elems[i0][2]*nbetaz
 
@@ -399,6 +410,11 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 	ngammax := sg.Ng[1]*(mesh.Verts.Elems[i1][2]-mesh.Verts.Elems[i0][2]) - sg.Ng[2]*(mesh.Verts.Elems[i1][1]-mesh.Verts.Elems[i0][1])
 	ngammay := sg.Ng[2]*(mesh.Verts.Elems[i1][0]-mesh.Verts.Elems[i0][0]) - sg.Ng[0]*(mesh.Verts.Elems[i1][2]-mesh.Verts.Elems[i0][2])
 	ngammaz := sg.Ng[0]*(mesh.Verts.Elems[i1][1]-mesh.Verts.Elems[i0][1]) - sg.Ng[1]*(mesh.Verts.Elems[i1][0]-mesh.Verts.Elems[i0][0])
+
+	q = m.Sqrt(sqr(ngammax) + sqr(ngammay) + sqr(ngammaz))
+	ngammax /= q
+	ngammay /= q
+	ngammaz /= q
 
 	ngammad := -mesh.Verts.Elems[i0][0]*ngammax - mesh.Verts.Elems[i0][1]*ngammay - mesh.Verts.Elems[i0][2]*ngammaz
 

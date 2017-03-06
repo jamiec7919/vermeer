@@ -13,12 +13,18 @@ type miplevel struct {
 }
 
 func (mip *miplevel) BilinearSample(s, t float32, cp int) (c [3]float32) {
-	x0 := int(m.Floor(s * float32(mip.w)))
-	x1 := int(m.Ceil(s * float32(mip.w)))
-	dx := s*float32(mip.w) - m.Floor(s*float32(mip.w))
-	y0 := int(m.Floor(t * float32(mip.h)))
-	y1 := int(m.Ceil(t * float32(mip.h)))
-	dy := t*float32(mip.h) - m.Floor(t*float32(mip.h))
+
+	ms := s - m.Floor(s)
+	mt := t - m.Floor(t)
+
+	// ms and mt in [0,1)  (wrapped mode)
+
+	x0 := int(m.Floor(ms * float32(mip.w)))
+	x1 := int(m.Ceil(ms * float32(mip.w)))
+	dx := ms*float32(mip.w) - m.Floor(ms*float32(mip.w))
+	y0 := int(m.Floor(mt * float32(mip.h)))
+	y1 := int(m.Ceil(mt * float32(mip.h)))
+	dy := mt*float32(mip.h) - m.Floor(mt*float32(mip.h))
 
 	x0 %= mip.w
 	x1 %= mip.w
@@ -280,7 +286,6 @@ func stdfilter(w, h int, img []byte, components int) (out mipmap) {
 
 			}
 		}
-
 		/*
 				buf := make([]float32, nwidth*nheight*components)
 
@@ -299,7 +304,6 @@ func stdfilter(w, h int, img []byte, components int) (out mipmap) {
 			skip:
 				fp.Close()
 		*/
-
 		width = nwidth
 		height = nheight
 

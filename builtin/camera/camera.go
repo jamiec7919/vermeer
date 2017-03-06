@@ -236,7 +236,11 @@ func (c *Camera) ComputeRay(sc *core.ShaderContext, lensU, lensV float64, ray *c
 	D := m.Vec3{0, 0, 1}
 	P := m.Vec3{}
 
+	dx := float32(0)
+	dy := float32(0)
+
 	var d m.Vec3
+	w, h := core.FrameMetrics()
 
 	if c.Radius > 0.0 {
 
@@ -244,6 +248,16 @@ func (c *Camera) ComputeRay(sc *core.ShaderContext, lensU, lensV float64, ray *c
 		e := m.Vec3Add(m.Vec3Scale(x, U), m.Vec3Scale(y, V))
 		//D = m.Matrix4MulVec(M, m.Vec3Normalize(m.Vec3Sub(s, e)))
 		d = m.Matrix4MulVec(M, m.Vec3Sub(s, e))
+
+		camu2 := float32(ray.Sx+(2/float32(w))) * float32(c.TanThetaFocal)
+		camv2 := float32(ray.Sy+(2/float32(h))) * float32(c.TanThetaFocal/c.Aspect)
+		sx := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(camu2, U), m.Vec3Scale(camv, V)), m.Vec3Scale(c.Focal, W))
+		sy := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(camu, U), m.Vec3Scale(camv2, V)), m.Vec3Scale(c.Focal, W))
+		d2x := m.Matrix4MulVec(M, m.Vec3Sub(sx, e))
+		d2y := m.Matrix4MulVec(M, m.Vec3Sub(sy, e))
+		dx = m.Vec3Length(m.Vec3Sub(d2x, d))
+		dy = m.Vec3Length(m.Vec3Sub(d2y, d))
+
 		D = m.Vec3Normalize(d)
 		P = m.Matrix4MulPoint(M, e)
 	} else {
@@ -251,11 +265,23 @@ func (c *Camera) ComputeRay(sc *core.ShaderContext, lensU, lensV float64, ray *c
 		d = m.Matrix4MulVec(M, s)
 		D = m.Vec3Normalize(d)
 		P = m.Matrix4MulPoint(M, m.Vec3{})
+
+		camu2 := float32(ray.Sx+(2/float32(w))) * float32(c.TanThetaFocal)
+		camv2 := float32(ray.Sy+(2/float32(h))) * float32(c.TanThetaFocal/c.Aspect)
+		sx := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(camu2, U), m.Vec3Scale(camv, V)), m.Vec3Scale(c.Focal, W))
+		sy := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(camu, U), m.Vec3Scale(camv2, V)), m.Vec3Scale(c.Focal, W))
+		d2x := m.Matrix4MulVec(M, m.Vec3Sub(sx, m.Vec3{}))
+		d2y := m.Matrix4MulVec(M, m.Vec3Sub(sy, m.Vec3{}))
+		dx = m.Vec3Length(m.Vec3Sub(d2x, d))
+		dy = m.Vec3Length(m.Vec3Sub(d2y, d))
+
 	}
 	//D = D
 
 	right := m.Vec3{M[0], M[1], M[2]}
 	up := m.Vec3{M[4], M[5], M[6]}
+	//right := m.Vec3{M[0], M[4], M[8]}
+	//up := m.Vec3{M[1], M[5], M[9]}
 
 	ray.DdPdx = m.Vec3{}
 	ray.DdPdy = m.Vec3{}
@@ -264,8 +290,14 @@ func (c *Camera) ComputeRay(sc *core.ShaderContext, lensU, lensV float64, ray *c
 
 	// Should calculate these from world space dimensions
 	//w, h := core.FrameMetrics()
-	sc.Image.PixelDelta[0] = c.TanThetaFocal            //m.Vec3Length(right) / float32(w)
-	sc.Image.PixelDelta[1] = c.TanThetaFocal / c.Aspect //m.Vec3Length(up) / float32(h)
+	dx = 2.0 / float32(w)
+	dy = 2.0 / float32(h)
+
+	_ = dx
+	_ = dy
+
+	sc.Image.PixelDelta[0] = 2 * c.TanThetaFocal / float32(w)
+	sc.Image.PixelDelta[1] = 2 * c.TanThetaFocal / (c.Aspect * float32(h))
 
 	ray.Init(core.RayTypeCamera, P, D, m.Inf(1), 0, sc)
 
