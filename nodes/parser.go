@@ -252,13 +252,15 @@ func (p *parser) rgbtex(field reflect.Value) error {
 		return errors.New("Expected field type.")
 	}
 
-	v := &maps.Texture{}
-
 	if t := p.lex.Lex(&sym); t != TokString {
 		return errors.New("Expected RGB texture filename.")
 	}
 
-	v.Filename = sym.str
+	v, err := maps.CreateRGBTextureMap(sym.str)
+
+	if err != nil {
+		return errors.New(fmt.Sprintf("nodes.rgbtex: %v", err))
+	}
 
 	field.Set(reflect.ValueOf(v))
 

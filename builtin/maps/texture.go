@@ -8,7 +8,10 @@ import (
 	//"fmt"
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
+	"github.com/jamiec7919/vermeer/core/param"
 	"github.com/jamiec7919/vermeer/texture"
+	"net/url"
+	"strconv"
 )
 
 type Texture struct {
@@ -17,16 +20,64 @@ type Texture struct {
 }
 
 func (c *Texture) Float32(sg *core.ShaderContext) float32 {
-	return texture.SampleRGB(c.Filename, sg)[c.Chan]
+	return texture.SampleFeline(c.Filename, sg)[c.Chan]
 }
 
 func (c *Texture) RGB(sg *core.ShaderContext) colour.RGB {
-	if false {
-
-		//fmt.Printf("x: %v y: %v\n", deltaTx, deltaTy)
-		return colour.RGB(texture.SampleRGB(c.Filename, sg))
-	}
 
 	return colour.RGB(texture.SampleFeline(c.Filename, sg))
 
+}
+
+type TextureTrilinear struct {
+	Filename string
+	Chan     int
+}
+
+func (c *TextureTrilinear) Float32(sg *core.ShaderContext) float32 {
+	return texture.SampleRGB(c.Filename, sg)[c.Chan]
+}
+
+func (c *TextureTrilinear) RGB(sg *core.ShaderContext) colour.RGB {
+	return colour.RGB(texture.SampleRGB(c.Filename, sg))
+
+}
+
+func CreateFloat32TextureMap(filename string) (param.Float32Uniform, error) {
+	u, err := url.Parse(filename)
+
+	if err != nil {
+		return nil, err
+	}
+
+	chString := u.Query().Get("ch")
+
+	ch, _ := strconv.Atoi(chString)
+
+	filter := u.Query().Get("filter")
+
+	switch filter {
+	case "trilinear":
+		return &TextureTrilinear{Filename: u.EscapedPath(), Chan: ch}, nil
+	}
+
+	return &Texture{Filename: u.EscapedPath(), Chan: ch}, nil
+
+}
+
+func CreateRGBTextureMap(filename string) (param.RGBUniform, error) {
+	u, err := url.Parse(filename)
+
+	if err != nil {
+		return nil, err
+	}
+
+	filter := u.Query().Get("filter")
+
+	switch filter {
+	case "trilinear":
+		return &TextureTrilinear{Filename: u.EscapedPath(), Chan: 0}, nil
+	}
+
+	return &Texture{Filename: u.EscapedPath(), Chan: 0}, nil
 }
