@@ -29,12 +29,12 @@ type Lambert struct {
 
 // NewLambert will return an instance of the model for the given point.
 func NewLambert(lambda float32, omegaI m.Vec3, U, V, N m.Vec3) *Lambert {
-	return &Lambert{lambda, omegaI, U, V, N}
+	return &Lambert{lambda, m.Vec3BasisProject(U, V, N, omegaI), U, V, N}
 }
 
 // Sample implements core.BSDF.
 func (b *Lambert) Sample(r0, r1 float64) m.Vec3 {
-	return sample.CosineHemisphere(r0, r1)
+	return m.Vec3BasisExpand(b.U, b.V, b.N, sample.CosineHemisphere(r0, r1))
 }
 
 // PDF implements core.BSDF.

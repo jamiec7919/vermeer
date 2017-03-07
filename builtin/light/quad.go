@@ -83,8 +83,15 @@ func (d *Quad) NumSamples(sg *core.ShaderContext) int {
 // Geom implements core.Light
 func (d *Quad) Geom() core.Geom { return d.geom }
 
+// ValidSample implements core.Light.
+func (d *Quad) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool {
+	panic("light/Quad.ValidSample: unimplemented.")
+	return false
+}
+
 // SampleArea implements core.Light.
 func (d *Quad) SampleArea(sg *core.ShaderContext, n int) error {
+	panic("light/Quad.SampleArea: unimplemented.")
 
 	a1 := sphericalTriangleArea(d.p[0], d.p[1], d.p[2], sg.P)
 	a2 := sphericalTriangleArea(d.p[0], d.p[2], d.p[3], sg.P)
@@ -152,7 +159,7 @@ func (d *Quad) SampleArea(sg *core.ShaderContext, n int) error {
 
 		// geometry term / pdf, lots of cancellations
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
-		ls.Weight = m.Abs(m.Vec3Dot(ls.Ld, sg.N)) / /* m.Abs(m.Vec3Dot(sg.Ld, N)) / (sg.Ldist * sg.Ldist */ float32(pdf)
+		ls.Pdf = float32(pdf) * m.Abs(m.Vec3Dot(ls.Ld, N)) / (ls.Ldist * ls.Ldist)
 
 		sg.Lsamples = append(sg.Lsamples, ls)
 	}

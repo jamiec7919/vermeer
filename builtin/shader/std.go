@@ -18,6 +18,7 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/ldseq"
 	"github.com/jamiec7919/vermeer/nodes"
+	"math"
 )
 
 // ShaderStd is the default surface shader.
@@ -110,6 +111,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 		diffRoughness = sh.DiffuseRoughness.Float32(sg)
 	}
 
+	var _ = diffRoughness
 	diffBrdf := bsdf.NewOrenNayar(sg.Lambda, m.Vec3Neg(sg.Rd), diffRoughness, U, V, sg.N)
 	//diffBrdf := bsdf.NewLambert(sg.Lambda, m.Vec3Neg(sg.Rd), U, V, sg.N)
 
@@ -144,13 +146,13 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 
 		sg.LightsPrepare()
 
-		for sg.LightsGetSample() {
+		for sg.NextLight() {
 
 			if sg.Lp.DiffuseShadeMult() > 0.0 {
 
 				// In this example the brdf passed is an interface
 				// allowing sampling, pdf and bsdf eval
-				col := sg.EvaluateLightSample(diffBrdf)
+				col := sg.EvaluateLightSamples(diffBrdf)
 				col.Mul(diffColour)
 				diffContrib.Add(col)
 			}
@@ -225,22 +227,20 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 			r0 := ldseq.VanDerCorput(idx, sg.Scramble[0])
 			r1 := ldseq.Sobol(idx, sg.Scramble[1])
 
-			omegaO := spec1BRDF.Sample(r0, r1)
-			pdf := spec1BRDF.PDF(omegaO)
+			spec1OmegaO := spec1BRDF.Sample(r0, r1)
+			pdf := spec1BRDF.PDF(spec1OmegaO)
 
-			spec1Omega := m.Vec3BasisExpand(U, V, sg.N, omegaO)
-
-			if m.Vec3Dot(spec1Omega, sg.Ng) <= 0.0 {
+			if m.Vec3Dot(spec1OmegaO, sg.Ng) <= 0.0 {
 				continue
 
 			}
 			//fmt.Printf("%v %v\n", spec1Omega, m.Vec3Length(spec1Omega))
 
-			ray.Init(core.RayTypeReflected, sg.OffsetP(1), spec1Omega, m.Inf(1), sg.Level+1, sg)
+			ray.Init(core.RayTypeReflected, sg.OffsetP(1), spec1OmegaO, m.Inf(1), sg.Level+1, sg)
 
 			if core.Trace(ray, &samp) {
 
-				rho := spec1BRDF.Eval(omegaO)
+				rho := spec1BRDF.Eval(spec1OmegaO)
 
 				rho.Scale(1.0 / float32(pdf))
 
@@ -249,6 +249,12 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 				//fmt.Printf("%v %v\n", col, samp.Colour)
 				col.Mul(spec1Colour)
 				col.Mul(samp.Colour)
+
+				for k := range col {
+					if col[k] < 0 || math.IsNaN(float64(col[k])) {
+						col[k] = 0
+					}
+				}
 				spec1Contrib.Add(col)
 			}
 
@@ -257,6 +263,21 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 		sg.ReleaseRay(ray)
 
 		spec1Contrib.Scale(spec1Weight / float32(spec1Samples))
+
+		sg.LightsPrepare()
+
+		for sg.NextLight() {
+
+			//			if sg.Lp.DiffuseShadeMult() > 0.0 {
+
+			// In this example the brdf passed is an interface
+			// allowing sampling, pdf and bsdf eval
+			col := sg.EvaluateLightSamples(spec1BRDF)
+			col.Mul(spec1Colour)
+			spec1Contrib.Add(col)
+			//			}
+
+		}
 
 	}
 
@@ -287,7 +308,7 @@ func (sh *ShaderStd) EvalEmission(sg *core.ShaderContext, omegaO m.Vec3) colour.
 		return colour.RGB{}
 	}
 
-	emissColour.Scale(emissStrength)
+	emissColour.Scale(emissStrength * m.Vec3DotClamp(sg.N, omegaO))
 	return emissColour
 }
 

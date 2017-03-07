@@ -96,23 +96,33 @@ func (b *MicrofacetGGX) Sample(r0, r1 float64) (omegaO m.Vec3) {
 
 	omegaO = m.Vec3Sub(m.Vec3Scale(2.0*m.Vec3DotAbs(omegaM, b.OmegaR), omegaM), b.OmegaR)
 
-	return m.Vec3Normalize(omegaO)
+	return m.Vec3BasisExpand(b.U, b.V, b.N, m.Vec3Normalize(omegaO))
 }
 
 // PDF implements core.BSDF.
-func (b *MicrofacetGGX) PDF(omegaI m.Vec3) float64 {
+func (b *MicrofacetGGX) PDF(_omegaO m.Vec3) float64 {
+	omegaO := m.Vec3BasisProject(b.U, b.V, b.N, _omegaO)
+
 	alpha := sqr32(b.Roughness)
 
 	var omegaM m.Vec3
 
-	omegaM = m.Vec3Scale(sign(b.OmegaR[2]), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omegaI)))
+	omegaM = m.Vec3Scale(sign(b.OmegaR[2]), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omegaO)))
 
 	//log.Printf("D: %v", ggxD(omegaM, alpha))
-	return float64(ggxD(omegaM, alpha) * omegaM[2])
+	pdf := float64(ggxD(omegaM, alpha) * omegaM[2])
+
+	if math.IsNaN(pdf) {
+		return 0
+	}
+
+	return pdf
 }
 
 // Eval implements core.BSDF.
-func (b *MicrofacetGGX) Eval(omegaI m.Vec3) (rho colour.Spectrum) {
+func (b *MicrofacetGGX) Eval(_omegaO m.Vec3) (rho colour.Spectrum) {
+	omegaI := m.Vec3BasisProject(b.U, b.V, b.N, _omegaO)
+
 	alpha := sqr32(b.Roughness)
 
 	h := m.Vec3Scale(sign(b.OmegaR[2]), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omegaI)))
@@ -125,6 +135,13 @@ func (b *MicrofacetGGX) Eval(omegaI m.Vec3) (rho colour.Spectrum) {
 	rho.Lambda = b.Lambda
 	rho.FromRGB(fresnel)
 	rho.Scale(m.Abs(omegaI[2]) * numer / denom)
+
+	for k := range rho.C {
+		if rho.C[k] < 0 || math.IsNaN(float64(rho.C[k])) {
+			rho.C[k] = 0
+		}
+	}
+
 	return
 }
 
