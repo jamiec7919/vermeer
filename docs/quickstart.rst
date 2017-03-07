@@ -7,6 +7,11 @@ written out to any output nodes.
 (preview is disabled in v0.3.0) Preview - A window will pop up.  After a short while 
 the first iteration should appear and then gradually improve. Closing the window should have the same effect as Ctrl-C (you may need to be patient after clicking close, the final iteration will be completed before the application exits). 
 
+Example Data
+------------
+
+A selection of example data is available at `<https://github.com/jamiec7919/vermeer-example/>`_.
+
 Command line parameters
 -----------------------
 
@@ -65,6 +70,7 @@ Available Nodes
 - QuadLight_
 - TriLight_
 - OutputHDR_
+- OutputFloat_
 - AiryFilter_
 - GaussFilter_
 - Proc_
@@ -112,7 +118,7 @@ The PolyMesh is the default mesh type::
 	             0 1 0 0
 	             0 0 1 0 
 	             0 0 0 1
-    Shader "mtl2"
+    Shader 1 string "mtl2"
     CalcNormals 1
   }
 
@@ -143,8 +149,8 @@ Transform
 Shader
   The shaders to use.  String array.
 
-ShadeIdx
-  (optional) Index into shader array for each face.
+ShaderIdx
+  (optional) Index into shader array for each face. Int array.
 
 CalcNormals
   Specify whether to calculate vertex normals.
@@ -428,6 +434,16 @@ only takes one parameter::
 	Filename "myfile.hdr"
   }
 
+OutputFloat
++++++++++
+
+The OutputFloat node instructs the renderer to output a raw RGB float32 file of the given name, it
+only takes one parameter::
+
+  OutputFloat {
+  Filename "myfile.hdr"
+  }
+
 AiryFilter
 +++++++++
 
@@ -471,22 +487,22 @@ Res
 Proc
 ++++++
 
-Procedure node.
+Procedure node::
 
- Proc {
-  Name "proc1"
-  Handler "wfobj"
-  Data "amodel.obj"
-  BMin 1 1 point -100 -100 -100
-  BMax 1 1 point 100 100 100
-  Transform 1 matrix 1 0 0 0
-                     0 1 0 0
-                     0 0 1 0
-                     0 0 0 1
- }
+  Proc {
+   Name "proc1"
+   Handler "wfobj"
+   Data "amodel.obj"
+   BMin 1 1 point -100 -100 -100
+   BMax 1 1 point 100 100 100
+   Transform 1 matrix 1 0 0 0
+                      0 1 0 0
+                      0 0 1 0
+                      0 0 0 1
+  }
 
 Name
-  Name for the Proce node.
+  Name for the Procedural node.
 
 Handler
   Which handler to use (currently 'wfobj' or 'vnf').
@@ -506,21 +522,21 @@ Transform
 GeomInstance
 ++++++
 
-Instance nodes allow duplication of another Geom with a different transform.
+Instance nodes allow duplication of another Geom with a different transform::
 
- GeomInstance {
-  Name "proc1"
-  Geom "othergeom"
-  BMin 1 1 point -100 -100 -100
-  BMax 1 1 point 100 100 100
-  Transform 1 matrix 1 0 0 0
+  GeomInstance {
+   Name "proc1"
+   Geom "othergeom"
+   BMin 1 1 point -100 -100 -100
+   BMax 1 1 point 100 100 100
+   Transform 1 matrix 1 0 0 0
                      0 1 0 0
                      0 0 1 0
                      0 0 0 1
- }
+  }
 
 Name
-  Name for the Proce node.
+  Name for the Instance node.
 
 Geom
   Which geom node to instance.
