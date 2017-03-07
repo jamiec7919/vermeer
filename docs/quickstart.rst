@@ -68,6 +68,7 @@ Available Nodes
 - AiryFilter_
 - GaussFilter_
 - Proc_
+- GeomInstance_
 
 Globals
 +++++++
@@ -319,7 +320,8 @@ Radius
   Radius of the disk in world units.
 
 Samples
-  Number of samples to take from this light.  This value is squared to give actual number taken. Default is 1.
+  Number of samples to take from this light.  This value is raised to the power of 2 minus 1 (i.e. 2^(n-1)) to give actual number taken. This is also modified by MIS.  Default is 1 which means 1 sample, a value
+  of 0 here means don't sample.
 
 SphereLight
 +++++++++
@@ -347,7 +349,8 @@ Radius
   Radius of the disk in world units.
 
 Samples
-  Number of samples to take from this light.  This value is squared to give actual number taken. Default is 1.
+  Number of samples to take from this light.  This value is raised to the power of 2 minus 1 (i.e. 2^(n-1)) to give actual number taken. This is also modified by MIS.  Default is 1 which means 1 sample, a value
+  of 0 here means don't sample.
 
 QuadLight
 +++++++++
@@ -379,7 +382,8 @@ V
   Vector representing other side of quad.
 
 Samples
-  Number of samples to take from this light.  This value is squared to give actual number taken. Default is 1.
+  Number of samples to take from this light.  This value is raised to the power of 2 minus 1 (i.e. 2^(n-1)) to give actual number taken. This is also modified by MIS.  Default is 1 which means 1 sample, a value
+  of 0 here means don't sample.
 
 TriLight
 +++++++++
@@ -411,7 +415,8 @@ P2
   Position of the third point of the triangle.  Point.
 
 Samples
-  Number of samples to take from this light.  This value is squared to give actual number taken. Default is 1.
+  Number of samples to take from this light.  This value is raised to the power of 2 minus 1 (i.e. 2^(n-1)) to give actual number taken. This is also modified by MIS.  Default is 1 which means 1 sample, a value
+  of 0 here means don't sample.
 
 OutputHDR
 +++++++++
@@ -441,8 +446,7 @@ Width
   Filter support width in pixels.  4 is a decent starting point.
 
 Res
-  Res is the resolution of the pre-computed importance sampling CDF inversion.  A value of 61 is reasonable but for extremely
-  high number of iterations it might be worth increasing this.  
+  Res is the resolution of the pre-computed importance sampling CDF inversion.  A value of 61 is reasonable but for an extremely high number of iterations it might be worth increasing this.  
 
 GaussFilter
 +++++++++
@@ -462,8 +466,7 @@ Width
   Filter support width in pixels.  4 is a decent starting point.
 
 Res
-  Res is the resolution of the pre-computed importance sampling CDF inversion.  A value of 61 is reasonable but for extremely
-  high number of iterations it might be worth increasing this.  
+  Res is the resolution of the pre-computed importance sampling CDF inversion.  A value of 61 is reasonable but for an extremely high number of iterations it might be worth increasing this.  
 
 Proc
 ++++++
@@ -490,6 +493,37 @@ Handler
 
 Data
   Data string passed into handler init function (usually filename of model to load).
+
+BMin
+  Point array for bounding box min.
+
+BMax
+  Point array for bounding box max.
+
+Transform
+  Matrix array for world space transform.
+
+GeomInstance
+++++++
+
+Instance nodes allow duplication of another Geom with a different transform.
+
+ GeomInstance {
+  Name "proc1"
+  Geom "othergeom"
+  BMin 1 1 point -100 -100 -100
+  BMax 1 1 point 100 100 100
+  Transform 1 matrix 1 0 0 0
+                     0 1 0 0
+                     0 0 1 0
+                     0 0 0 1
+ }
+
+Name
+  Name for the Proce node.
+
+Geom
+  Which geom node to instance.
 
 BMin
   Point array for bounding box min.
