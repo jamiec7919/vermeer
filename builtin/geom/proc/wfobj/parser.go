@@ -53,35 +53,46 @@ func parseFace(lscan *lineScanner, mesh *polymesh.PolyMesh, mtl byte) error {
 		p, n, t := parseFaceField(field)
 
 		//log.Printf("%v %v %v", p, n, t)
-		if p <= 0 {
+		switch {
+		case p < 0:
 			p = len(mesh.Verts.Elems) + p + 1
+		case p == 0:
+			p = 1
 		}
 
 		//				if r.MergeVertPos {
 		//					p = int(vertmergeface[p-1])
 		//				}
-
-		if t <= 0 {
+		switch {
+		case t < 0:
 			t = len(mesh.UV.Elems) + t + 1
+		case t == 0:
+			t = 1
 		}
 
 		//				if r.MergeTexVert {
 		//					t = int(texvertmergeface[t-1])
 		//				}
-
-		if n <= 0 {
+		switch {
+		case n < 0:
 			n = len(mesh.Normals.Elems) + n + 1
+
+		case n == 0:
+			n = 1
 		}
 
 		mesh.FaceIdx = append(mesh.FaceIdx, int32(p-1))
 
-		if mesh.Normals.Elems != nil {
-			mesh.NormalIdx = append(mesh.NormalIdx, int32(n-1))
-		}
-
-		if mesh.UV.Elems != nil {
-			mesh.UVIdx = append(mesh.UVIdx, int32(t-1))
-		}
+		// Annoyingly some .obj files don't have normals until late in the file but the indexes must
+		// exist for all triangles!
+		//if mesh.Normals.Elems != nil {
+		mesh.NormalIdx = append(mesh.NormalIdx, int32(n-1))
+		//}
+		// Annoyingly some .obj files don't have tex coords until late in the file but the indexes must
+		// exist for all triangles!
+		//if mesh.UV.Elems != nil {
+		mesh.UVIdx = append(mesh.UVIdx, int32(t-1))
+		//}
 		verts++
 	}
 
@@ -237,6 +248,16 @@ func (wfobj *File) parse(r io.Reader) (mesh *polymesh.PolyMesh, shaders []*shade
 	}
 
 	err = nil
+
+	// If there are no Normals then delete the indexes
+	if mesh.Normals.Elems == nil {
+		mesh.NormalIdx = nil
+	}
+
+	// If there are no UVs then delete the indexes
+	if mesh.UV.Elems == nil {
+		mesh.UVIdx = nil
+	}
 
 	//log.Printf("%v %v", len(mesh.FaceIdx), mesh.FaceIdx)
 	return

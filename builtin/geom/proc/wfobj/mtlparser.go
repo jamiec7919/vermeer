@@ -10,12 +10,25 @@ import (
 	"github.com/jamiec7919/vermeer/builtin/maps"
 	"github.com/jamiec7919/vermeer/builtin/shader"
 	"github.com/jamiec7919/vermeer/colour"
+	m "github.com/jamiec7919/vermeer/math"
 	"io"
 	"math"
 	"path/filepath"
 	"strconv"
 	"unicode/utf8"
 )
+
+// NsToSpecRoughness translates from the WF MTL specular exponent to a roughness
+// value.  The range is supposed to be 0-1000 but have seen up to 2048.  This is
+// another instance where having all the mtl materials and choosing appropriately would
+// be convenient
+func NsToSpecRoughness(ns float32) float32 {
+	if ns <= 1000 {
+		return 1 - (ns / 1000)
+	}
+	return m.Max(0, 1-(ns/2048))
+
+}
 
 type lineScanner struct {
 	line []byte
@@ -82,6 +95,9 @@ func (wfobj *File) parseMTL(r io.Reader, path string) (shaders []*shader.ShaderS
 
 	var mtl *shader.ShaderStd
 
+	// TODO: should really add everything to a new struct then after all fields parsed create
+	// the shader. That way can more elegantly handle refl maps etc.
+
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -140,10 +156,10 @@ func (wfobj *File) parseMTL(r io.Reader, path string) (shaders []*shader.ShaderS
 			g, err := strconv.ParseFloat(lscan.Token(), 32)
 			b, err := strconv.ParseFloat(lscan.Token(), 32)
 
-			if r == 0 && g == 0 && b == 0 {
+			//if r == 0 && g == 0 && b == 0 {
 
-				continue
-			}
+			//	continue
+			//}
 
 			//fmt.Printf("diff %v %v %v\n", r, g, b)
 			if err != nil {
@@ -151,7 +167,17 @@ func (wfobj *File) parseMTL(r io.Reader, path string) (shaders []*shader.ShaderS
 			}
 
 			mtl.DiffuseColour = &maps.Constant{C: colour.RGB{float32(r), float32(g), float32(b)}, Chan: 0}
-			mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+			//mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+
+		case "Ns":
+
+			ns, err := strconv.ParseFloat(lscan.Token(), 32)
+
+			if err != nil {
+				return shaders, err
+			}
+
+			mtl.Spec1Roughness = &maps.Constant{C: colour.RGB{NsToSpecRoughness(float32(ns))}, Chan: 0}
 
 		case "Ks":
 
@@ -164,17 +190,71 @@ func (wfobj *File) parseMTL(r io.Reader, path string) (shaders []*shader.ShaderS
 			}
 			//fmt.Printf("%v %v %v\n", r, g, b)
 
-			if r == 0 && g == 0 && b == 0 {
-				continue
-			}
+			//if r == 0 && g == 0 && b == 0 {
+			//	continue
+			//}
 
 			mtl.Spec1Colour = &maps.Constant{C: colour.RGB{float32(r), float32(g), float32(b)}, Chan: 0}
-			mtl.Spec1Strength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
-			mtl.Spec1Roughness = &maps.Constant{C: colour.RGB{float32(0.0)}, Chan: 0}
+			//mtl.Spec1Strength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
 
 			//mtl.params["DiffuseColour"] = &rgbparam{[3]float32{float32(r), float32(g), float32(b)}}
 			//mtl.params["DiffuseStrength"] = &floatparam{float32(1)}
 
+		case "illum":
+			model := lscan.Token()
+
+			m, err := strconv.Atoi(model)
+
+			if err != nil {
+				return shaders, err
+			}
+
+			// From: http://paulbourke.net/dataformats/mtl/
+			switch m {
+			case 0:
+				// Constant
+				mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+			case 1:
+				// Diffuse
+				mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+			case 2:
+				// Diffuse + Specular
+				mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+				mtl.Spec1Strength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+			case 3:
+				// Diffuse + Specular 'Blinn'
+				mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+				mtl.Spec1Strength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+			case 4:
+				// Diffuse + Specular Glass refractive
+				mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.2)}, Chan: 0}
+				mtl.Spec1Strength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+			case 5:
+				// Diffuse + Specular Metallic Fresnel
+				mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.2)}, Chan: 0}
+				mtl.Spec1Strength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+				mtl.Spec1FresnelModel = "Metal"
+			case 6:
+				// Diffuse + Specular Glass refractive
+				mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+				mtl.Spec1Strength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+			case 7:
+				// Diffuse + Specular
+				mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+				mtl.Spec1Strength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+			case 8:
+				// Diffuse + Specular
+				mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+				mtl.Spec1Strength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+			case 9:
+				// Diffuse + Specular
+				mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+				mtl.Spec1Strength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+			case 10:
+				// Diffuse + Specular
+				mtl.DiffuseStrength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+				mtl.Spec1Strength = &maps.Constant{C: colour.RGB{float32(0.5)}, Chan: 0}
+			}
 		case "map_Kd":
 
 			//mtl.params["DiffuseColour"] = &texparam{lscan.Rest()}
