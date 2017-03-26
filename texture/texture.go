@@ -15,6 +15,7 @@ package texture
 
 import (
 	//"fmt"
+	"bytes"
 	"github.com/blezek/tga"
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
@@ -22,12 +23,17 @@ import (
 	"image"
 	_ "image/jpeg" // Imported for effect
 	_ "image/png"  // Imported for effect
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
 )
+
+// Uses https://github.com/jteeuwen/go-bindata
+//go:generate go-bindata -nocompress -pkg=texture data/
+const embeddedTexture = "data/checker.png"
 
 // Texture represents a texture image.  (shouldn't be public)
 type Texture struct {
@@ -48,17 +54,31 @@ var loadMutex sync.Mutex
 var testTexture *Texture
 
 func init() {
-	tmp := CreateRGBTexture(2, 2)
-	tmp.url = "test"
-	tmp.SetRGB(0, 0, 250, 250, 250)
-	tmp.SetRGB(1, 0, 250, 150, 250)
-	tmp.SetRGB(0, 1, 250, 150, 250)
-	tmp.SetRGB(1, 1, 250, 250, 250)
-	mipmap := stdfilter(tmp.w, tmp.h, tmp.data, 3)
+	data, err := Asset(embeddedTexture)
 
-	tmp.mipmap = mipmap
+	if err != nil {
+		log.Printf("Failed to load embedded fallback texture: %v", err)
 
-	testTexture = tmp
+		tmp := CreateRGBTexture(2, 2)
+		tmp.url = "test"
+		tmp.SetRGB(0, 0, 2, 2, 2)
+		tmp.SetRGB(1, 0, 250, 150, 250)
+		tmp.SetRGB(0, 1, 250, 150, 250)
+		tmp.SetRGB(1, 1, 2, 2, 2)
+
+		mipmap := stdfilter(tmp.w, tmp.h, tmp.data, 3)
+
+		tmp.mipmap = mipmap
+		testTexture = tmp
+
+	} else {
+		t, err := loadTexture(embeddedTexture, bytes.NewReader(data))
+		testTexture = t
+
+		if err != nil {
+			log.Printf("Failed to load embedded fallback texture: %v", err)
+		}
+	}
 	texStore.Store(make(TexStore))
 }
 
@@ -79,6 +99,12 @@ func LoadTexture(url string) (*Texture, error) {
 	}
 	defer file.Close()
 
+	return loadTexture(url, file)
+}
+
+func loadTexture(url string, file io.Reader) (*Texture, error) {
+
+	var err error
 	var m image.Image
 
 	if filepath.Ext(url) == ".tga" || filepath.Ext(url) == ".TGA" {
