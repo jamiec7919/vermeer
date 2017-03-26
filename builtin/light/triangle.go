@@ -142,7 +142,7 @@ func (d *Tri) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool 
 	}
 
 	// Check if we can do spherical:
-	if true || m.Vec3Dot(sg.Ng, m.Vec3Sub(d.P0, P)) < 0 ||
+	if m.Vec3Dot(sg.Ng, m.Vec3Sub(d.P0, P)) < 0 ||
 		m.Vec3Dot(sg.Ng, m.Vec3Sub(d.P1, P)) < 0 ||
 		m.Vec3Dot(sg.Ng, m.Vec3Sub(d.P2, P)) < 0 {
 
@@ -178,7 +178,7 @@ func (d *Tri) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool 
 		//E.Scale(m.Abs(omegaO[2]))
 		sample.Liu.FromRGB(E)
 
-		sample.PdfLight = float32(pdf) * m.Vec3DotAbs(sample.Ld, N) / sqr(sample.Ldist)
+		sample.PdfLight = float32(pdf) * sqr(sample.Ldist) / m.Vec3DotAbs(sample.Ld, N)
 
 	} else {
 		pa := m.Vec3Normalize(m.Vec3Sub(d.P0, sg.P))
@@ -271,9 +271,8 @@ func (d *Tri) sampleByArea(sg *core.ShaderContext, n int) error {
 		//E.Scale(m.Abs(omegaO[2]))
 		ls.Liu.FromRGB(E)
 
-		// geometry term / pdf, lots of cancellations
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
-		ls.Pdf = float32(pdf) * m.Vec3DotAbs(ls.Ld, N) / sqr(ls.Ldist)
+		ls.Pdf = float32(pdf) * sqr(ls.Ldist) / m.Vec3DotAbs(ls.Ld, N)
 
 		sg.Lsamples = append(sg.Lsamples, ls)
 
@@ -291,7 +290,6 @@ func (d *Tri) SampleArea(sg *core.ShaderContext, n int) error {
 		m.Vec3Dot(sg.Ng, m.Vec3Sub(d.P2, sg.P)) < 0 {
 		return d.sampleByArea(sg, n)
 	}
-	return d.sampleByArea(sg, n)
 
 	for i := 0; i < n; i++ {
 		idx := uint64(sg.I*n + i)

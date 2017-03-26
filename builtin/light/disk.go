@@ -13,6 +13,9 @@ import (
 	"github.com/jamiec7919/vermeer/nodes"
 )
 
+// NOTE: Conversion 1/|A| sampling (point on surface) to solid angle pdf is
+// p := 1/|A| * (|x-y|^2  / cos omega')
+
 // Disk represents a circular disk light node.
 type Disk struct {
 	NodeDef       core.NodeDef `node:"-"`
@@ -131,7 +134,7 @@ func (d *Disk) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool
 
 	V := m.Vec3Sub(p, sg.P)
 
-	if m.Vec3Dot(V, sg.Ng) <= 0.0 && m.Vec3Dot(V, d.N) >= 0.0 {
+	if m.Vec3Dot(V, sg.Ng) <= 0.0 || m.Vec3Dot(V, d.N) >= 0.0 {
 		return false
 	}
 
@@ -157,7 +160,7 @@ func (d *Disk) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool
 	sample.Liu.FromRGB(E)
 
 	// Convert dA to dSigma
-	sample.PdfLight = float32(pdf) * (m.Abs(m.Vec3Dot(sample.Ld, d.N))) / (sample.Ldist * sample.Ldist)
+	sample.PdfLight = float32(pdf) * (sample.Ldist * sample.Ldist) / (m.Abs(m.Vec3Dot(sample.Ld, d.N)))
 
 	return true
 }
@@ -189,6 +192,7 @@ func (d *Disk) SampleArea(sg *core.ShaderContext, n int) error {
 			//ODotN := omegaO[2]
 			lsg := sg.NewShaderContext()
 
+			lsg.Lambda = sg.Lambda
 			lsg.P = P
 			lsg.N = d.N
 			lsg.Ng = d.N
@@ -203,7 +207,7 @@ func (d *Disk) SampleArea(sg *core.ShaderContext, n int) error {
 			sg.ReleaseShaderContext(lsg)
 
 			// geometry term / pdf
-			ls.Pdf = float32(pdf) * m.Abs(m.Vec3Dot(ls.Ld, d.N)) / (ls.Ldist * ls.Ldist)
+			ls.Pdf = float32(pdf) * (ls.Ldist * ls.Ldist) / m.Abs(m.Vec3Dot(ls.Ld, d.N))
 
 			//		fmt.Printf("%v %v %v %v\n", sg.Poffset, sg.P, pdf, sg.Weight)
 			sg.Lsamples = append(sg.Lsamples, ls)

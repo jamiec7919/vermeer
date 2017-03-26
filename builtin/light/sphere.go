@@ -131,7 +131,6 @@ func (d *Sphere) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bo
 	t, ok := raySphereIntersect(sg.P, sample.D, d.P, d.Radius)
 
 	if !ok {
-		//return fmt.Errorf("nosample")
 		return false
 	}
 
@@ -169,7 +168,6 @@ func (d *Sphere) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bo
 
 	l := m.Vec3Length(V)
 
-	//	sample.Weight = m.Abs(m.Vec3Dot(sample.Ld, sg.N)) * 2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))
 	sample.PdfLight = 1 / (2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))) // q_2 from Shirley96
 
 	if false {
@@ -257,9 +255,7 @@ func (d *Sphere) SampleArea(sg *core.ShaderContext, n int) error {
 		//E.Scale(m.Abs(omegaO[2]))
 		ls.Liu.FromRGB(E)
 
-		// geometry term / pdf, lots of cancellations
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
-		//ls.Weight = m.Abs(m.Vec3Dot(ls.Ld, sg.N)) * 2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))
 		ls.Pdf = 1 / (2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))) // q_2 from Shirley96
 
 		if false {
