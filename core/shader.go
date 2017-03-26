@@ -205,15 +205,21 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 	var col colour.RGB
 
 	if sc.NSamples > 1 {
-
+		// BEWARE correlation between light samples and BSDF.  Seems to be some patterning due
+		// to ldseq when only BSDF sampling is used (goes away after sufficient iterations). Invisible
+		// with lighting on.
 		for i := 0; i < sc.NSamples/2; i++ {
-			idx := uint64(sc.I*(sc.NSamples/2) + sc.Sample + i)
+			idx := uint64(sc.I*(sc.NSamples/2) + i)
 			r0 := ldseq.VanDerCorput(idx, sc.Scramble[0])
 			r1 := ldseq.Sobol(idx, sc.Scramble[1])
 
-			omegaO := bsdf.Sample(r0, r1)
+			omegaO := m.Vec3Normalize(bsdf.Sample(r0, r1))
 
 			s := BSDFSample{D: omegaO, Pdf: bsdf.PDF(omegaO)}
+
+			if s.Pdf <= 0 {
+				continue
+			}
 
 			if sc.Lp.ValidSample(sc, &s) {
 
@@ -239,6 +245,9 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 		if len(sc.Lsamples) == 0 { // NOTE this needs thinking about, if we take any samples at all then should count all of them, otherwise use BSDF.
 			nLightSamples = 0
 		}
+		if len(bsdfSamples) == 0 { // NOTE this needs thinking about, if we take any samples at all then should count all of them, otherwise use BSDF.
+			nBSDFSamples = 0
+		}
 
 		totalSamples := nBSDFSamples + nLightSamples
 
@@ -252,6 +261,10 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 		chsc := sc.NewShaderContext()
 
 		for _, ls := range sc.Lsamples {
+
+			if m.Vec3Dot(ls.Ld, sc.N) <= 0 {
+				continue
+			}
 
 			if m.Vec3Dot(ls.Ld, sc.Ng) < 0 {
 				ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(ls.Ldist*(1.0-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
@@ -289,6 +302,10 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 		}
 
 		for _, bs := range bsdfSamples {
+
+			if m.Vec3Dot(bs.Ld, sc.N) <= 0 {
+				continue
+			}
 
 			if m.Vec3Dot(bs.Ld, sc.Ng) < 0 {
 				ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(bs.Ldist*(1.0-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
@@ -349,6 +366,10 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 			ray := sc.NewRay()
 			chsc := sc.NewShaderContext()
 
+			if m.Vec3Dot(ls.Ld, sc.N) <= 0 {
+				continue
+			}
+
 			if m.Vec3Dot(ls.Ld, sc.Ng) < 0 {
 				ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(ls.Ldist*(1.0-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
 			} else {
@@ -370,9 +391,9 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 
 				col.Add(rgb)
 
-				sc.ReleaseRay(ray)
-				sc.ReleaseShaderContext(chsc)
 			}
+			sc.ReleaseRay(ray)
+			sc.ReleaseShaderContext(chsc)
 		}
 
 	}

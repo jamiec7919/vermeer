@@ -166,12 +166,12 @@ func Render(maxIter int, exit chan bool) (RenderStats, error) {
 	framescramble = make([]pixelscramble, framebuffer.Width*framebuffer.Height)
 
 	for i := range framescramble {
-		framescramble[i].lensU = uint64(rand.Int63())
-		framescramble[i].lensV = uint64(rand.Int63())
-		framescramble[i].time = uint64(rand.Int63())
-		framescramble[i].lambda = uint64(rand.Int63())
-		framescramble[i].scramble[0] = uint64(rand.Int63())
-		framescramble[i].scramble[1] = uint64(rand.Int63())
+		framescramble[i].lensU = rand.Uint64()
+		framescramble[i].lensV = rand.Uint64()
+		framescramble[i].time = rand.Uint64()
+		framescramble[i].lambda = rand.Uint64()
+		framescramble[i].scramble[0] = rand.Uint64()
+		framescramble[i].scramble[1] = rand.Uint64()
 
 	}
 
