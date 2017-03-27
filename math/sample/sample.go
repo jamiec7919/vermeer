@@ -16,6 +16,20 @@ import (
 // is [0,0,1]
 // pdf is cos(v,N)/Pi
 func CosineHemisphere(u0, u1 float64) m.Vec3 {
+	r := math.Sqrt(1 - u0)
+	theta := 2 * math.Pi * u1
+
+	x := r * math.Cos(theta)
+	y := r * math.Sin(theta)
+
+	return m.Vec3{float32(x), float32(y), float32(math.Sqrt(u0))}
+
+}
+
+// CosineHemisphere2 returns a unit vector sampled from the cosine weighted hemisphere. Normal
+// is [0,0,1]
+// pdf is cos(v,N)/Pi
+func CosineHemisphere2(u0, u1 float64) m.Vec3 {
 	r := math.Sqrt(u0)
 	theta := 2 * math.Pi * u1
 
@@ -23,6 +37,52 @@ func CosineHemisphere(u0, u1 float64) m.Vec3 {
 	y := r * math.Sin(theta)
 
 	return m.Vec3{float32(x), float32(y), float32(math.Sqrt(1 - u0))}
+
+}
+
+// CosineHemisphereConcentric returns a unit vector sampled from the cosine weighted hemisphere. Normal
+// is [0,0,1].  Uses Concentric (Shirley) mapping.
+// pdf is cos(v,N)/Pi
+func CosineHemisphereConcentric(u0, u1 float64) m.Vec3 {
+	var r, phi float64
+
+	u0 = -1 + (u0 * 2)
+	u1 = -1 + (u1 * 2)
+
+	switch {
+	case u0 > -u1 && u0 > u1:
+		r = u0
+		phi = (math.Pi / 4) * (u1 / u0)
+	case u0 < u1 && u0 > -u1:
+		r = u1
+		phi = (math.Pi / 4) * (2 - u0/u1)
+	case u0 < -u1 && u0 < u1:
+		r = -u0
+		phi = (math.Pi / 4) * (4 + u1/u0)
+	case u0 > u1 && u0 < -u1:
+		r = -u1
+		phi = (math.Pi / 4) * (6 - u0/u1)
+
+	}
+
+	x := r * math.Cos(phi)
+	y := r * math.Sin(phi)
+
+	return m.Vec3{float32(x), float32(y), m.Sqrt(1 - float32(r*r))}
+
+}
+
+// UniformHemisphere returns a unit vector sampled from the cosine weighted hemisphere. Normal
+// is [0,0,1]
+// pdf is 1/2pi
+func UniformHemisphere(u0, u1 float64) m.Vec3 {
+	r := math.Sqrt(1 - u1*u1)
+	theta := 2 * math.Pi * u0
+
+	x := r * math.Cos(theta)
+	y := r * math.Sin(theta)
+
+	return m.Vec3{float32(x), float32(y), float32(u1)}
 
 }
 

@@ -103,9 +103,9 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 		V = m.Vec3Cross(sg.N, sg.DdPdv)
 	}
 	V = m.Vec3Normalize(V)
-	U := m.Vec3Cross(sg.N, V)
+	U := m.Vec3Normalize(m.Vec3Cross(sg.N, V))
 
-	diffRoughness := float32(0.3)
+	diffRoughness := float32(0.5)
 
 	if sh.DiffuseRoughness != nil {
 		diffRoughness = sh.DiffuseRoughness.Float32(sg)
@@ -216,7 +216,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 		var samp core.TraceSample
 		ray := sg.NewRay()
 
-		spec1Samples := 4
+		spec1Samples := 0
 
 		if spec1Roughness == 0.0 {
 			spec1Samples = 1
@@ -262,23 +262,26 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 
 		sg.ReleaseRay(ray)
 
-		spec1Contrib.Scale(spec1Weight / float32(spec1Samples))
-
-		sg.LightsPrepare()
-
-		for sg.NextLight() {
-
-			//			if sg.Lp.DiffuseShadeMult() > 0.0 {
-
-			// In this example the brdf passed is an interface
-			// allowing sampling, pdf and bsdf eval
-			col := sg.EvaluateLightSamples(spec1BRDF)
-			col.Mul(spec1Colour)
-			spec1Contrib.Add(col)
-			//			}
-
+		if spec1Samples > 0 {
+			spec1Contrib.Scale(spec1Weight / float32(spec1Samples))
 		}
 
+		if spec1Roughness > 0.0 { // No point doing direct lighting for mirror surfaces!
+			sg.LightsPrepare()
+
+			for sg.NextLight() {
+
+				//			if sg.Lp.DiffuseShadeMult() > 0.0 {
+
+				// In this example the brdf passed is an interface
+				// allowing sampling, pdf and bsdf eval
+				col := sg.EvaluateLightSamples(spec1BRDF)
+				col.Mul(spec1Colour)
+				spec1Contrib.Add(col)
+				//			}
+
+			}
+		}
 	}
 
 	contrib := colour.RGB{}
@@ -308,7 +311,7 @@ func (sh *ShaderStd) EvalEmission(sg *core.ShaderContext, omegaO m.Vec3) colour.
 		return colour.RGB{}
 	}
 
-	emissColour.Scale(emissStrength * m.Vec3DotClamp(sg.N, omegaO))
+	emissColour.Scale(emissStrength)
 	return emissColour
 }
 

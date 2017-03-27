@@ -8,7 +8,6 @@ import (
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
-	"log"
 )
 
 func reflect(omegaR, N m.Vec3) (omegaO m.Vec3) {
@@ -59,30 +58,40 @@ func (b *Specular) Sample(r0, r1 float64) m.Vec3 {
 	//if b.transmissive == 0.0 || r0 < float64(fresnel) {
 	omegaO := reflect(b.OmegaR, m.Vec3{0, 0, 1})
 
-	if sign(omegaO[2]) != sign(b.OmegaR[2]) {
-		log.Panicf("signs %v %v", omegaO, b.OmegaR)
-	}
-	//	} else {
 	//		if b.thin {
 	//			omegaO = m.Vec3Neg(b.OmegaR)
 	//		} else {
 	//		log.Printf("transmit")
 	//omegaO = refract(b.OmegaR, b.ior)
 	//		}
-	//	}
 
 	omegaO = m.Vec3Normalize(omegaO)
 	return m.Vec3BasisExpand(b.U, b.V, b.N, omegaO)
 }
 
 // PDF implements core.BSDF.
-func (b *Specular) PDF(omegaO m.Vec3) float64 {
+func (b *Specular) PDF(_omegaO m.Vec3) float64 {
+	omegaO := m.Vec3BasisProject(b.U, b.V, b.N, _omegaO)
+
+	omegaORefl := reflect(b.OmegaR, m.Vec3{0, 0, 1})
+
+	if m.Vec3Dot(omegaO, omegaORefl) < 0.9999 {
+		return 0
+	}
+
 	return 1
 }
 
 // Eval implements core.BSDF.
 func (b *Specular) Eval(_omegaO m.Vec3) (rho colour.Spectrum) {
 	omegaO := m.Vec3BasisProject(b.U, b.V, b.N, _omegaO)
+
+	omegaORefl := reflect(b.OmegaR, m.Vec3{0, 0, 1})
+
+	if m.Vec3Dot(omegaO, omegaORefl) < 0.9999 {
+		return
+	}
+
 	fresnel := b.fresnel.Kr(b.OmegaR[2])
 
 	rho.Lambda = b.Lambda

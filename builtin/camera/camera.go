@@ -82,13 +82,17 @@ func (c *Camera) PreRender() error {
 		c.Aspect = core.FrameAspect()
 	}
 
-	if c.From.MotionKeys < 2 && c.Target.MotionKeys < 2 {
-		c.calcBasisLookat(c.From.Elems[0], c.Target.Elems[0], c.Up, 0)
-	}
+	//if c.From.MotionKeys < 2 && c.Target.MotionKeys < 2 {
+	//	c.calcBasisLookat(c.From.Elems[0], c.Target.Elems[0], c.Up, 0)
+	//}
 
 	c.TanThetaFocal = m.Tan(degToRad(c.Fov/2)) * c.Focal
 
-	c.calcLookatMatrices()
+	if c.Type == "LookAt" {
+		c.calcLookatMatrices()
+	} else {
+		c.matrixCalc()
+	}
 
 	return nil
 }
@@ -196,6 +200,19 @@ func (c *Camera) calcBasisLookat(from, to, up m.Vec3, roll float32) {
 
 	c.U = m.Vec3Add(m.Vec3Scale(m.Cos(roll), u), m.Vec3Scale(m.Sin(roll), v))
 	c.V = m.Vec3Add(m.Vec3Scale(-m.Sin(roll), u), m.Vec3Scale(m.Cos(roll), v))
+
+}
+
+func (c *Camera) matrixCalc() {
+	for _, mtx := range c.WorldToLocal.Elems {
+		srt, _ := m.Matrix4Inverse(mtx)
+		c.LocalToWorld.Elems = append(c.LocalToWorld.Elems, srt)
+		c.LocalToWorld.MotionKeys++
+	}
+
+	for i := range c.LocalToWorld.Elems {
+		c.decomp = append(c.decomp, m.TransformDecompMatrix4(c.LocalToWorld.Elems[i]))
+	}
 
 }
 

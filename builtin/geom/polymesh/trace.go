@@ -501,14 +501,14 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 		sg.Dduvdy[1] = alphay*0 + betay*0 + gammay*1
 	}
 
-	//fmt.Printf("%v %v \n", sg.Dduvdx, sg.Dduvdy)
-	sg.DdPdu[0] = e00
-	sg.DdPdu[1] = e01
-	sg.DdPdu[2] = e02
+	axisu := m.Vec3Sub(m.Vec3{1, 0, 0}, m.Vec3Scale(m.Vec3Dot(m.Vec3{1, 0, 0}, sg.Ng), sg.Ng))
 
-	sg.DdPdv[0] = e10
-	sg.DdPdv[1] = e11
-	sg.DdPdv[2] = e12
+	if m.Vec3Length2(axisu) < 0.1 || m.Abs(m.Vec3Dot(axisu, sg.Ng)) > 0.3 {
+		axisu = m.Vec3Sub(m.Vec3{0, 0, 1}, m.Vec3Scale(m.Vec3Dot(m.Vec3{0, 0, 1}, sg.Ng), sg.Ng))
+	}
+
+	sg.DdPdu = m.Vec3Normalize(axisu)
+	sg.DdPdv = m.Vec3Cross(sg.Ng, sg.DdPdu)
 
 	sg.ElemID = uint32(idx)
 

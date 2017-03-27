@@ -18,9 +18,9 @@ For each AA sample x_i take the next b^m samples from the 'light source' or othe
 t,m,s nets for each x_i. This reduces correlation and stratifies across more dimensions. */
 package ldseq
 
-// VanDerCorput computes the Van der Corput radical inverse in base 2 with 52 bits precision.
+// VanDerCorput23 computes the Van der Corput radical inverse in base 2 with 52 bits precision.
 // Returns a float64 in [0,1)
-func VanDerCorput(i, r uint64) float64 {
+func VanDerCorput23(i, r uint64) float64 {
 	bits := uint32((i << 16) | (i >> 16))
 	bits = ((bits & 0x00ff00ff) << 8) | ((bits & 0xff00ff00) >> 8)
 	bits = ((bits & 0x0f0f0f0f) << 4) | ((bits & 0xf0f0f0f0) >> 4)
@@ -30,9 +30,9 @@ func VanDerCorput(i, r uint64) float64 {
 	return float64(bits) / float64(0x100000000)
 }
 
-// Sobol calculates the Sobol sequence radical inverse in base 2 with 52 bits precision.
+// Sobol23 calculates Sobol's radical inverse in base 2 with 52 bits precision.
 // Returns a float64 in [0,1)
-func Sobol(_i, r uint64) float64 {
+func Sobol23(_i, r uint64) float64 {
 	q := uint32(r)
 	i := uint32(_i)
 	for v := uint32(1 << 31); i != 0; i >>= 1 {
@@ -45,9 +45,9 @@ func Sobol(_i, r uint64) float64 {
 	return float64(q) / float64(0x100000000)
 }
 
-// TODO: BROKEN VanDerCorput computes the Van der Corput radical inverse in base 2 with 52 bits precision.
+// VanDerCorput computes the Van der Corput radical inverse in base 2 with 52 bits precision.
 // Returns a float64 in [0,1)
-func _VanDerCorput(i, scramble uint64) float64 {
+func VanDerCorput(i, scramble uint64) float64 {
 	return float64(vanDerCorput(i, scramble)) / float64(uint64(1)<<52)
 
 }
@@ -74,9 +74,9 @@ func vanDerCorput(i, scramble uint64) uint64 {
 
 }
 
-// TODO: BROKEN Sobol calculates the Sobol sequence radical inverse in base 2 with 52 bits precision.
+// Sobol calculates the Sobol sequence radical inverse in base 2 with 52 bits precision.
 // Returns a float64 in [0,1)
-func _Sobol(i, scramble uint64) float64 {
+func Sobol(i, scramble uint64) float64 {
 	return float64(sobol(i, scramble)) / float64(uint64(1)<<52)
 }
 
@@ -93,6 +93,13 @@ func sobol(i, scramble uint64) uint64 {
 	}
 
 	return r
+}
+
+// Hammersley computes i/2^m radical inverse in base 2 with 52 bits precision.
+// Returns a float64 in [0,1)
+func Hammersley(i, scramble, m uint64) float64 {
+	K := uint64(1 << m)
+	return float64(i^(scramble&(K-1))) / float64(K)
 }
 
 // LarcherPillichshammer computes Larcher Pillichshammer radical inverse in base 2 with 52 bits precision.
