@@ -1,17 +1,11 @@
-
-
-
-    
-
-
-
-
 <!DOCTYPE HTML>
 
 <html>
     <head>
         
-            <title>about - Vermeer Light Tools</title>
+            
+                <title>Release 0.3.0</title>
+            
         
 
         <meta charset="utf-8" />
@@ -20,6 +14,8 @@
         
 
 
+        
+            <meta name="author" content="Jamie">
         
         
             
@@ -33,24 +29,18 @@
 
 
 
-<meta name="twitter:title" content="about"/>
-<meta name="twitter:description" content="Features  Distribution ray tracing Disk light sources Polygon meshes (&#43; WF .obj loading) Basic texture support BSDF support, Oren-Nayar diffuse and GGX specular Transparency and thin-transparency support  Tech Vermeer Light Tools is a physically plausible renderer.
-Vermeer is written in Go so you&rsquo;ll need that before building. Binaries will be made available when I&rsquo;m ready for release.
-Get Vermeer go install github.com/jamiec7919/vermeer/cmd/vermeer
-Documentation Please refer to: The Documentation for details of the vnf format and useage."/>
+<meta name="twitter:title" content="Release 0.3.0"/>
+<meta name="twitter:description" content="Info After several months hard work there is virtually no visible change :) But it&rsquo;s not all bad, most of the work went into code that supports more advanced features and making the existing features work properly so next release should have some more, different pretty pictures. The main visible difference will be in the default texture filtering which is now anisotropic and properly calculated from the ray differentials."/>
 
 
 
-        <meta property="og:title" content="about" />
-<meta property="og:description" content="Features  Distribution ray tracing Disk light sources Polygon meshes (&#43; WF .obj loading) Basic texture support BSDF support, Oren-Nayar diffuse and GGX specular Transparency and thin-transparency support  Tech Vermeer Light Tools is a physically plausible renderer.
-Vermeer is written in Go so you&rsquo;ll need that before building. Binaries will be made available when I&rsquo;m ready for release.
-Get Vermeer go install github.com/jamiec7919/vermeer/cmd/vermeer
-Documentation Please refer to: The Documentation for details of the vnf format and useage." />
+        <meta property="og:title" content="Release 0.3.0" />
+<meta property="og:description" content="Info After several months hard work there is virtually no visible change :) But it&rsquo;s not all bad, most of the work went into code that supports more advanced features and making the existing features work properly so next release should have some more, different pretty pictures. The main visible difference will be in the default texture filtering which is now anisotropic and properly calculated from the ray differentials." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="http://vermeerlt.com/about/" />
+<meta property="og:url" content="http://vermeerlt.com/blog/release-0.3.0/" />
 
 
-<meta property="og:updated_time" content="2016-09-29T15:18:04&#43;01:00"/>
+<meta property="og:updated_time" content="2017-03-07T16:02:27&#43;00:00"/>
 
 
 
@@ -62,15 +52,12 @@ Documentation Please refer to: The Documentation for details of the vnf format a
 
 
         
-<meta itemprop="name" content="about">
-<meta itemprop="description" content="Features  Distribution ray tracing Disk light sources Polygon meshes (&#43; WF .obj loading) Basic texture support BSDF support, Oren-Nayar diffuse and GGX specular Transparency and thin-transparency support  Tech Vermeer Light Tools is a physically plausible renderer.
-Vermeer is written in Go so you&rsquo;ll need that before building. Binaries will be made available when I&rsquo;m ready for release.
-Get Vermeer go install github.com/jamiec7919/vermeer/cmd/vermeer
-Documentation Please refer to: The Documentation for details of the vnf format and useage.">
+<meta itemprop="name" content="Release 0.3.0">
+<meta itemprop="description" content="Info After several months hard work there is virtually no visible change :) But it&rsquo;s not all bad, most of the work went into code that supports more advanced features and making the existing features work properly so next release should have some more, different pretty pictures. The main visible difference will be in the default texture filtering which is now anisotropic and properly calculated from the ray differentials.">
 
 
-<meta itemprop="dateModified" content="2016-09-29T15:18:04&#43;01:00" />
-<meta itemprop="wordCount" content="76">
+<meta itemprop="dateModified" content="2017-03-07T16:02:27&#43;00:00" />
+<meta itemprop="wordCount" content="177">
 
 
 
@@ -118,6 +105,7 @@ ga('send', 'pageview');
         <div id="wrapper">
 
     
+    
 <header id="header">
     
         <h2><a href="/">Vermeer LT</i></a></h2>
@@ -149,6 +137,10 @@ ga('send', 'pageview');
     </nav>
     <nav class="main">
         <ul>
+            
+            <li id="share-nav" class="share-menu" style="display:none;">
+                <a class="fa-share-alt" href="#share-menu">Share</a>
+            </li>
             
             <li class="search">
                 <a class="fa-search" href="#search">Search</a>
@@ -237,50 +229,249 @@ ga('send', 'pageview');
         
 </section>
 
+    <section id="share-menu">
+    <section id="social-share-nav">
+        <ul class="links">
+            <header>
+                <h3>Share this post <i class="fa fa-smile-o"></i></h3>
+            </header>
+            
+
+
+<li><a href="//twitter.com/share?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f&text=Release%200.3.0&via=" target="_blank" class="share-btn twitter">
+    <i class="fa fa-twitter"></i>
+    <p>Twitter</p>
+</a></li>
+
+
+<li><a href="//plus.google.com/share?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f" target="_blank" class="share-btn google-plus">
+    <i class="fa fa-google-plus"></i>
+    <p>Google+</p>
+</a></li>
+
+
+<li><a href="//www.facebook.com/sharer/sharer.php?u=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f" target="_blank" class="share-btn facebook">
+    <i class="fa fa-facebook"></i>
+    <p>Facebook</p>
+</a></li>
+
+
+<li><a href="//reddit.com/submit?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f&title=Release%200.3.0" target="_blank" class="share-btn reddit">
+    <i class="fa fa-reddit-alien"></i>
+    <p>Reddit</p>
+</a></li>
+
+
+<li><a href="//www.linkedin.com/shareArticle?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f&title=Release%200.3.0" target="_blank" class="share-btn linkedin">
+    <i class="fa fa-linkedin"></i>
+    <p>LinkedIn</p>
+</a></li>
+
+
+<li><a href="//www.stumbleupon.com/submit?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f&title=Release%200.3.0" target="_blank" class="share-btn stumbleupon">
+    <i class="fa fa-stumbleupon"></i>
+    <p>StumbleUpon</p>
+</a></li>
+
+
+<li><a href="mailto:?subject=Check out this post by Jamie&body=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f" target="_blank" class="share-btn email">
+    <i class="fa fa-envelope"></i>
+    <p>Email</p>
+</a></li>
+
+        </ul>
+    </section>
+</section>
+
     
     <div id="main">
+        
+        
         <article class="post">
-            
-            <header>
+    <header>
     <div class="title">
         
-            <h1><a href="http://vermeerlt.com/about/">about</a></h1>
+            <h1><a href="http://vermeerlt.com/blog/release-0.3.0/">Release 0.3.0</a></h1>
             
+        
+        
+    </div>
+    <div class="meta">
+        
+            
+        
+
+        <time class="published"
+            datetime='2017-03-07'>
+            March 7, 2017</time>
+        <span class="author">Jamie</span>
+        
+            <p>1 minute read</p>
         
         
     </div>
 </header>
 
-            <div id="content">
-                
 
-<h2 id="features">Features</h2>
+    <section id="social-share">
+        <ul class="icons">
+            
+
+
+<li><a href="//twitter.com/share?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f&text=Release%200.3.0&via=" target="_blank" class="share-btn twitter">
+    <i class="fa fa-twitter"></i>
+    <p>Twitter</p>
+</a></li>
+
+
+<li><a href="//plus.google.com/share?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f" target="_blank" class="share-btn google-plus">
+    <i class="fa fa-google-plus"></i>
+    <p>Google+</p>
+</a></li>
+
+
+<li><a href="//www.facebook.com/sharer/sharer.php?u=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f" target="_blank" class="share-btn facebook">
+    <i class="fa fa-facebook"></i>
+    <p>Facebook</p>
+</a></li>
+
+
+<li><a href="//reddit.com/submit?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f&title=Release%200.3.0" target="_blank" class="share-btn reddit">
+    <i class="fa fa-reddit-alien"></i>
+    <p>Reddit</p>
+</a></li>
+
+
+<li><a href="//www.linkedin.com/shareArticle?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f&title=Release%200.3.0" target="_blank" class="share-btn linkedin">
+    <i class="fa fa-linkedin"></i>
+    <p>LinkedIn</p>
+</a></li>
+
+
+<li><a href="//www.stumbleupon.com/submit?url=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f&title=Release%200.3.0" target="_blank" class="share-btn stumbleupon">
+    <i class="fa fa-stumbleupon"></i>
+    <p>StumbleUpon</p>
+</a></li>
+
+
+<li><a href="mailto:?subject=Check out this post by Jamie&body=http%3a%2f%2fvermeerlt.com%2fblog%2frelease-0.3.0%2f" target="_blank" class="share-btn email">
+    <i class="fa fa-envelope"></i>
+    <p>Email</p>
+</a></li>
+
+        </ul>
+    </section>
+    
+
+    <div id="content">
+        
+
+<h2 id="info">Info</h2>
+
+<p>After several months hard work there is virtually no visible change :)  But it&rsquo;s not all bad, most of
+the work went into code that supports more advanced features and making the existing features work properly so next release should have some more, different pretty pictures.  The main visible difference will be in the default texture filtering which is now
+anisotropic and properly calculated from the ray differentials.</p>
+
+<p>Multiple importance sampling for direct lighting is now also supported and used by default which leads to
+less noisy highlights on glossy surfaces.</p>
+
+<h2 id="new-features">New Features</h2>
 
 <ul>
-<li>Distribution ray tracing</li>
-<li>Disk light sources</li>
-<li>Polygon meshes (+ WF .obj loading)</li>
-<li>Basic texture support</li>
-<li>BSDF support, Oren-Nayar diffuse and GGX specular</li>
-<li>Transparency and thin-transparency support</li>
+<li>Multiple Importance Sampling</li>
+<li>Anisotropic texture filtering</li>
+<li>Procedural nodes - well, you can now load WFObj (again) and VNF files.</li>
+<li>Better light sampling</li>
+<li>Geometry Instancing</li>
+<li>Per-face shaders in PolyMesh</li>
 </ul>
 
-<h2 id="tech">Tech</h2>
+<h2 id="images">Images</h2>
 
-<p>Vermeer Light Tools is a physically plausible renderer.</p>
+<p><a href="/img/render/0.3.0/cornell.jpg"><img src="/img/render/0.3.0/cornell.tn.jpg"></a>
+<a href="/img/render/0.3.0/quad.jpg"><img src="/img/render/0.3.0/quad.tn.jpg"></a>
+<a href="/img/render/0.3.0/lambo.jpg"><img src="/img/render/0.3.0/lambo.tn.jpg"></a>
+<a href="/img/render/0.3.0/madScience.jpg"><img src="/img/render/0.3.0/madScience.tn.jpg"></a></p>
 
-<p>Vermeer is written in <a href="http://www.golang.org">Go</a> so you&rsquo;ll need that before building.  Binaries will be made available when I&rsquo;m ready for release.</p>
+<h2 id="roadmap-due-may-2017">Roadmap - Due May 2017</h2>
 
-<h2 id="get-vermeer">Get Vermeer</h2>
+<p>The next stage will include:</p>
 
-<p>go install github.com/jamiec7919/vermeer/cmd/vermeer</p>
+<ul>
+<li>At least one exporter for a 3D package (probably Maya)</li>
+<li>Transparency will be working again</li>
+<li>Subdivision surfaces</li>
+<li>Better error handling and reporting</li>
+<li>Many general bugfixes and making everything more robust</li>
+<li>Test scene suite and some more advanced demo scenes (the exporter will help here)</li>
+</ul>
 
-<h2 id="documentation">Documentation</h2>
+    </div>
 
-<p>Please refer to: <a href="http://vermeer.readthedocs.io/">The Documentation</a> for details of the vnf format and useage.</p>
+    <footer>
+        <ul class="stats">
+    
+        
 
-            </div>
+        
+        
+            <li>
+                
+                
+                    
+
+                    
+
+                    
+
+                    
+                        Category
+                    
+                
+            </li>
+        
+    
+
+    
+    
+        <li><a href='/categoriesrelease'>Release</a></li>
+    
+</ul>
+
+    </footer>
+</article>
+<ul class="actions pagination">
+    
+        <li><a href="http://vermeerlt.com/blog/release-0.2.0/"
+                class="button big previous">Release 0.2.0</a></li>
+    
+
+    
+</ul>
+
+
+
+    
+        <article class="post">
+            <div id="disqus_thread"></div>
+<script type="text/javascript">
+    var disqus_shortname = 'vermeer-lt';
+    var disqus_identifier = 'http:\/\/vermeerlt.com\/blog\/release-0.3.0\/';
+    var disqus_title = 'Release 0.3.0';
+    var disqus_url = 'http:\/\/vermeerlt.com\/blog\/release-0.3.0\/';
+
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
         </article>
+    
+
+
     </div>
     
 <section id="sidebar">

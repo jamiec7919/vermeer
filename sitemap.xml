@@ -2,8 +2,8 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
-    <loc>http://vermeerlt.com/</loc>
-    <lastmod>2016-10-10T15:10:42+01:00</lastmod>
+    <loc>http://vermeerlt.com/blog/release-0.3.0/</loc>
+    <lastmod>2017-03-07T16:02:27+00:00</lastmod>
   </url>
   
   <url>
@@ -24,6 +24,29 @@
   <url>
     <loc>http://vermeerlt.com/blog/prerelease/</loc>
     <lastmod>2016-03-20T19:51:24+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>http://vermeerlt.com/blog/</loc>
+    <lastmod>2017-03-07T16:02:27+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>http://vermeerlt.com/categories/</loc>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>http://vermeerlt.com/</loc>
+    <lastmod>2017-03-07T16:02:27+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>http://vermeerlt.com/categories/release/</loc>
+    <lastmod>2017-03-07T16:02:27+00:00</lastmod>
+    <priority>0</priority>
   </url>
   
 </urlset>

@@ -2,12 +2,62 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Blogs on Vermeer Light Tools</title>
-    <link>http://vermeerlt.com/blog/</link>
+    <link>http://vermeerlt.com/blog/index.xml</link>
     <description>Recent content in Blogs on Vermeer Light Tools</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 10 Oct 2016 15:10:42 +0100</lastBuildDate>
+    <lastBuildDate>Tue, 07 Mar 2017 16:02:27 +0000</lastBuildDate>
     <atom:link href="http://vermeerlt.com/blog/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Release 0.3.0</title>
+      <link>http://vermeerlt.com/blog/release-0.3.0/</link>
+      <pubDate>Tue, 07 Mar 2017 16:02:27 +0000</pubDate>
+      
+      <guid>http://vermeerlt.com/blog/release-0.3.0/</guid>
+      <description>
+
+&lt;h2 id=&#34;info&#34;&gt;Info&lt;/h2&gt;
+
+&lt;p&gt;After several months hard work there is virtually no visible change :)  But it&amp;rsquo;s not all bad, most of
+the work went into code that supports more advanced features and making the existing features work properly so next release should have some more, different pretty pictures.  The main visible difference will be in the default texture filtering which is now
+anisotropic and properly calculated from the ray differentials.&lt;/p&gt;
+
+&lt;p&gt;Multiple importance sampling for direct lighting is now also supported and used by default which leads to
+less noisy highlights on glossy surfaces.&lt;/p&gt;
+
+&lt;h2 id=&#34;new-features&#34;&gt;New Features&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Multiple Importance Sampling&lt;/li&gt;
+&lt;li&gt;Anisotropic texture filtering&lt;/li&gt;
+&lt;li&gt;Procedural nodes - well, you can now load WFObj (again) and VNF files.&lt;/li&gt;
+&lt;li&gt;Better light sampling&lt;/li&gt;
+&lt;li&gt;Geometry Instancing&lt;/li&gt;
+&lt;li&gt;Per-face shaders in PolyMesh&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;images&#34;&gt;Images&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://vermeerlt.com/img/render/0.3.0/cornell.jpg&#34;&gt;&lt;img src=&#34;http://vermeerlt.com/img/render/0.3.0/cornell.tn.jpg&#34;&gt;&lt;/a&gt;
+&lt;a href=&#34;http://vermeerlt.com/img/render/0.3.0/quad.jpg&#34;&gt;&lt;img src=&#34;http://vermeerlt.com/img/render/0.3.0/quad.tn.jpg&#34;&gt;&lt;/a&gt;
+&lt;a href=&#34;http://vermeerlt.com/img/render/0.3.0/lambo.jpg&#34;&gt;&lt;img src=&#34;http://vermeerlt.com/img/render/0.3.0/lambo.tn.jpg&#34;&gt;&lt;/a&gt;
+&lt;a href=&#34;http://vermeerlt.com/img/render/0.3.0/madScience.jpg&#34;&gt;&lt;img src=&#34;http://vermeerlt.com/img/render/0.3.0/madScience.tn.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;roadmap-due-may-2017&#34;&gt;Roadmap - Due May 2017&lt;/h2&gt;
+
+&lt;p&gt;The next stage will include:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;At least one exporter for a 3D package (probably Maya)&lt;/li&gt;
+&lt;li&gt;Transparency will be working again&lt;/li&gt;
+&lt;li&gt;Subdivision surfaces&lt;/li&gt;
+&lt;li&gt;Better error handling and reporting&lt;/li&gt;
+&lt;li&gt;Many general bugfixes and making everything more robust&lt;/li&gt;
+&lt;li&gt;Test scene suite and some more advanced demo scenes (the exporter will help here)&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
     
     <item>
       <title>Release 0.2.0</title>
