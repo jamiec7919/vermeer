@@ -12,9 +12,9 @@ hit the scene we evaluate a surface (or, if in some medium a volume) shader whic
 and sample the light sources in order to determine the colour at that point.
 
 Geometry, cameras and light sources are usually specified by a modelling package (e.g. Blender or Autodesk Maya).
-Vermeer doesn't yet contain any exporters (it is only at v0.2.0!) but these are planned as soon as possible.
+Vermeer doesn't yet contain any exporters (it is only at v0.3.0!) but these are planned as soon as possible.
 
-Animation is a key requisite of production rendering.  In order to smooth out animation for films it is necessary to simulate a small amount of motion blur (this reduces what is known as temporal aliasing) - Vermeer currently supports this for :ref:`polymesh-def` deformation and camera motion.  
+Animation is a key requisite of production rendering.  In order to smooth out animation for films it is necessary to simulate a small amount of motion blur (this reduces what is known as temporal aliasing) - Vermeer currently supports this for :ref:`polymesh-def` motion and deformation and camera motion.  
 
 How it works
 ------------
@@ -33,4 +33,5 @@ Progressive Rendering
 Vermeer is a progressive renderer. This means that an image goes through a set of iterations, each one improving the quality.  Due to the spectral sampling
 at least 4 iterations are required to reduce colour noise acceptably.  The quasi-monte carlo sampling procedure perfoms careful stratification of samples across iterations which means that surprisingly few are required for (e.g.) soft shadows and glossy reflections.
 
-A render can be left as long as desired, scenes will converge at different rates depending on geometry and lighting configuration and shaders in use. 
+A render can be left as long as desired, scenes will converge at different rates depending on geometry and lighting configuration and shaders in use.  It is also possible to tweak the number of samples taken
+per light source in order to account for difficult lighting situations.

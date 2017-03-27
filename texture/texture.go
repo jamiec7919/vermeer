@@ -14,23 +14,34 @@ textures are used in shaders. */
 package texture
 
 import (
-	//_ "github.com/ftrvxmtrx/tga"
+	//"fmt"
+	"bytes"
+	"github.com/blezek/tga"
+	"github.com/jamiec7919/vermeer/core"
+	m "github.com/jamiec7919/vermeer/math"
 	_ "golang.org/x/image/tiff" // Imported for effect
 	"image"
 	_ "image/jpeg" // Imported for effect
 	_ "image/png"  // Imported for effect
+	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 )
 
+// Uses https://github.com/jteeuwen/go-bindata
+//go:generate go-bindata -nocompress -pkg=texture data/
+const embeddedTexture = "data/checker.png"
+
 // Texture represents a texture image.  (shouldn't be public)
 type Texture struct {
-	url  string
-	fmt  int
-	w, h int
-	data []byte
+	url    string
+	fmt    int
+	w, h   int
+	data   []byte
+	mipmap mipmap
 }
 
 // TexStore is the type of the cache.
@@ -43,13 +54,31 @@ var loadMutex sync.Mutex
 var testTexture *Texture
 
 func init() {
-	tmp := CreateRGBTexture(2, 2)
-	tmp.url = "test"
-	tmp.SetRGB(0, 0, 250, 250, 250)
-	tmp.SetRGB(1, 0, 250, 5, 250)
-	tmp.SetRGB(0, 1, 250, 5, 250)
-	tmp.SetRGB(1, 1, 250, 250, 250)
-	testTexture = tmp
+	data, err := Asset(embeddedTexture)
+
+	if err != nil {
+		log.Printf("Failed to load embedded fallback texture: %v", err)
+
+		tmp := CreateRGBTexture(2, 2)
+		tmp.url = "test"
+		tmp.SetRGB(0, 0, 2, 2, 2)
+		tmp.SetRGB(1, 0, 250, 150, 250)
+		tmp.SetRGB(0, 1, 250, 150, 250)
+		tmp.SetRGB(1, 1, 2, 2, 2)
+
+		mipmap := stdfilter(tmp.w, tmp.h, tmp.data, 3)
+
+		tmp.mipmap = mipmap
+		testTexture = tmp
+
+	} else {
+		t, err := loadTexture(embeddedTexture, bytes.NewReader(data))
+		testTexture = t
+
+		if err != nil {
+			log.Printf("Failed to load embedded fallback texture: %v", err)
+		}
+	}
 	texStore.Store(make(TexStore))
 }
 
@@ -70,8 +99,23 @@ func LoadTexture(url string) (*Texture, error) {
 	}
 	defer file.Close()
 
-	// Decode the image.
-	m, _, err := image.Decode(file)
+	return loadTexture(url, file)
+}
+
+func loadTexture(url string, file io.Reader) (*Texture, error) {
+
+	var err error
+	var m image.Image
+
+	if filepath.Ext(url) == ".tga" || filepath.Ext(url) == ".TGA" {
+		// Decode the image.
+		m, err = tga.Decode(file)
+
+	} else {
+		// Decode the image.
+		m, _, err = image.Decode(file)
+	}
+
 	if err != nil {
 		return testTexture, err
 	}
@@ -90,6 +134,11 @@ func LoadTexture(url string) (*Texture, error) {
 			//				tex.Set(i, m.Bounds().Max.Y-1-j, byte(r), byte(g), byte(b))
 		}
 	}
+
+	mipmap := stdfilter(t.w, t.h, t.data, 3)
+
+	t.mipmap = mipmap
+
 	/*
 		t.rset = make(map[int]*TexImage)
 		t.rset[t.genHash(log2(tex.w), log2(tex.h))] = tex
@@ -116,6 +165,7 @@ func LoadTexture(url string) (*Texture, error) {
 		tex3.Resample(tex2)
 		return tex3.Texture(), nil
 	*/
+
 	return t, nil
 }
 
@@ -149,9 +199,9 @@ func cacheMiss(filename string) (*Texture, error) {
 	tex, err := LoadTexture(filename)
 
 	if err != nil {
-		loadMutex.Unlock()
+		//loadMutex.Unlock()
 		log.Printf("texture.SampleRGB: \"%v\": %v", filename, err)
-		return nil, err
+		//return nil, err
 	}
 
 	texturesNew := make(TexStore)
@@ -167,9 +217,13 @@ func cacheMiss(filename string) (*Texture, error) {
 }
 
 // SampleRGB samples an RGB value from the given file using the coords s,t and footprint ds,dt.
-func SampleRGB(filename string, s, t, ds, dt float32) (out [3]float32) {
-	// This uses an atomic copy-on-write for the textures store
+func SampleRGB(filename string, sg *core.ShaderContext) (out [3]float32) {
 
+	// This uses an atomic copy-on-write for the textures store
+	//ds = m.Max(1, 1/ds)
+	//dt = m.Max(1, 1/dt)
+
+	//fmt.Printf("%v %v\n", ds, dt)
 	//loadMutex.Lock()
 	textures := texStore.Load().(TexStore)
 	img := textures[filename]
@@ -183,24 +237,75 @@ func SampleRGB(filename string, s, t, ds, dt float32) (out [3]float32) {
 
 		img = img2
 	}
+
+	deltaTx := m.Vec2Scale(sg.Image.PixelDelta[0], sg.Dduvdx)
+	deltaTy := m.Vec2Scale(sg.Image.PixelDelta[1], sg.Dduvdy)
+
+	deltaTx[0] = deltaTx[0] * float32(img.w)
+	deltaTy[0] = deltaTy[0] * float32(img.w)
+
+	deltaTx[1] = deltaTx[1] * float32(img.h)
+	deltaTy[1] = deltaTy[1] * float32(img.h)
+
+	ds := m.Max(m.Abs(deltaTx[0]), m.Abs(deltaTy[0]))
+	dt := m.Max(m.Abs(deltaTx[1]), m.Abs(deltaTy[1]))
+
+	ds = m.Vec2Length(deltaTx)
+	dt = m.Vec2Length(deltaTy)
 	//	loadMutex.Unlock()
+	/*
+		deltaTx := m.Vec2Scale(sg.Image.PixelDelta[0], sg.Dduvdx)
+		deltaTy := m.Vec2Scale(sg.Image.PixelDelta[1], sg.Dduvdy)
+	*/
+	lod := m.Log2(m.Max(ds, dt))
+	/*
+		l := int(lod)
 
-	x := int(s * float32(img.w))
-	y := int(t * float32(img.h))
+		if l > len(img.mipmap.mipmap)-1 {
+			l = len(img.mipmap.mipmap) - 1
+		}
 
-	x = x % img.w
-	y = y % img.h
+		if l < 0 {
+			l = 0
+		}
 
-	if x < 0 {
-		x += img.w
+		w := img.mipmap.mipmap[l].w
+		h := img.mipmap.mipmap[l].h
+		x := int(s * float32(w))
+		y := int(t * float32(h))
+
+		//fmt.Printf("%v %v %v %v\n", x, y, img.mipmap.mipmap[l].w, img.mipmap.mipmap[l].h)
+
+		x = x % w
+		y = y % h
+
+		//fmt.Printf("%v %v\n", x, y)
+		if x < 0 {
+			x += w
+		}
+		if y < 0 {
+			y += h
+		}
+
+		out[0] = float32(img.mipmap.mipmap[l].mipmap[(x+(y*img.mipmap.mipmap[l].w))*3+0]) / 255.0
+		out[1] = float32(img.mipmap.mipmap[l].mipmap[(x+(y*img.mipmap.mipmap[l].w))*3+1]) / 255.0
+		out[2] = float32(img.mipmap.mipmap[l].mipmap[(x+(y*img.mipmap.mipmap[l].w))*3+2]) / 255.0
+	*/
+	lod = lod
+
+	if lod > float32(img.mipmap.MaxLevelOfDetail()) {
+		lod = float32(img.mipmap.MaxLevelOfDetail())
 	}
-	if y < 0 {
-		y += img.h
+
+	if lod < 0 {
+		lod = 0
 	}
 
-	out[0] = float32(img.data[(x+(y*img.w))*3+0]) / 255.0
-	out[1] = float32(img.data[(x+(y*img.w))*3+1]) / 255.0
-	out[2] = float32(img.data[(x+(y*img.w))*3+2]) / 255.0
+	out = img.mipmap.TrilinearSample(sg.U, sg.V, lod)
+	out[0] /= 255.0
+	out[1] /= 255.0
+	out[2] /= 255.0
 
+	//out[0] = lod * 10
 	return
 }

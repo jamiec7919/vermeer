@@ -82,13 +82,17 @@ func (c *Camera) PreRender() error {
 		c.Aspect = core.FrameAspect()
 	}
 
-	if c.From.MotionKeys < 2 && c.Target.MotionKeys < 2 {
-		c.calcBasisLookat(c.From.Elems[0], c.Target.Elems[0], c.Up, 0)
-	}
+	//if c.From.MotionKeys < 2 && c.Target.MotionKeys < 2 {
+	//	c.calcBasisLookat(c.From.Elems[0], c.Target.Elems[0], c.Up, 0)
+	//}
 
 	c.TanThetaFocal = m.Tan(degToRad(c.Fov/2)) * c.Focal
 
-	c.calcLookatMatrices()
+	if c.Type == "LookAt" {
+		c.calcLookatMatrices()
+	} else {
+		c.matrixCalc()
+	}
 
 	return nil
 }
@@ -199,21 +203,27 @@ func (c *Camera) calcBasisLookat(from, to, up m.Vec3, roll float32) {
 
 }
 
+func (c *Camera) matrixCalc() {
+	for _, mtx := range c.WorldToLocal.Elems {
+		srt, _ := m.Matrix4Inverse(mtx)
+		c.LocalToWorld.Elems = append(c.LocalToWorld.Elems, srt)
+		c.LocalToWorld.MotionKeys++
+	}
+
+	for i := range c.LocalToWorld.Elems {
+		c.decomp = append(c.decomp, m.TransformDecompMatrix4(c.LocalToWorld.Elems[i]))
+	}
+
+}
+
 // ComputeRay calculates a position and direction for a sampled ray.
 // x,y are the raster position, lensU,lensV are in [0,1)x[0,1)
-func (c *Camera) ComputeRay(x, y, lensU, lensV, lambda, time float64, ray *core.Ray) {
-
-	w, h := core.FrameMetrics()
-
-	ray.X = int32(x)
-	ray.Y = int32(y)
-	ray.Sx = float32(-1.0 + 2.0*(x/float64(w))) // note x [-filter.width/2,w+filter.width/2)
-	ray.Sy = -float32(-1.0 + 2.0*(y/float64(h)))
+func (c *Camera) ComputeRay(sc *core.ShaderContext, lensU, lensV float64, ray *core.Ray) {
 
 	M := m.Matrix4Identity
 
 	if c.decomp != nil {
-		k := float32(time * float64(len(c.decomp)-1))
+		k := sc.Time * float32(len(c.decomp)-1)
 
 		t := k - m.Floor(k)
 
@@ -226,6 +236,10 @@ func (c *Camera) ComputeRay(x, y, lensU, lensV, lambda, time float64, ray *core.
 	}
 
 	// D = || u*U + v*V - d*W  ||
+	ray.X = sc.X
+	ray.Y = sc.Y
+	ray.Sx = sc.Sx
+	ray.Sy = sc.Sy
 
 	camu := float32(ray.Sx) * float32(c.TanThetaFocal)
 	camv := float32(ray.Sy) * float32(c.TanThetaFocal/c.Aspect)
@@ -239,19 +253,71 @@ func (c *Camera) ComputeRay(x, y, lensU, lensV, lambda, time float64, ray *core.
 	D := m.Vec3{0, 0, 1}
 	P := m.Vec3{}
 
+	dx := float32(0)
+	dy := float32(0)
+
+	var d m.Vec3
+	w, h := core.FrameMetrics()
+
 	if c.Radius > 0.0 {
 
 		x, y := sample.UniformDisk2D(c.Radius, float32(lensU), float32(lensV))
 		e := m.Vec3Add(m.Vec3Scale(x, U), m.Vec3Scale(y, V))
-		D = m.Matrix4MulVec(M, m.Vec3Normalize(m.Vec3Sub(s, e)))
+		//D = m.Matrix4MulVec(M, m.Vec3Normalize(m.Vec3Sub(s, e)))
+		d = m.Matrix4MulVec(M, m.Vec3Sub(s, e))
+
+		camu2 := float32(ray.Sx+(2/float32(w))) * float32(c.TanThetaFocal)
+		camv2 := float32(ray.Sy+(2/float32(h))) * float32(c.TanThetaFocal/c.Aspect)
+		sx := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(camu2, U), m.Vec3Scale(camv, V)), m.Vec3Scale(c.Focal, W))
+		sy := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(camu, U), m.Vec3Scale(camv2, V)), m.Vec3Scale(c.Focal, W))
+		d2x := m.Matrix4MulVec(M, m.Vec3Sub(sx, e))
+		d2y := m.Matrix4MulVec(M, m.Vec3Sub(sy, e))
+		dx = m.Vec3Length(m.Vec3Sub(d2x, d))
+		dy = m.Vec3Length(m.Vec3Sub(d2y, d))
+
+		D = m.Vec3Normalize(d)
 		P = m.Matrix4MulPoint(M, e)
 	} else {
-		D = m.Matrix4MulVec(M, m.Vec3Normalize(s))
+		//D = m.Matrix4MulVec(M, m.Vec3Normalize(s))
+		d = m.Matrix4MulVec(M, s)
+		D = m.Vec3Normalize(d)
 		P = m.Matrix4MulPoint(M, m.Vec3{})
+
+		camu2 := float32(ray.Sx+(2/float32(w))) * float32(c.TanThetaFocal)
+		camv2 := float32(ray.Sy+(2/float32(h))) * float32(c.TanThetaFocal/c.Aspect)
+		sx := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(camu2, U), m.Vec3Scale(camv, V)), m.Vec3Scale(c.Focal, W))
+		sy := m.Vec3Sub(m.Vec3Add(m.Vec3Scale(camu, U), m.Vec3Scale(camv2, V)), m.Vec3Scale(c.Focal, W))
+		d2x := m.Matrix4MulVec(M, m.Vec3Sub(sx, m.Vec3{}))
+		d2y := m.Matrix4MulVec(M, m.Vec3Sub(sy, m.Vec3{}))
+		dx = m.Vec3Length(m.Vec3Sub(d2x, d))
+		dy = m.Vec3Length(m.Vec3Sub(d2y, d))
+
 	}
 	//D = D
 
-	ray.Init(core.RayTypeCamera, P, D, m.Inf(1), 0, float32(lambda), float32(time))
+	right := m.Vec3{M[0], M[1], M[2]}
+	up := m.Vec3{M[4], M[5], M[6]}
+	//right := m.Vec3{M[0], M[4], M[8]}
+	//up := m.Vec3{M[1], M[5], M[9]}
+
+	ray.DdPdx = m.Vec3{}
+	ray.DdPdy = m.Vec3{}
+	ray.DdDdx = m.Vec3Scale(1/(m.Vec3Dot(d, d)*m.Sqrt(m.Vec3Dot(d, d))), m.Vec3Sub(m.Vec3Scale(m.Vec3Dot(d, d), right), m.Vec3Scale(m.Vec3Dot(d, right), d)))
+	ray.DdDdy = m.Vec3Scale(1/(m.Vec3Dot(d, d)*m.Sqrt(m.Vec3Dot(d, d))), m.Vec3Sub(m.Vec3Scale(m.Vec3Dot(d, d), up), m.Vec3Scale(m.Vec3Dot(d, up), d)))
+
+	// Should calculate these from world space dimensions
+	//w, h := core.FrameMetrics()
+	dx = 2.0 / float32(w)
+	dy = 2.0 / float32(h)
+
+	_ = dx
+	_ = dy
+
+	sc.Image.PixelDelta[0] = 2 * c.TanThetaFocal / float32(w)
+	sc.Image.PixelDelta[1] = 2 * c.TanThetaFocal / (c.Aspect * float32(h))
+
+	ray.Init(core.RayTypeCamera, P, D, m.Inf(1), 0, sc)
+
 	//	log.Printf("%v %v %v %v", D, u, v, vm.Vec3Add(vm.Vec3Scale(u, c.U), vm.Vec3Scale(v, c.V)))
 	return
 }

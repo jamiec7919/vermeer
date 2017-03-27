@@ -13,6 +13,9 @@ import (
 const (
 	RayTypeCamera uint32 = (1 << iota)
 	RayTypeShadow
+	RayTypeReflected
+	RayTypeRefracted
+	RayTypeGlossy
 )
 
 // ShadowRayEpsilon ensures no self-intersecting shadow rays.
@@ -50,7 +53,7 @@ type Ray struct {
 // Init sets up the ray.  ty should be bitwise combination of RAY_ constants.  P is the
 // start point and D is the direction.  maxdist is the length of the ray.  sg is used
 // to get the Lambda, Time parameters and ray differntial calculations.
-func (r *Ray) Init(ty uint32, P, D m.Vec3, maxdist float32, level uint8, lambda, time float32) {
+func (r *Ray) Init(ty uint32, P, D m.Vec3, maxdist float32, level uint8, sc *ShaderContext) {
 	r.P = P
 	r.D = D
 	r.Tclosest = maxdist
@@ -58,10 +61,41 @@ func (r *Ray) Init(ty uint32, P, D m.Vec3, maxdist float32, level uint8, lambda,
 	r.Setup()
 
 	r.Level = level
-	r.Lambda = lambda
-	r.Time = time
+	r.Lambda = sc.Lambda
+	r.Time = sc.Time
 	r.NodesT = 0
 	r.LeafsT = 0
+
+	r.Scramble = sc.Scramble // ^ math.Float64bits(pdf)
+	r.I = sc.I
+
+	// Compute ray differentials for reflection
+	if ty&RayTypeReflected != 0 {
+		r.DdPdx = sc.DdPdx
+		r.DdPdy = sc.DdPdy
+
+		DdotNdx := m.Vec3Dot(sc.DdDdx, sc.N) + m.Vec3Dot(sc.Rd, sc.DdNdx)
+		DdotNdy := m.Vec3Dot(sc.DdDdy, sc.N) + m.Vec3Dot(sc.Rd, sc.DdNdy)
+
+		r.DdDdx = m.Vec3Mad(sc.DdDdx, m.Vec3Add(m.Vec3Scale(m.Vec3Dot(sc.Rd, sc.N), sc.DdNdx), m.Vec3Scale(DdotNdx, sc.N)), -2)
+		r.DdDdy = m.Vec3Mad(sc.DdDdy, m.Vec3Add(m.Vec3Scale(m.Vec3Dot(sc.Rd, sc.N), sc.DdNdy), m.Vec3Scale(DdotNdy, sc.N)), -2)
+
+	}
+
+	if ty&RayTypeShadow != 0 {
+		return
+	}
+}
+
+func (r *Ray) DifferentialTransfer(sc *ShaderContext) {
+	dtdx := -m.Vec3Dot(m.Vec3Mad(r.DdPdx, r.DdDdx, r.Tclosest), sc.Ng) / m.Vec3Dot(r.D, sc.Ng)
+	dtdy := -m.Vec3Dot(m.Vec3Mad(r.DdPdy, r.DdDdy, r.Tclosest), sc.Ng) / m.Vec3Dot(r.D, sc.Ng)
+
+	sc.DdPdx = m.Vec3Add(m.Vec3Mad(r.DdPdx, r.DdDdx, r.Tclosest), m.Vec3Scale(dtdx, r.D))
+	sc.DdPdy = m.Vec3Add(m.Vec3Mad(r.DdPdy, r.DdDdy, r.Tclosest), m.Vec3Scale(dtdy, r.D))
+
+	sc.DdDdx = r.DdDdx
+	sc.DdDdy = r.DdDdy
 }
 
 // Setup should be called after P and D have been set, this will precalculate various values for triangle intersection.  This

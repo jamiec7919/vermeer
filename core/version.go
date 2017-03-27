@@ -11,7 +11,7 @@ import (
 // Version constants.
 const (
 	VersionMajor   = 0
-	VersionMinor   = 2
+	VersionMinor   = 3
 	VersionPatch   = 0
 	VersionRelease = "alpha"
 )

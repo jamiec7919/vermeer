@@ -23,7 +23,8 @@ type PolyMesh struct {
 	PolyCount []int32 `node:",opt"`
 	FaceIdx   []int32 `node:",opt"`
 
-	Shader string
+	Shader    []string
+	ShaderIdx []int32 `node:",opt"`
 
 	CalcNormals bool `node:",opt"`
 	IsVisible   bool `node:",opt"`
@@ -43,6 +44,7 @@ type PolyMesh struct {
 	vertidxstride int      // 3 or 4 if including material ids
 	uvtriidx      []uint32 // triangulated UV indexes
 	normalidx     []uint32
+	shaderidx     []uint8
 
 	accel struct {
 		mqbvh qbvh.MotionQBVH
@@ -50,7 +52,7 @@ type PolyMesh struct {
 		idx   []int32 // Face indexes
 	}
 
-	shader core.Shader
+	shader []core.Shader
 
 	bounds          m.BoundingBox
 	motionBounds    []m.BoundingBox
@@ -76,17 +78,19 @@ func (mesh *PolyMesh) PreRender() error {
 	mesh.facecount = len(mesh.idxp) / 3
 	mesh.vertidxstride = 3
 
-	if s := core.FindNode(mesh.Shader); s != nil {
-		shader, ok := s.(core.Shader)
+	for _, shader := range mesh.Shader {
+		if s := core.FindNode(shader); s != nil {
+			shader, ok := s.(core.Shader)
 
-		if !ok {
-			return fmt.Errorf("Unable to find shader %v", mesh.Shader)
+			if !ok {
+				return fmt.Errorf("Unable to find shader %v", shader)
+			}
+
+			mesh.shader = append(mesh.shader, shader)
+		} else {
+			return fmt.Errorf("Unable to find node (shader %v)", shader)
+
 		}
-
-		mesh.shader = shader
-	} else {
-		return fmt.Errorf("Unable to find node (shader %v)", mesh.Shader)
-
 	}
 
 	return mesh.initAccel()

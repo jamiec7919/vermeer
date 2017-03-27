@@ -4,8 +4,13 @@ Quickstart
 Vermeer is meant to be run as a command line program.  After installation you should be able to (in a terminal/command prompt) type 'vermeer <file>.vnf' and the render will start. If you haven't specified a maximum number of iterations then Ctrl-C will result in the last frame being completed and 
 written out to any output nodes.
 
-(preview is disabled in v0.2.0) Preview - A window will pop up.  After a short while 
+(preview is disabled in v0.3.0) Preview - A window will pop up.  After a short while 
 the first iteration should appear and then gradually improve. Closing the window should have the same effect as Ctrl-C (you may need to be patient after clicking close, the final iteration will be completed before the application exits). 
+
+Example Data
+------------
+
+A selection of example data is available at `<https://github.com/jamiec7919/vermeer-example/>`_.
 
 Command line parameters
 -----------------------
@@ -50,7 +55,7 @@ A parameter may have one of the following types:
 - Vec2
 - Vec3
 
-And also arrays of a subset of these types (Matrix4, Vec2, Point, Vec3).  When specifying an array this is often for motion blur keys and hence need both the count of element types and count of motion keys.  All elements of one key are then listed, followed by the next key and so on.  For matrix arrays this doesn't apply as the matrix has a fixed number of elements per key.
+And also arrays of a subset of these types (Matrix4, Vec2, Point, Vec3, String, Int).  When specifying an array this is often for motion blur keys and hence need both the count of element types and count of motion keys.  All elements of one key are then listed, followed by the next key and so on.  For matrix, string and int arrays this doesn't apply as the matrix has a fixed number of elements per key and string and int arrays don't change over a frame.
 
 Available Nodes
 ---------------
@@ -65,8 +70,11 @@ Available Nodes
 - QuadLight_
 - TriLight_
 - OutputHDR_
+- OutputFloat_
 - AiryFilter_
 - GaussFilter_
+- Proc_
+- GeomInstance_
 
 Globals
 +++++++
@@ -110,7 +118,7 @@ The PolyMesh is the default mesh type::
 	             0 1 0 0
 	             0 0 1 0 
 	             0 0 0 1
-    Shader "mtl2"
+    Shader 1 string "mtl2"
     CalcNormals 1
   }
 
@@ -139,7 +147,10 @@ Transform
   interpolated. Matrix4 array.
 
 Shader
-  The shader to use.  String.
+  The shaders to use.  String array.
+
+ShaderIdx
+  (optional) Index into shader array for each face. Int array.
 
 CalcNormals
   Specify whether to calculate vertex normals.
@@ -315,7 +326,8 @@ Radius
   Radius of the disk in world units.
 
 Samples
-  Number of samples to take from this light.  This value is squared to give actual number taken. Default is 1.
+  Number of samples to take from this light.  This value is raised to the power of 2 minus 1 (i.e. 2^(n-1)) to give actual number taken. This is also modified by MIS.  Default is 1 which means 1 sample, a value
+  of 0 here means don't sample.
 
 SphereLight
 +++++++++
@@ -343,7 +355,8 @@ Radius
   Radius of the disk in world units.
 
 Samples
-  Number of samples to take from this light.  This value is squared to give actual number taken. Default is 1.
+  Number of samples to take from this light.  This value is raised to the power of 2 minus 1 (i.e. 2^(n-1)) to give actual number taken. This is also modified by MIS.  Default is 1 which means 1 sample, a value
+  of 0 here means don't sample.
 
 QuadLight
 +++++++++
@@ -375,7 +388,8 @@ V
   Vector representing other side of quad.
 
 Samples
-  Number of samples to take from this light.  This value is squared to give actual number taken. Default is 1.
+  Number of samples to take from this light.  This value is raised to the power of 2 minus 1 (i.e. 2^(n-1)) to give actual number taken. This is also modified by MIS.  Default is 1 which means 1 sample, a value
+  of 0 here means don't sample.
 
 TriLight
 +++++++++
@@ -407,7 +421,8 @@ P2
   Position of the third point of the triangle.  Point.
 
 Samples
-  Number of samples to take from this light.  This value is squared to give actual number taken. Default is 1.
+  Number of samples to take from this light.  This value is raised to the power of 2 minus 1 (i.e. 2^(n-1)) to give actual number taken. This is also modified by MIS.  Default is 1 which means 1 sample, a value
+  of 0 here means don't sample.
 
 OutputHDR
 +++++++++
@@ -417,6 +432,16 @@ only takes one parameter::
 
   OutputHDR {
 	Filename "myfile.hdr"
+  }
+
+OutputFloat
++++++++++
+
+The OutputFloat node instructs the renderer to output a raw RGB float32 file of the given name, it
+only takes one parameter::
+
+  OutputFloat {
+  Filename "myfile.hdr"
   }
 
 AiryFilter
@@ -437,8 +462,7 @@ Width
   Filter support width in pixels.  4 is a decent starting point.
 
 Res
-  Res is the resolution of the pre-computed importance sampling CDF inversion.  A value of 61 is reasonable but for extremely
-  high number of iterations it might be worth increasing this.  
+  Res is the resolution of the pre-computed importance sampling CDF inversion.  A value of 61 is reasonable but for an extremely high number of iterations it might be worth increasing this.  
 
 GaussFilter
 +++++++++
@@ -458,5 +482,70 @@ Width
   Filter support width in pixels.  4 is a decent starting point.
 
 Res
-  Res is the resolution of the pre-computed importance sampling CDF inversion.  A value of 61 is reasonable but for extremely
-  high number of iterations it might be worth increasing this.  
+  Res is the resolution of the pre-computed importance sampling CDF inversion.  A value of 61 is reasonable but for an extremely high number of iterations it might be worth increasing this.  
+
+Proc
+++++++
+
+Procedure node::
+
+  Proc {
+   Name "proc1"
+   Handler "wfobj"
+   Data "amodel.obj"
+   BMin 1 1 point -100 -100 -100
+   BMax 1 1 point 100 100 100
+   Transform 1 matrix 1 0 0 0
+                      0 1 0 0
+                      0 0 1 0
+                      0 0 0 1
+  }
+
+Name
+  Name for the Procedural node.
+
+Handler
+  Which handler to use (currently 'wfobj' or 'vnf').
+
+Data
+  Data string passed into handler init function (usually filename of model to load).
+
+BMin
+  Point array for bounding box min.
+
+BMax
+  Point array for bounding box max.
+
+Transform
+  Matrix array for world space transform.
+
+GeomInstance
+++++++
+
+Instance nodes allow duplication of another Geom with a different transform::
+
+  GeomInstance {
+   Name "proc1"
+   Geom "othergeom"
+   BMin 1 1 point -100 -100 -100
+   BMax 1 1 point 100 100 100
+   Transform 1 matrix 1 0 0 0
+                     0 1 0 0
+                     0 0 1 0
+                     0 0 0 1
+  }
+
+Name
+  Name for the Instance node.
+
+Geom
+  Which geom node to instance.
+
+BMin
+  Point array for bounding box min.
+
+BMax
+  Point array for bounding box max.
+
+Transform
+  Matrix array for world space transform.

@@ -61,6 +61,9 @@ func (mesh *PolyMesh) init() error {
 					}
 				}
 
+				if mesh.ShaderIdx != nil {
+					mesh.shaderidx = append(mesh.shaderidx, uint8(mesh.ShaderIdx[k]))
+				}
 			}
 			basei += uint32(mesh.PolyCount[k])
 		}
@@ -114,12 +117,18 @@ func (mesh *PolyMesh) init() error {
 
 			}
 		}
+
+		for _, idx := range mesh.ShaderIdx {
+			mesh.shaderidx = append(mesh.shaderidx, uint8(idx))
+		}
+
 	}
 
 	mesh.FaceIdx = nil
 	mesh.PolyCount = nil
 	mesh.UVIdx = nil
 	mesh.NormalIdx = nil
+	mesh.ShaderIdx = nil
 
 	return nil
 }

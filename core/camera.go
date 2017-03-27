@@ -7,5 +7,5 @@ package core
 // Camera represents a 3D camera.
 type Camera interface {
 	// ComputeRay should return a world-space ray within the given pixel.
-	ComputeRay(x, y, lensU, lensV, lambda, time float64, ray *Ray)
+	ComputeRay(sc *ShaderContext, lensU, lensV float64, ray *Ray)
 }

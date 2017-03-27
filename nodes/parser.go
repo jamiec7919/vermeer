@@ -34,6 +34,7 @@ const (
 	TokComma
 )
 
+var typeString = reflect.TypeOf("")
 var typeInt32 = reflect.TypeOf(int32(0))
 var typeUInt32 = reflect.TypeOf(uint32(0))
 var typeVec3 = reflect.TypeOf(m.Vec3{})
@@ -76,6 +77,30 @@ func init() {
 
 		return &core.Globals{XRes: 256, YRes: 256, MaxGoRoutines: 5}, nil
 	})
+}
+
+// Parse2 attempts to open filename and parse the contents, returning nodes in slice.  Returns
+// nil error on success or an appropriate error.
+func Parse2(filename string) (nodes []core.Node, err error) {
+	f, err := os.Open(filename)
+
+	if err != nil {
+		return nil, err
+
+	}
+
+	in := bufio.NewReader(f)
+
+	var l Lex
+	l.in = in
+	l.LineNumber = 0
+	l.ColNumber = 1
+
+	parser := parser{filename: filename, lex: &l}
+
+	//	l.error = parser.error
+
+	return parser.parse2()
 }
 
 // Parse attempts to open filename and parse the contents, adding nodes to rc.  Returns
@@ -127,6 +152,36 @@ func (p *parser) int32slice(field reflect.Value) error {
 		}
 
 		s = append(s, int32(sym.numInt))
+	}
+
+	field.Set(reflect.ValueOf(s))
+
+	return nil
+}
+
+func (p *parser) stringslice(field reflect.Value) error {
+	var sym SymType
+
+	count := -1
+
+	if t := p.lex.Lex(&sym); t != TokInt {
+		return errors.New("Expected slice length.")
+	}
+
+	count = int(sym.numInt)
+
+	if t := p.lex.Lex(&sym); t != TokToken && sym.str != "string" {
+		return errors.New("Expected slice type.")
+	}
+
+	s := make([]string, 0, count)
+
+	for i := 0; i < count; i++ {
+		if t := p.lex.Lex(&sym); t != TokString {
+			return errors.New("Expected string.")
+		}
+
+		s = append(s, sym.str)
 	}
 
 	field.Set(reflect.ValueOf(s))
@@ -197,13 +252,15 @@ func (p *parser) rgbtex(field reflect.Value) error {
 		return errors.New("Expected field type.")
 	}
 
-	v := &maps.Texture{}
-
 	if t := p.lex.Lex(&sym); t != TokString {
 		return errors.New("Expected RGB texture filename.")
 	}
 
-	v.Filename = sym.str
+	v, err := maps.CreateRGBTextureMap(sym.str)
+
+	if err != nil {
+		return errors.New(fmt.Sprintf("nodes.rgbtex: %v", err))
+	}
 
 	field.Set(reflect.ValueOf(v))
 
@@ -568,6 +625,14 @@ func (p *parser) parseParam(field reflect.Value, skip bool) error {
 				p.errorf("Invalid token for param (expecting length of slice)")
 				p.lex.Skip()
 			}
+		case typeString:
+			switch t := p.lex.Peek(&v); t {
+			case TokInt:
+				p.stringslice(field)
+			default:
+				p.errorf("Invalid token for param (expecting length of slice)")
+				p.lex.Skip()
+			}
 		}
 
 	case reflect.Interface:
@@ -832,4 +897,44 @@ L:
 	}
 
 	return nil
+}
+
+func (p *parser) parse2() (nodes []core.Node, err error) {
+	var v SymType
+L:
+	for {
+		t := p.lex.Lex(&v)
+		switch t {
+		case TokToken:
+			token := v.str
+			if t := p.lex.Lex(&v); t != TokOpenCurlyBrace {
+				p.errorf("Invalid token in node preamble")
+			}
+
+			node, err := p.node(token)
+
+			if err != nil || node == nil {
+				p.errorf("Node is nil: %v", err)
+
+				for {
+					t := p.lex.Lex(&v)
+					// skip until closing brace
+					if t == TokCloseCurlyBrace {
+						break
+					}
+				}
+
+			}
+
+			if node != nil {
+				nodes = append(nodes, node)
+			}
+
+		// ERROR
+		default:
+			break L
+		}
+	}
+
+	return
 }

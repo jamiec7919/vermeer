@@ -13,6 +13,9 @@ import (
 	"github.com/jamiec7919/vermeer/nodes"
 )
 
+// NOTE: Conversion 1/|A| sampling (point on surface) to solid angle pdf is
+// p := 1/|A| * (|x-y|^2  / cos omega')
+
 // Disk represents a circular disk light node.
 type Disk struct {
 	NodeDef       core.NodeDef `node:"-"`
@@ -30,6 +33,40 @@ type Disk struct {
 
 var _ core.Node = (*Disk)(nil)
 var _ core.Light = (*Disk)(nil)
+
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection
+func rayPlaneIntersect(Ro, Rd, P, N m.Vec3) (float32, bool) {
+	// assuming vectors are all normalized
+	denom := m.Vec3Dot(N, Rd)
+
+	if m.Abs(denom) > 1e-6 {
+		p0l0 := m.Vec3Sub(P, Ro)
+
+		t := m.Vec3Dot(p0l0, N) / denom
+
+		return t, t >= 0
+	}
+
+	return 0, false
+}
+
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection
+func rayDiskIntersect(Ro, Rd, P, N m.Vec3, radius float32) (float32, bool) {
+
+	if t, ok := rayPlaneIntersect(Ro, Rd, P, N); ok {
+		p := m.Vec3Mad(Ro, Rd, t)
+
+		v := m.Vec3Sub(p, P)
+
+		d2 := m.Vec3Dot(v, v)
+
+		return t, m.Sqrt(d2) <= radius
+		// or you can use the following optimisation (and precompute radius^2)
+		// return d2 <= radius2; // where radius2 = radius * radius
+	}
+
+	return 0, false
+}
 
 // Name implements core.Node.
 func (d *Disk) Name() string { return d.NodeName }
@@ -73,7 +110,7 @@ func (d *Disk) PotentialContrib(sg *core.ShaderContext) float32 {
 
 // NumSamples implements core.Light
 func (d *Disk) NumSamples(sg *core.ShaderContext) int {
-	return d.Samples * d.Samples
+	return 1 << uint(d.Samples)
 }
 
 // Geom implements core.Light
@@ -82,43 +119,101 @@ func (d *Disk) Geom() core.Geom { return d.geom }
 // PostRender implelments core.Node.
 func (d *Disk) PostRender() error { return nil }
 
-// SampleArea implements core.Light.
-func (d *Disk) SampleArea(sg *core.ShaderContext, n int) error {
-	panic("builtin/light/disk.go: SampleArea not implemented")
-	idx := uint64(sg.I*d.NumSamples(sg) + sg.Sample)
-	r0 := ldseq.VanDerCorput(idx, sg.Scramble[0])
-	r1 := ldseq.Sobol(idx, sg.Scramble[1])
-
-	u := d.Radius * m.Sqrt(float32(r0)) * m.Cos(2*m.Pi*float32(r1))
-	v := d.Radius * m.Sqrt(float32(r0)) * m.Sin(2*m.Pi*float32(r1))
+// ValidSample implements core.Light.
+func (d *Disk) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool {
 
 	pdf := float64(1.0 / (m.Pi * d.Radius * d.Radius))
 
-	P := m.Vec3Add3(d.P, m.Vec3Scale(u, d.B), m.Vec3Scale(v, d.T))
+	t, ok := rayDiskIntersect(sg.P, sample.D, d.P, d.N, d.Radius)
 
-	V := m.Vec3Sub(P, sg.P)
-
-	if m.Vec3Dot(V, sg.Ng) > 0.0 && m.Vec3Dot(V, d.N) < 0.0 {
-		sg.Ldist = m.Vec3Length(V)
-		sg.Ld = m.Vec3Normalize(V)
-
-		sg.Liu.Lambda = sg.Lambda
-		omegaO := m.Vec3BasisProject(d.B, d.T, d.N, m.Vec3Neg(sg.Ld))
-		//ODotN := omegaO[2]
-		E := d.shader.EvalEmission(sg, omegaO)
-		//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
-		//E.Scale(m.Abs(omegaO[2]))
-		sg.Liu.FromRGB(E)
-
-		// geometry term / pdf
-		sg.Weight = m.Abs(m.Vec3Dot(sg.Ld, sg.N)) * m.Abs(m.Vec3Dot(sg.Ld, d.N)) / (sg.Ldist * sg.Ldist)
-		sg.Weight /= float32(pdf)
-
-		//		fmt.Printf("%v %v %v %v\n", sg.Poffset, sg.P, pdf, sg.Weight)
-		return nil
+	if !ok {
+		return false
 	}
 
-	return fmt.Errorf("nosample")
+	p := m.Vec3Mad(sg.P, sample.D, t)
+
+	V := m.Vec3Sub(p, sg.P)
+
+	if m.Vec3Dot(V, sg.Ng) <= 0.0 || m.Vec3Dot(V, d.N) >= 0.0 {
+		return false
+	}
+
+	sample.Ldist = m.Vec3Length(V)
+	sample.Ld = m.Vec3Normalize(V)
+
+	sample.Liu.Lambda = sg.Lambda
+	//ODotN := omegaO[2]
+
+	lsg := sg.NewShaderContext()
+
+	lsg.Lambda = sg.Lambda
+	lsg.P = p
+	lsg.N = d.N
+	lsg.Ng = d.N
+	lsg.U = m.Vec3Dot(d.B, m.Vec3Sub(p, d.P))
+	lsg.V = m.Vec3Dot(d.T, m.Vec3Sub(p, d.P))
+
+	E := d.shader.EvalEmission(lsg, m.Vec3Neg(sample.Ld))
+
+	sg.ReleaseShaderContext(lsg)
+
+	sample.Liu.FromRGB(E)
+
+	// Convert dA to dSigma
+	sample.PdfLight = float32(pdf) * (sample.Ldist * sample.Ldist) / (m.Abs(m.Vec3Dot(sample.Ld, d.N)))
+
+	return true
+}
+
+// SampleArea implements core.Light.
+func (d *Disk) SampleArea(sg *core.ShaderContext, n int) error {
+	for i := 0; i < n; i++ {
+		idx := uint64(sg.I*n + i)
+		r0 := ldseq.VanDerCorput(idx, sg.Scramble[0])
+		r1 := ldseq.Sobol(idx, sg.Scramble[1])
+
+		u := d.Radius * m.Sqrt(float32(r0)) * m.Cos(2*m.Pi*float32(r1))
+		v := d.Radius * m.Sqrt(float32(r0)) * m.Sin(2*m.Pi*float32(r1))
+
+		pdf := float64(1.0 / (m.Pi * d.Radius * d.Radius))
+
+		P := m.Vec3Add3(d.P, m.Vec3Scale(u, d.B), m.Vec3Scale(v, d.T))
+
+		V := m.Vec3Sub(P, sg.P)
+
+		var ls core.LightSample
+
+		if m.Vec3Dot(V, sg.Ng) > 0.0 && m.Vec3Dot(V, d.N) < 0.0 {
+			ls.Ldist = m.Vec3Length(V)
+			ls.Ld = m.Vec3Normalize(V)
+
+			ls.Liu.Lambda = sg.Lambda
+
+			//ODotN := omegaO[2]
+			lsg := sg.NewShaderContext()
+
+			lsg.Lambda = sg.Lambda
+			lsg.P = P
+			lsg.N = d.N
+			lsg.Ng = d.N
+			lsg.U = u
+			lsg.V = v
+
+			E := d.shader.EvalEmission(lsg, m.Vec3Neg(ls.Ld))
+			//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
+			//E.Scale(m.Abs(omegaO[2]))
+			ls.Liu.FromRGB(E)
+
+			sg.ReleaseShaderContext(lsg)
+
+			// geometry term / pdf
+			ls.Pdf = float32(pdf) * (ls.Ldist * ls.Ldist) / m.Abs(m.Vec3Dot(ls.Ld, d.N))
+
+			//		fmt.Printf("%v %v %v %v\n", sg.Poffset, sg.P, pdf, sg.Weight)
+			sg.Lsamples = append(sg.Lsamples, ls)
+		}
+	}
+	return nil
 }
 
 // DiffuseShadeMult implements core.Light.
@@ -134,7 +229,7 @@ func (d *Disk) createMesh() *polymesh.PolyMesh {
 
 	msh := polymesh.PolyMesh{NodeDef: d.NodeDef, NodeName: d.NodeName + ":<mesh>",
 		IsVisible: true,
-		Shader:    d.Shader}
+		Shader:    []string{d.Shader}}
 
 	//msh.ModelToWorld.Elems = []m.Matrix4{m.Matrix4Identity}
 	//msh.ModelToWorld.MotionKeys = 1
@@ -169,7 +264,7 @@ func (d *Disk) createMesh() *polymesh.PolyMesh {
 func init() {
 	nodes.Register("DiskLight", func() (core.Node, error) {
 
-		return &Disk{Segments: 20}, nil
+		return &Disk{Segments: 20, Samples: 1}, nil
 
 	})
 }

@@ -77,14 +77,21 @@ func (d *Quad) PotentialContrib(sg *core.ShaderContext) float32 {
 
 // NumSamples implements core.Light
 func (d *Quad) NumSamples(sg *core.ShaderContext) int {
-	return d.Samples * d.Samples
+	return 1 << uint(d.Samples)
 }
 
 // Geom implements core.Light
 func (d *Quad) Geom() core.Geom { return d.geom }
 
+// ValidSample implements core.Light.
+func (d *Quad) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool {
+	panic("light/Quad.ValidSample: unimplemented.")
+	return false
+}
+
 // SampleArea implements core.Light.
 func (d *Quad) SampleArea(sg *core.ShaderContext, n int) error {
+	panic("light/Quad.SampleArea: unimplemented.")
 
 	a1 := sphericalTriangleArea(d.p[0], d.p[1], d.p[2], sg.P)
 	a2 := sphericalTriangleArea(d.p[0], d.p[2], d.p[3], sg.P)
@@ -92,7 +99,7 @@ func (d *Quad) SampleArea(sg *core.ShaderContext, n int) error {
 	w2 := float64(a2 / (a1 + a2))
 
 	for i := 0; i < n; i++ {
-		idx := uint64(sg.I*d.NumSamples(sg) + sg.Sample + i)
+		idx := uint64(sg.I*d.NumSamples(sg) + i)
 		r0 := ldseq.VanDerCorput(idx, sg.Scramble[0])
 		r1 := ldseq.Sobol(idx, sg.Scramble[1])
 
@@ -152,7 +159,7 @@ func (d *Quad) SampleArea(sg *core.ShaderContext, n int) error {
 
 		// geometry term / pdf, lots of cancellations
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
-		ls.Weight = m.Abs(m.Vec3Dot(ls.Ld, sg.N)) / /* m.Abs(m.Vec3Dot(sg.Ld, N)) / (sg.Ldist * sg.Ldist */ float32(pdf)
+		ls.Pdf = float32(pdf) * (ls.Ldist * ls.Ldist) / m.Abs(m.Vec3Dot(ls.Ld, N))
 
 		sg.Lsamples = append(sg.Lsamples, ls)
 	}
@@ -168,7 +175,7 @@ func (d *Quad) createMesh() *polymesh.PolyMesh {
 
 	msh := polymesh.PolyMesh{NodeDef: d.NodeDef, NodeName: d.NodeName + ":<mesh>",
 		IsVisible: true,
-		Shader:    d.Shader}
+		Shader:    []string{d.Shader}}
 
 	//msh.ModelToWorld.Elems = []m.Matrix4{m.Matrix4Identity}
 	//msh.ModelToWorld.MotionKeys = 1
