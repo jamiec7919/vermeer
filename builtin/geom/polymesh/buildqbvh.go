@@ -11,6 +11,18 @@ import (
 	"github.com/jamiec7919/vermeer/qbvh"
 )
 
+func (mesh *PolyMesh) transformBoundingBox(t m.Matrix4) m.BoundingBox {
+	box := m.BoundingBox{}
+	box.Reset()
+
+	for i := range mesh.Verts.Elems {
+		box.GrowVec3(m.Matrix4MulPoint(t, mesh.Verts.Elems[i]))
+	}
+
+	return box
+
+}
+
 func (mesh *PolyMesh) initAccel() error {
 	boxes := make([]m.BoundingBox, mesh.facecount)
 	centroids := make([]m.Vec3, mesh.facecount)
@@ -85,7 +97,12 @@ func (mesh *PolyMesh) initAccel() error {
 	nodes, bounds := qbvh.BuildAccel(boxes, centroids, idxs, 16)
 	mesh.accel.qbvh = nodes
 	mesh.accel.idx = idxs
-	mesh.bounds = bounds
+
+	if len(mesh.Transform.Elems) > 0 {
+		mesh.bounds = mesh.transformBoundingBox(mesh.Transform.Elems[0])
+	} else {
+		mesh.bounds = bounds
+	}
 
 	idxp := make([]uint32, len(mesh.idxp))
 
