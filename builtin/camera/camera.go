@@ -50,10 +50,10 @@ type Camera struct {
 	NodeName string       `node:"Name"`
 
 	Type   string             // 'lookat' 'matrix'
-	From   param.PointArray   // eye point
-	Target param.PointArray   `node:"To"`
-	Roll   param.Float32Array // rotation around z axis
-	Up     m.Vec3
+	From   param.PointArray   `node:",opt"` // eye point
+	Target param.PointArray   `node:"To,opt"`
+	Roll   param.Float32Array `node:",opt"` // rotation around z axis
+	Up     m.Vec3             `node:",opt"`
 
 	U, V, W m.Vec3 `node:"-"` // orthonormal basis
 
@@ -242,7 +242,7 @@ func (c *Camera) ComputeRay(sc *core.ShaderContext, lensU, lensV float64, ray *c
 	ray.Sy = sc.Sy
 
 	camu := float32(ray.Sx) * float32(c.TanThetaFocal)
-	camv := float32(ray.Sy) * float32(c.TanThetaFocal/c.Aspect)
+	camv := float32(ray.Sy) * float32(c.TanThetaFocal/core.FrameAspect())
 
 	U := m.Vec3{1, 0, 0}
 	V := m.Vec3{0, 1, 0}
