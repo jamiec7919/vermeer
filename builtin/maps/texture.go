@@ -58,10 +58,10 @@ func CreateFloat32TextureMap(filename string) (param.Float32Uniform, error) {
 
 	switch filter {
 	case "trilinear":
-		return &TextureTrilinear{Filename: u.EscapedPath(), Chan: ch}, nil
+		return &TextureTrilinear{Filename: u.Path, Chan: ch}, nil
 	}
 
-	return &Texture{Filename: u.EscapedPath(), Chan: ch}, nil
+	return &Texture{Filename: u.Path, Chan: ch}, nil
 
 }
 
@@ -76,8 +76,8 @@ func CreateRGBTextureMap(filename string) (param.RGBUniform, error) {
 
 	switch filter {
 	case "trilinear":
-		return &TextureTrilinear{Filename: u.EscapedPath(), Chan: 0}, nil
+		return &TextureTrilinear{Filename: u.Path, Chan: 0}, nil
 	}
 
-	return &Texture{Filename: u.EscapedPath(), Chan: 0}, nil
+	return &Texture{Filename: u.Path, Chan: 0}, nil
 }
