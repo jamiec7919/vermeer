@@ -64,6 +64,9 @@ func Trace(ray *Ray, samp *TraceSample) bool {
 			return false
 		}
 
+		// Set ray length
+		sg.Rl = float64(ray.Tclosest)
+
 		ray.DifferentialTransfer(sg)
 
 		sg.ApplyTransform()
