@@ -79,6 +79,13 @@ func (mesh *PolyMesh) PreRender() error {
 	mesh.facecount = len(mesh.idxp) / 3
 	mesh.vertidxstride = 3
 
+	// No shaders specified, warn
+	if len(mesh.Shader) == 0 {
+		log.Printf("%v: No shaders, using default.", mesh.Name())
+
+		mesh.Shader = append(mesh.Shader, "defaultShader")
+	}
+
 	for _, shader := range mesh.Shader {
 		if s := core.FindNode(shader); s != nil {
 			shader, ok := s.(core.Shader)

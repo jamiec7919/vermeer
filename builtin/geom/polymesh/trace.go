@@ -318,6 +318,10 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 		shaderIdx = mesh.shaderidx[idx]
 	}
 
+	if mesh.shader == nil || int(shaderIdx) >= len(mesh.shader) {
+		panic(fmt.Sprintf("%v: Shader %v %v", mesh.Name(), mesh.Shader, shaderIdx))
+	}
+
 	sg.Shader = mesh.shader[shaderIdx]
 
 	e00 := mesh.Verts.Elems[i1][0] - mesh.Verts.Elems[i0][0]
