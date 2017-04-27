@@ -58,11 +58,18 @@ func Trace(ray *Ray, samp *TraceSample) bool {
 		InvTransform: m.Matrix4Identity,
 	}
 
+	Tclosest := ray.Tclosest // record the original value for this as it gets overwritten
+
+retry:
+
 	if TraceProbe(ray, sg) {
 
 		if sg.Shader == nil { // can't do much with no material
 			return false
 		}
+
+		// set interior list for shader
+		sg.InteriorList = ray.InteriorList
 
 		// Set ray length
 		sg.Rl = float64(ray.Tclosest)
@@ -71,7 +78,15 @@ func Trace(ray *Ray, samp *TraceSample) bool {
 
 		sg.ApplyTransform()
 
-		sg.Shader.Eval(sg)
+		// If this shader/point won't evaluate this intersection then try to find the
+		// next one.
+		if !sg.Shader.Eval(sg) {
+			ray.Tmin = ray.Tclosest + 0.0001
+			ray.Tclosest = Tclosest // Reset the ray
+			// Transfer current interior list to ray (sg.Eval will probably have updated it).
+			ray.InteriorList = sg.InteriorList
+			goto retry
+		}
 
 		if samp != nil {
 			samp.Colour = sg.OutRGB

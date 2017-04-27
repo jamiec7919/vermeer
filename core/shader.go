@@ -39,10 +39,17 @@ type Fresnel interface {
 	Kr(cosTheta float32) colour.RGB
 }
 
+type InteriorListEntry struct {
+	InteriorID uint64
+	IOR        float32
+}
+
 // Shader represents a surface shader (Note: this will be renamed to Shader or SurfaceShader).
 type Shader interface {
 	// Eval evaluates the shader and returns values in sh.OutXXX members.
-	Eval(sc *ShaderContext)
+	// Eval should return false if this shader won't produce any output for this hit,
+	// the Trace routines will then continue the ray (setting Tmin=Tclosest and re-traversing).
+	Eval(sc *ShaderContext) bool
 
 	// EvalEmission evaluates the shader and returns emission value.
 	EvalEmission(sc *ShaderContext, omegaO m.Vec3) colour.RGB
@@ -61,7 +68,7 @@ type ShaderContext struct {
 	Lambda              float32   // Wavelength
 	Time                float32
 	Ro, Rd              m.Vec3         // Ray origin and direction
-	Rl                  float64        // Ray length (|Ro-P|)
+	Rl                  float64        // Ray length (|Ro-P|=t)
 	ElemID              uint32         // Element ID (triangle, curve etc.)
 	Geom                Geom           // Geom pointer
 	Psc                 *ShaderContext // Parent (last shaded)
@@ -86,6 +93,8 @@ type ShaderContext struct {
 	Lidx     int     // Index of current light
 	Lsamples []LightSample
 	Lp       Light // Light pointer (current light)
+
+	InteriorList []InteriorListEntry
 
 	Area float32
 
@@ -132,6 +141,7 @@ func (sc *ShaderContext) ApplyTransform() {
 	sc.Ng = m.Vec3Normalize(m.Matrix4MulVec(m.Matrix4Transpose(sc.InvTransform), sc.Ng))
 	sc.DdPdu = m.Vec3Normalize(m.Matrix4MulVec(sc.Transform, sc.DdPdu))
 	sc.DdPdv = m.Vec3Normalize(m.Matrix4MulVec(sc.Transform, sc.DdPdv))
+	sc.Poffset = m.Matrix4MulVec(m.Matrix4Transpose(sc.InvTransform), sc.Poffset)
 }
 
 // OffsetP returns the intersection point pushed out from surface by about 1 ulp.

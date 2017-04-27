@@ -628,7 +628,7 @@ func (mesh *PolyMesh) TraceMotionElems(time float32, key, key2 int, ray *core.Ra
 
 		detSign := m.SignMask(det)
 
-		if m.Xorf(T, detSign) <= mesh.RayBias*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Tclosest*m.Xorf(det, detSign) {
+		if m.Xorf(T, detSign) < (m.EpsilonFloat32+mesh.RayBias+ray.Tmin)*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Tclosest*m.Xorf(det, detSign) {
 			continue
 		}
 

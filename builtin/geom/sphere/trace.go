@@ -15,7 +15,7 @@ func (sphere *Sphere) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 	t, ok := raySphereIntersect(ray.P, ray.D, sphere.P, sphere.Radius)
 
 	if ok {
-		if t < ray.Tclosest {
+		if t < ray.Tclosest && t > ray.Tmin {
 			ray.Tclosest = t
 
 			P := m.Vec3Mad(ray.P, ray.D, t)

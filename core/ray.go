@@ -45,6 +45,8 @@ type Ray struct {
 	DdPdx, DdPdy m.Vec3 // Ray differential
 	DdDdx, DdDdy m.Vec3 // Ray differential
 
+	InteriorList []InteriorListEntry
+
 	NodesT, LeafsT int
 
 	next *Ray // Pool list
@@ -61,14 +63,24 @@ func (r *Ray) Init(ty uint32, P, D m.Vec3, maxdist float32, level uint8, sc *Sha
 	r.Type = ty
 	r.Setup()
 
+	r.Tmin = 0
+
 	r.Level = level
 	r.Lambda = sc.Lambda
 	r.Time = sc.Time
 	r.NodesT = 0
 	r.LeafsT = 0
+	r.X = sc.X
+	r.Y = sc.Y
+	r.Sx = sc.Sx
+	r.Sy = sc.Sy
 
 	r.Scramble = sc.Scramble // ^ math.Float64bits(pdf)
 	r.I = sc.I
+
+	r.InteriorList = r.InteriorList[:0]
+
+	r.InteriorList = append(r.InteriorList, sc.InteriorList...)
 
 	// Compute ray differentials for reflection
 	if ty&RayTypeReflected != 0 {
