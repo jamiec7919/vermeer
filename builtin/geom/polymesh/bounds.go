@@ -23,7 +23,7 @@ func (mesh *PolyMesh) initTransformBounds() {
 
 // Bounds implements core.Geom.
 func (mesh *PolyMesh) Bounds(time float32) m.BoundingBox {
-	if false && mesh.transformBounds != nil {
+	if mesh.transformBounds != nil {
 		k := time * float32(len(mesh.transformBounds)-1)
 
 		t := k - m.Floor(k)

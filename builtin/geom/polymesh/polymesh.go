@@ -11,6 +11,7 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/nodes"
 	"github.com/jamiec7919/vermeer/qbvh"
+	"log"
 )
 
 // PolyMesh is the main polygon mesh type in Vermeer.
@@ -93,7 +94,10 @@ func (mesh *PolyMesh) PreRender() error {
 		}
 	}
 
-	return mesh.initAccel()
+	err := mesh.initAccel()
+
+	log.Printf("%v: %v", mesh.Name(), mesh.bounds)
+	return err
 }
 
 // PostRender is a core.Node method.

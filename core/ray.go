@@ -32,6 +32,7 @@ type Ray struct {
 	Kx, Ky, Kz int32      // Precalculated ray-triangle members
 
 	// 64 bytes to here
+	Tmin         float32 // Ray minimum t value
 	Time, Lambda float32 // Time value and wavelength
 	X, Y         int32   // Raster position
 	Sx, Sy       float32 // Screen space coords [-1,1]x[-1,1]

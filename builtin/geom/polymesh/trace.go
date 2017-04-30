@@ -17,7 +17,8 @@ func (mesh *PolyMesh) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 	var Rp, Rd, Rdinv m.Vec3
 	var S [3]float32
 	var Kx, Ky, Kz int32
-	var transform, invTransform m.Matrix4
+	transform := m.Matrix4Identity
+	invTransform := m.Matrix4Identity
 
 	if mesh.Transform.Elems != nil {
 		Rp = ray.P
@@ -67,10 +68,13 @@ func (mesh *PolyMesh) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 			ray.Kx = Kx
 			ray.Ky = Ky
 			ray.Kz = Kz
-			sg.Transform = transform
-			sg.InvTransform = invTransform
-			sg.P = m.Matrix4MulPoint(transform, sg.Po)
-			sg.N = m.Matrix4MulVec(m.Matrix4Transpose(invTransform), sg.N)
+
+			if hit {
+				sg.Transform = transform
+				sg.InvTransform = invTransform
+				sg.P = m.Matrix4MulPoint(transform, sg.Po)
+			}
+			//sg.N = m.Matrix4MulVec(m.Matrix4Transpose(invTransform), sg.N)
 		}
 		return hit
 	}
@@ -93,10 +97,13 @@ func (mesh *PolyMesh) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 		ray.Kx = Kx
 		ray.Ky = Ky
 		ray.Kz = Kz
-		sg.Transform = transform
-		sg.InvTransform = invTransform
-		sg.P = m.Matrix4MulPoint(transform, sg.Po)
-		sg.N = m.Matrix4MulVec(m.Matrix4Transpose(invTransform), sg.N)
+
+		if hit {
+			sg.Transform = transform
+			sg.InvTransform = invTransform
+			sg.P = m.Matrix4MulPoint(transform, sg.Po)
+			//sg.N = m.Matrix4MulVec(m.Matrix4Transpose(invTransform), sg.N)
+		}
 	}
 	return hit
 }
@@ -179,11 +186,15 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 			detSign := m.SignMask(det)
 
 			// NOTE: the t < 0 bound here is a bit adhoc, it is possible to calculate tighter error bounds automatically.
-			if m.Xorf(T, detSign) < (m.EpsilonFloat32+mesh.RayBias)*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Tclosest*m.Xorf(det, detSign) {
+			if m.Xorf(T, detSign) <= (m.EpsilonFloat32+mesh.RayBias+ray.Tmin)*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Tclosest*m.Xorf(det, detSign) {
 				continue
 			}
 
 			rcpDet := 1.0 / det
+
+			//if ray.Tmin >= T*rcpDet {
+			//	continue
+			//}
 
 			U = fU * rcpDet
 			V = fV * rcpDet
@@ -255,11 +266,15 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 
 			detSign := m.SignMask(det)
 
-			if m.Xorf(T, detSign) <= mesh.RayBias*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Tclosest*m.Xorf(det, detSign) {
+			if m.Xorf(T, detSign) <= (m.EpsilonFloat32+mesh.RayBias+ray.Tmin)*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Tclosest*m.Xorf(det, detSign) {
 				continue
 			}
 
 			rcpDet := 1.0 / det
+
+			//	if ray.Tmin >= T*rcpDet {
+			//		continue
+			//	}
 
 			U = fU * rcpDet
 			V = fV * rcpDet
