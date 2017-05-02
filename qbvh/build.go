@@ -39,7 +39,8 @@ func calcMinCost(bounds m.BoundingBox, centroids []m.Vec3, boxes []m.BoundingBox
 			//panic(fmt.Sprintf("calcMinCost: null axis %v %v %v: len(indxs)>1 (%v) %v %v", axis, bounds.Bounds[1][axis]-bounds.Bounds[0][axis], bounds, len(indxs), indxs, boxes))
 			//fmt.Printf("calcMinCost: %v %v\n", len(indxs), bounds)
 		}
-		return axis, len(indxs)/2 + 1
+		//return axis, len(indxs)/2 + 1
+		return axis, len(indxs) / 2
 	}
 
 	k1 := float32(nbins) * (1.0 - 0.00006) / (bounds.Bounds[1][axis] - bounds.Bounds[0][axis])

@@ -29,7 +29,7 @@ type ShaderStd struct {
 	EmissionColour   param.RGBUniform     `node:",opt"`
 	EmissionStrength param.Float32Uniform `node:",opt"`
 
-	Sides int `node:",opt"` // One or two sided
+	OneSided bool `node:",opt"` // One or two sided (defaults to 2 which means has different properties depending on which side ray approaches)
 
 	DiffuseColour    param.RGBUniform     `node:",opt"` // Colour parameter
 	DiffuseStrength  param.Float32Uniform `node:",opt"` // Weight parameter
@@ -43,7 +43,58 @@ type ShaderStd struct {
 	Spec1FresnelRefl  param.RGBUniform `node:",opt"` // Colour parameter
 	Spec1FresnelEdge  param.RGBUniform `node:",opt"` // Colour parameter
 
-	IOR param.Float32Uniform `node:",opt"`
+	IsTransmissive bool `node:"Transmissive,opt"`
+	Priority       int  `node:",opt"` // Must be <= 255 (8 bits), lower is higher priority
+	interiorID     uint64
+	TransColour    param.RGBUniform     `node:",opt"` // Colour parameter
+	TransStrength  param.Float32Uniform `node:",opt"` // Weight parameter
+	IOR            param.Float32Uniform `node:",opt"`
+}
+
+func refract2(omegaR, N m.Vec3, ior float32) m.Vec3 {
+	eta := 1.0 / ior
+
+	c := m.Vec3Dot(omegaR, N)
+
+	a := eta*c - m.Sqrt(1.0+eta*(c*c-1.0))
+
+	return m.Vec3Sub(m.Vec3Scale(a, N), m.Vec3Scale(eta, omegaR))
+
+}
+
+func reflect(omegaR, N m.Vec3) (omegaO m.Vec3) {
+	//omegaO = m.Vec3Add(m.Vec3Neg(omegaR), m.Vec3Scale(2*m.Vec3DotAbs(omegaR, N), N))
+
+	omegaO = m.Vec3Add(omegaR, m.Vec3Scale(2.0*m.Vec3Dot(N, omegaR), N))
+
+	return
+}
+
+func refract(d, N m.Vec3, ior float32) (bool, m.Vec3) {
+	// ior = n/n_t or inverse
+	dotN := m.Vec3Dot(d, N)
+
+	sq := 1 - ior*ior*(1-dotN*dotN)
+
+	// Total internal reflection
+	if sq < 0 {
+		//fmt.Printf("sq: %v\n", sq)
+		return false, m.Vec3{}
+	}
+
+	omega := m.Vec3Sub(m.Vec3Scale(ior, m.Vec3Sub(d, m.Vec3Scale(dotN, N))), m.Vec3Scale(m.Sqrt(sq), N))
+	//fmt.Printf("%v %v %v\n", d, omega, N)
+	return true, omega
+}
+
+var interiorID uint64 = 1
+
+// NextInteriorID returns a unique interior ID
+// TODO: add locking
+func NextInteriorID() uint64 {
+	id := interiorID
+	interiorID++
+	return id << 8
 }
 
 // Assert that ShaderStd satisfies important interfaces.
@@ -66,6 +117,11 @@ func (sh *ShaderStd) PreRender() error {
 		sh.spec1FresnelModel = fr.ConductorModel
 
 	}
+
+	if sh.IsTransmissive {
+		sh.interiorID = NextInteriorID() | uint64(sh.Priority)
+	}
+
 	return nil
 }
 
@@ -74,7 +130,7 @@ func (sh *ShaderStd) PostRender() error { return nil }
 
 // Eval implements core.Shader.  Performs all shading for the surface point in sg.  May trace
 // rays and shadow rays.
-func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
+func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 
 	//fmt.Printf("%v %v %v %v\n", sg.DdDdx, sg.DdNdx, sg.DdDdy, sg.DdNdy)
 	/*	deltaTx := m.Vec2Scale(sg.Image.PixelDelta[0], sg.Dduvdx)
@@ -92,8 +148,80 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 		}
 		return
 	*/
-	if sg.Level > 3 {
-		return
+	if sg.Level > 8 {
+		return true
+	}
+
+	ior := float32(1.7)
+
+	if sh.IOR != nil {
+		ior = sh.IOR.Float32(sg)
+	}
+
+	transEnter := true     // Assume we're entering surface
+	var ior1, ior2 float32 // ior1 is the medium we're going from, ior2 is medium we're entering
+
+	if sh.IsTransmissive {
+		if m.Vec3Dot(sg.Rd, sg.Ng) > 0 {
+			// Nope we're exiting
+			transEnter = false
+
+			ior1 = ior
+			ior2 = 1.00029
+
+			// We're leaving the surface, ior2 should be set to the highest priority surface in
+			// the InteriorList.  If we are not the highest priority then remove and false hit.
+			// Otherwise, don't add us as need to do that after checking for TIR.
+			highestPriority := uint64(255)
+
+			for i := range sg.InteriorList {
+				if sg.InteriorList[i].InteriorID != 0 && sg.InteriorList[i].InteriorID != sh.interiorID {
+					priority := sg.InteriorList[i].InteriorID & 0xff
+
+					if priority < highestPriority {
+						highestPriority = priority
+						ior2 = sg.InteriorList[i].IOR
+					}
+				}
+			}
+
+			if uint64(sh.Priority) > highestPriority {
+				// We aren' highest priority so remove and false hit
+				for i := range sg.InteriorList {
+					if sg.InteriorList[i].InteriorID == sh.interiorID {
+						sg.InteriorList[i].InteriorID = 0
+					}
+				}
+				return false
+			}
+		} else {
+			ior1 = 1.00029
+			ior2 = ior
+
+			// We're entering the surface, ior1 should be set to the highest priority surface in
+			// the InteriorList.  If we are not the highest priority then add and false hit.
+
+			highestPriority := uint64(255)
+
+			for i := range sg.InteriorList {
+				if sg.InteriorList[i].InteriorID != 0 {
+					priority := sg.InteriorList[i].InteriorID & 0xff
+
+					if priority < highestPriority {
+						highestPriority = priority
+						ior1 = sg.InteriorList[i].IOR
+					}
+				}
+			}
+
+			if uint64(sh.Priority) > highestPriority {
+				// We aren't highest priority so add and false hit
+				sg.InteriorList = append(sg.InteriorList, core.InteriorListEntry{IOR: ior, InteriorID: sh.interiorID})
+
+				return false
+			}
+
+		}
 	}
 
 	// Construct a tangent space
@@ -123,8 +251,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 		diffColour = sh.DiffuseColour.RGB(sg)
 	}
 
-	diffWeight := float32(0)
-	spec1Weight := float32(0)
+	var diffWeight, spec1Weight, transWeight, totalWeight float32
 
 	if sh.DiffuseStrength != nil {
 		diffWeight = sh.DiffuseStrength.Float32(sg)
@@ -134,15 +261,28 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 		spec1Weight = sh.Spec1Strength.Float32(sg)
 	}
 
-	totalWeight := diffWeight + spec1Weight
-	diffWeight /= totalWeight
-	spec1Weight /= totalWeight
+	if sh.TransStrength != nil {
+		transWeight = sh.TransStrength.Float32(sg)
+	}
+
+	if !sh.IsTransmissive {
+		totalWeight = diffWeight + spec1Weight
+		diffWeight /= totalWeight
+		spec1Weight /= totalWeight
+		transWeight = 0
+	} else {
+		totalWeight = transWeight + spec1Weight
+		transWeight /= totalWeight
+		spec1Weight /= totalWeight
+		diffWeight = 0
+
+	}
 
 	if totalWeight == 0.0 {
 		panic(fmt.Sprintf("Shader %v has no weight", sh.Name()))
 	}
 
-	if diffWeight > 0.0 {
+	if diffWeight > 0.0 && !sh.IsTransmissive {
 
 		sg.LightsPrepare()
 
@@ -160,12 +300,6 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 		}
 
 		diffContrib.Scale(diffWeight)
-	}
-
-	ior := float32(1.7)
-
-	if sh.IOR != nil {
-		ior = sh.IOR.Float32(sg)
 	}
 
 	var fresnel core.Fresnel
@@ -263,7 +397,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 		sg.ReleaseRay(ray)
 
 		if spec1Samples > 0 {
-			spec1Contrib.Scale(spec1Weight / float32(spec1Samples))
+			spec1Contrib.Scale(1 / float32(spec1Samples))
 		}
 
 		if spec1Roughness > 0.0 { // No point doing direct lighting for mirror surfaces!
@@ -282,6 +416,71 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 
 			}
 		}
+
+		spec1Contrib.Scale(spec1Weight)
+	}
+
+	var transContrib colour.RGB
+
+	if sh.IsTransmissive {
+		ray := sg.NewRay()
+		var samp core.TraceSample
+
+		var transColour colour.RGB
+
+		if sh.TransColour != nil {
+			transColour = sh.TransColour.RGB(sg)
+		}
+
+		if transEnter {
+			ok, omega := refract(sg.Rd, sg.N, ior1/ior2)
+
+			if ok {
+				// We've entered the surface so add to the interior list
+
+				ray.Init(core.RayTypeRefracted, sg.OffsetP(-1), omega, m.Inf(1), sg.Level+1, sg)
+				ray.InteriorList = append(ray.InteriorList, core.InteriorListEntry{IOR: ior, InteriorID: sh.interiorID})
+
+				if core.Trace(ray, &samp) {
+					transContrib = samp.Colour
+					transContrib.Mul(transColour)
+				}
+
+			}
+
+		} else {
+			ok, omega := refract(sg.Rd, m.Vec3Neg(sg.N), ior1/ior2)
+
+			if ok {
+				// we've left the surface so remove the interior
+
+				ray.Init(core.RayTypeRefracted, sg.OffsetP(1), omega, m.Inf(1), sg.Level+1, sg)
+
+				for i := range ray.InteriorList {
+					if ray.InteriorList[i].InteriorID == sh.interiorID {
+						ray.InteriorList[i].InteriorID = 0
+					}
+				}
+
+				if core.Trace(ray, &samp) {
+					transContrib = samp.Colour
+					transContrib.Mul(transColour)
+				}
+			} else {
+				omega := reflect(sg.Rd, m.Vec3Neg(sg.N))
+
+				ray.Init(core.RayTypeRefracted, sg.OffsetP(-1), omega, m.Inf(1), sg.Level+1, sg)
+
+				if core.Trace(ray, &samp) {
+					transContrib = samp.Colour
+					transWeight = spec1Weight // This is really a specular bounce
+				}
+			}
+		}
+
+		sg.ReleaseRay(ray)
+		transContrib.Scale(transWeight)
+
 	}
 
 	contrib := colour.RGB{}
@@ -291,8 +490,11 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) {
 	contrib.Add(emissContrib)
 	contrib.Add(diffContrib)
 	contrib.Add(spec1Contrib)
+	contrib.Add(transContrib)
 
 	sg.OutRGB = contrib
+
+	return true
 }
 
 // EvalEmission implements core.Shader.

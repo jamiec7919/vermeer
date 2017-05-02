@@ -318,6 +318,10 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 		shaderIdx = mesh.shaderidx[idx]
 	}
 
+	if mesh.shader == nil || int(shaderIdx) >= len(mesh.shader) {
+		panic(fmt.Sprintf("%v: Shader %v %v", mesh.Name(), mesh.Shader, shaderIdx))
+	}
+
 	sg.Shader = mesh.shader[shaderIdx]
 
 	e00 := mesh.Verts.Elems[i1][0] - mesh.Verts.Elems[i0][0]
@@ -365,9 +369,11 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 	}
 	sg.Po = sg.P
 
-	if mesh.UV.Elems != nil {
+	if mesh.UV.Elems != nil && mesh.uvtriidx != nil {
 		sg.U = U*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][0] + V*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][0] + W*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][0]
 		sg.V = U*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][1] + V*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][1] + W*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][1]
+		//sg.U = U*mesh.UV.Elems[mesh.uvtriidx[i0]][0] + V*mesh.UV.Elems[mesh.uvtriidx[i1]][0] + W*mesh.UV.Elems[mesh.uvtriidx[i2]][0]
+		//sg.V = U*mesh.UV.Elems[mesh.uvtriidx[i0]][1] + V*mesh.UV.Elems[mesh.uvtriidx[i1]][1] + W*mesh.UV.Elems[mesh.uvtriidx[i2]][1]
 
 	} else {
 		sg.U = U
@@ -624,7 +630,7 @@ func (mesh *PolyMesh) TraceMotionElems(time float32, key, key2 int, ray *core.Ra
 
 		detSign := m.SignMask(det)
 
-		if m.Xorf(T, detSign) <= mesh.RayBias*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Tclosest*m.Xorf(det, detSign) {
+		if m.Xorf(T, detSign) < (m.EpsilonFloat32+mesh.RayBias+ray.Tmin)*m.Xorf(det, detSign) || m.Xorf(T, detSign) > ray.Tclosest*m.Xorf(det, detSign) {
 			continue
 		}
 
