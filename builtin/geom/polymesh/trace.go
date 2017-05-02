@@ -369,9 +369,11 @@ func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, co
 	}
 	sg.Po = sg.P
 
-	if mesh.UV.Elems != nil {
+	if mesh.UV.Elems != nil && mesh.uvtriidx != nil {
 		sg.U = U*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][0] + V*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][0] + W*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][0]
 		sg.V = U*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+0]][1] + V*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+1]][1] + W*mesh.UV.Elems[mesh.uvtriidx[(idx*3)+2]][1]
+		//sg.U = U*mesh.UV.Elems[mesh.uvtriidx[i0]][0] + V*mesh.UV.Elems[mesh.uvtriidx[i1]][0] + W*mesh.UV.Elems[mesh.uvtriidx[i2]][0]
+		//sg.V = U*mesh.UV.Elems[mesh.uvtriidx[i0]][1] + V*mesh.UV.Elems[mesh.uvtriidx[i1]][1] + W*mesh.UV.Elems[mesh.uvtriidx[i2]][1]
 
 	} else {
 		sg.U = U
