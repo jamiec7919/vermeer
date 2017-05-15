@@ -13,11 +13,11 @@ import (
 )
 
 // TransformSRTArray is an array of Transforms supporting lerp.
-type TransformSRTArray []m.TransformDecomp
+type TransformSRTArray []m.Transform
 
 // TimeKey returns the interpolated transform from the array (whole array is assumed to cover [0,1) linearly.
 // This should be altered to allow time to be non-linearly related to the keys.
-func (t *TransformSRTArray) TimeKey(time float32) m.TransformDecomp {
+func (t *TransformSRTArray) TimeKey(time float32) m.Transform {
 	if len(*t) > 1 {
 		k := time * float32(len(*t)-1)
 
@@ -31,7 +31,7 @@ func (t *TransformSRTArray) TimeKey(time float32) m.TransformDecomp {
 		}
 		//fmt.Printf("%v %v %v %v %v %v %v", ray.Time, len(mesh.Transform.Elems), time, key, key2, len(mesh.transformSRT), mesh.transformSRT)
 
-		return m.TransformDecompLerp((*t)[key], (*t)[key2], timeFrac)
+		return m.TransformLerp((*t)[key], (*t)[key2], timeFrac)
 	}
 
 	return (*t)[0]
@@ -101,7 +101,7 @@ func (proc *Proc) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 	Kz = ray.Kz
 
 	//			transformSRT := m.TransformDecompLerp(mesh.transformSRT[key], mesh.transformSRT[key2], time)
-	transform = m.TransformDecompToMatrix4(proc.transformSRT.TimeKey(ray.Time))
+	transform = m.TransformToMatrix4(proc.transformSRT.TimeKey(ray.Time))
 
 	invTransform, _ = m.Matrix4Inverse(transform)
 
@@ -155,12 +155,12 @@ func (proc *Proc) PreRender() error {
 	}
 
 	if proc.Transform.Elems == nil {
-		proc.Transform.Elems = append(proc.Transform.Elems, m.Matrix4Identity)
+		proc.Transform.Elems = append(proc.Transform.Elems, m.Matrix4Identity())
 		proc.Transform.MotionKeys = 1
 	}
 
 	for i := range proc.Transform.Elems {
-		proc.transformSRT = append(proc.transformSRT, m.TransformDecompMatrix4(proc.Transform.Elems[i]))
+		proc.transformSRT = append(proc.transformSRT, m.Matrix4ToTransform(proc.Transform.Elems[i]))
 	}
 
 	for i := range proc.BMin.Elems {
