@@ -12,9 +12,9 @@ import (
 	"github.com/jamiec7919/vermeer/nodes"
 )
 
-type TransformSRTArray []m.TransformDecomp
+type TransformSRTArray []m.Transform
 
-func (t *TransformSRTArray) TimeKey(time float32) m.TransformDecomp {
+func (t *TransformSRTArray) TimeKey(time float32) m.Transform {
 	if len(*t) > 1 {
 		k := time * float32(len(*t)-1)
 
@@ -28,7 +28,7 @@ func (t *TransformSRTArray) TimeKey(time float32) m.TransformDecomp {
 		}
 		//fmt.Printf("%v %v %v %v %v %v %v", ray.Time, len(mesh.Transform.Elems), time, key, key2, len(mesh.transformSRT), mesh.transformSRT)
 
-		return m.TransformDecompLerp((*t)[key], (*t)[key2], timeFrac)
+		return m.TransformLerp((*t)[key], (*t)[key2], timeFrac)
 	}
 
 	return (*t)[0]
@@ -86,7 +86,7 @@ func (ins *Instance) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 	Kz = ray.Kz
 
 	//			transformSRT := m.TransformDecompLerp(mesh.transformSRT[key], mesh.transformSRT[key2], time)
-	transform = m.TransformDecompToMatrix4(ins.transformSRT.TimeKey(ray.Time))
+	transform = m.TransformToMatrix4(ins.transformSRT.TimeKey(ray.Time))
 
 	invTransform, _ = m.Matrix4Inverse(transform)
 
@@ -117,7 +117,7 @@ func (ins *Instance) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 func (ins *Instance) PreRender() error {
 
 	for i := range ins.Transform.Elems {
-		ins.transformSRT = append(ins.transformSRT, m.TransformDecompMatrix4(ins.Transform.Elems[i]))
+		ins.transformSRT = append(ins.transformSRT, m.Matrix4ToTransform(ins.Transform.Elems[i]))
 	}
 
 	for i := range ins.BMin.Elems {
