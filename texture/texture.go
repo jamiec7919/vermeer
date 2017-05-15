@@ -241,14 +241,14 @@ func SampleRGB(filename string, sg *core.ShaderContext) (out [3]float32) {
 	deltaTx := m.Vec2Scale(sg.Image.PixelDelta[0], sg.Dduvdx)
 	deltaTy := m.Vec2Scale(sg.Image.PixelDelta[1], sg.Dduvdy)
 
-	deltaTx[0] = deltaTx[0] * float32(img.w)
-	deltaTy[0] = deltaTy[0] * float32(img.w)
+	deltaTx.X = deltaTx.X * float32(img.w)
+	deltaTy.X = deltaTy.X * float32(img.w)
 
-	deltaTx[1] = deltaTx[1] * float32(img.h)
-	deltaTy[1] = deltaTy[1] * float32(img.h)
+	deltaTx.Y = deltaTx.Y * float32(img.h)
+	deltaTy.Y = deltaTy.Y * float32(img.h)
 
-	ds := m.Max(m.Abs(deltaTx[0]), m.Abs(deltaTy[0]))
-	dt := m.Max(m.Abs(deltaTx[1]), m.Abs(deltaTy[1]))
+	ds := m.Max(m.Abs(deltaTx.X), m.Abs(deltaTy.X))
+	dt := m.Max(m.Abs(deltaTx.Y), m.Abs(deltaTy.Y))
 
 	ds = m.Vec2Length(deltaTx)
 	dt = m.Vec2Length(deltaTy)
