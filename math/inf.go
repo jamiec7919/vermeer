@@ -1,10 +1,12 @@
-// Copyright 2016 The Vermeer Light Tools Authors. All rights reserved.
+// Copyright 2017 The Vermeer Light Tools Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package math
 
-import "math"
+import (
+	"math"
+)
 
 // InfPos is +ve infinity in 32 bits.
 var InfPos = math.Float32frombits(uint32(0xff) << 23)

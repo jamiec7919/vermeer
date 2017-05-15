@@ -1,4 +1,4 @@
-// Copyright 2016 The Vermeer Light Tools Authors. All rights reserved.
+// Copyright 2017 The Vermeer Light Tools Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,8 +7,8 @@
 #define Half 0.5
 #define OnePointFive 1.5
 
-// func ·Vec3Normalize(a Vec3) (b Vec3)
-TEXT ·Vec3Normalize(SB),NOSPLIT,$0
+// func ·Vec3NormalizeRSqrt(a Vec3) (b Vec3)
+TEXT ·Vec3NormalizeRSqrt(SB),NOSPLIT,$0
 	MOVSS a+0(FP), X0
 	MOVSS a+4(FP), X1
 	MOVSS a+8(FP), X2
@@ -55,4 +55,25 @@ TEXT ·Vec3Length(SB),NOSPLIT,$0
     MOVSS X0,ret+16(FP)
     RET
 
+// func ·Vec3Normalize(a Vec3) Vec3
+TEXT ·Vec3Normalize(SB),NOSPLIT,$0
+	MOVSS a+0(FP), X1
+	MOVSS a+4(FP), X2
+	MOVSS a+8(FP), X3
+	MOVSS X1,X4
+	MULSS X4,X4
+	MOVSS X2,X5
+	MULSS X5,X5
+	ADDSS X4,X5 
+	MOVSS X3,X4
+	MULSS X4,X4
+	ADDSS X4,X5
+	SQRTSS X5,X5  // X5 has length
+	DIVSS X5,X1
+    MOVSS X1,ret+16(FP)
+	DIVSS X5,X2
+    MOVSS X2,ret+20(FP)
+ 	DIVSS X5,X3
+    MOVSS X3,ret+24(FP)
+    RET
     

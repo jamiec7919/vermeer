@@ -1,21 +1,19 @@
-// Copyright 2016 The Vermeer Light Tools Authors. All rights reserved.
+// Copyright 2017 The Vermeer Light Tools Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package math
 
-/*
-Matrix4 represents a 4x4 homogenous matrix.
+/* Matrix4 represents a 4x4 homogenous matrix.
 
-	Column major
+Column major
 
-	[ 0 4 8 12 ]
-	[ 1 5 9 13 ]
-	[ 2 6 10 14]
-	[ 3 7 11 15]
+[ 0 4 8 12 ]
+[ 1 5 9 13 ]
+[ 2 6 10 14]
+[ 3 7 11 15]
 
-	Transforms POST multiply matrix by column vector.
-
+Transforms must POST multiply matrix by column vector.
 */
 type Matrix4 [16]float32
 
@@ -57,39 +55,49 @@ func (m *Matrix4) Set(i, j int, v float32) {
 }
 
 // Matrix4Identity is the identity matrix.
-var Matrix4Identity = Matrix4{
-	1.0, 0.0, 0.0, 0.0,
-	0.0, 1.0, 0.0, 0.0,
-	0.0, 0.0, 1.0, 0.0,
-	0.0, 0.0, 0.0, 1.0}
+func Matrix4Identity() Matrix4 {
+	return Matrix4{
+		1.0, 0.0, 0.0, 0.0,
+		0.0, 1.0, 0.0, 0.0,
+		0.0, 0.0, 1.0, 0.0,
+		0.0, 0.0, 0.0, 1.0}
+}
 
 // Matrix4Null is the zero matrix.
-var Matrix4Null = Matrix4{
-	0.0, 0.0, 0.0, 0.0,
-	0.0, 0.0, 0.0, 0.0,
-	0.0, 0.0, 0.0, 0.0,
-	0.0, 0.0, 0.0, 0.0}
+func Matrix4Null() Matrix4 {
+	return Matrix4{
+		0.0, 0.0, 0.0, 0.0,
+		0.0, 0.0, 0.0, 0.0,
+		0.0, 0.0, 0.0, 0.0,
+		0.0, 0.0, 0.0, 0.0}
+}
 
 // Matrix4Add returns the sum of 4x4 matrices a and b.
-func Matrix4Add(a, b Matrix4) (c Matrix4) {
+func Matrix4Add(a, b Matrix4) Matrix4 {
+	var c Matrix4
+
 	for i := range c {
 		c[i] = a[i] + b[i]
 	}
 
-	return
+	return c
 }
 
 // Matrix4Sub returns the difference of 4x4 matrices a and b.
-func Matrix4Sub(a, b Matrix4) (c Matrix4) {
+func Matrix4Sub(a, b Matrix4) Matrix4 {
+	var c Matrix4
+
 	for i := range c {
 		c[i] = a[i] - b[i]
 	}
 
-	return
+	return c
 }
 
 // Matrix4Mul returns the matrix multiplication of 4x4 matrices a and b.
-func Matrix4Mul(a, b Matrix4) (c Matrix4) {
+func Matrix4Mul(a, b Matrix4) Matrix4 {
+	var c Matrix4
+
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
 			for k := 0; k < 4; k++ {
@@ -98,22 +106,24 @@ func Matrix4Mul(a, b Matrix4) (c Matrix4) {
 		}
 	}
 
-	return
+	return c
 }
 
 // Matrix4Transpose returns the transpose of 4x4 matrix a.
-func Matrix4Transpose(a Matrix4) (c Matrix4) {
+func Matrix4Transpose(a Matrix4) Matrix4 {
+	var c Matrix4
+
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
 			c[(i*4)+j] = a[(j*4)+i]
 		}
 	}
 
-	return
+	return c
 }
 
 // Matrix4Inverse returns the matrix inverse of 4x4 matrix a.
-func Matrix4Inverse(m Matrix4) (c Matrix4, ok bool) {
+func Matrix4Inverse(m Matrix4) (Matrix4, bool) {
 	var inv Matrix4
 
 	inv[0] = m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15] + m[9]*m[7]*m[14] + m[13]*m[6]*m[11] - m[13]*m[7]*m[10]
@@ -136,16 +146,16 @@ func Matrix4Inverse(m Matrix4) (c Matrix4, ok bool) {
 	det := m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12]
 
 	if det == 0.0 {
-		return c, false
+		return inv, false
 	}
 
 	det = 1.0 / det
 
-	for i := 0; i < 16; i++ {
-		c[i] = inv[i] * det
+	for i := range inv {
+		inv[i] *= det
 	}
 
-	return c, true
+	return inv, true
 }
 
 // Matrix4Det returns the determinant of 4x4 matrix a.
@@ -174,101 +184,92 @@ func Matrix4Det(m Matrix4) float32 {
 
 // Matrix4MulPoint post multiplies point b by 4x4 matrix a.
 // b is represented as a Vec3 but is assumed to be homogeonous point [x,y,z,1]
-func Matrix4MulPoint(a Matrix4, b Vec3) (c Vec3) {
-	c[0] = a[0]*b[0] + a[4]*b[1] + a[8]*b[2] + a[12]
-	c[1] = a[1]*b[0] + a[5]*b[1] + a[9]*b[2] + a[13]
-	c[2] = a[2]*b[0] + a[6]*b[1] + a[10]*b[2] + a[14]
+func Matrix4MulPoint(a Matrix4, b Vec3) Vec3 {
+	var c Vec3
 
-	return
-}
+	c.X = a[0]*b.X + a[4]*b.Y + a[8]*b.Z + a[12]
+	c.Y = a[1]*b.X + a[5]*b.Y + a[9]*b.Z + a[13]
+	c.Z = a[2]*b.X + a[6]*b.Y + a[10]*b.Z + a[14]
 
-// _Matrix4MulPoint2 post multiplies point b by 4x4 matrix a.
-// b is represented as a Vec3 but is assumed to be homogeonous point [x,y,z,1]
-// This is not inlined in Go1.6
-func _Matrix4MulPoint2(a Matrix4, b Vec3) (c Vec3) {
-	for i := 0; i < 3; i++ {
-		for j := 0; j < 3; j++ {
-			c[i] += a[(j*4)+i] * b[j]
-		}
-		c[i] += a[(3*4)+i] // Last element
-	}
-
-	return
+	return c
 }
 
 // Matrix4MulHPoint post multiplies point b by 4x4 matrix a.
 // b is represented as a full homoegenous point and returns in same representation.
-func Matrix4MulHPoint(a Matrix4, b [4]float32) (c [4]float32) {
+func Matrix4MulHPoint(a Matrix4, b [4]float32) [4]float32 {
+	var c [4]float32
+
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
 			c[i] += a[(j*4)+i] * b[j]
 		}
 	}
 
-	return
+	return c
 }
 
-// Matrix4MulVec post multiplies 3 vector b by 4x4 matrix a.
+// Matrix4MulVec post multiplies vector b by 4x4 matrix a.
 // b is represented as a Vec3 but is assumed to be homogeonous vector [x,y,z,0]
-func Matrix4MulVec(a Matrix4, b Vec3) (c Vec3) {
-	c[0] = a[0]*b[0] + a[4]*b[1] + a[8]*b[2]
-	c[1] = a[1]*b[0] + a[5]*b[1] + a[9]*b[2]
-	c[2] = a[2]*b[0] + a[6]*b[1] + a[10]*b[2]
-	return
+func Matrix4MulVec(a Matrix4, b Vec3) Vec3 {
+	var c Vec3
+
+	c.X = a[0]*b.X + a[4]*b.Y + a[8]*b.Z
+	c.Y = a[1]*b.X + a[5]*b.Y + a[9]*b.Z
+	c.Z = a[2]*b.X + a[6]*b.Y + a[10]*b.Z
+
+	return c
 }
 
-// _Matrix4MulVec2 post multiplies 3 vector b by 4x4 matrix a.
-// b is represented as a Vec3 but is assumed to be homogeonous vector [x,y,z,0]
-// This is not inlined in Go1.6
-func _Matrix4MulVec2(a Matrix4, b Vec3) (c Vec3) {
-	for i := 0; i < 3; i++ {
-		for j := 0; j < 3; j++ {
-			c[i] += a[(j*4)+i] * b[j]
-		}
-	}
-
-	return
-}
-
-// Matrix4Translate returns the matrix representing a translation by the given amount.
-func Matrix4Translate(X, Y, Z float32) (c Matrix4) {
-	c = Matrix4Identity
+// Matrix4TransformTranslate returns the matrix representing a translation by the given amount.
+func Matrix4TransformTranslate(X, Y, Z float32) Matrix4 {
+	var c Matrix4
+	c[0] = 1
+	c[5] = 1
+	c[10] = 1
 	c[12] = X
 	c[13] = Y
 	c[14] = Z
-	return
+	c[15] = 1
+	return c
 }
 
 // Matrix4TransformScale returns the matrix representing a scaling by the given amount.
-func Matrix4TransformScale(X, Y, Z float32) (c Matrix4) {
-	c = Matrix4Identity
+func Matrix4TransformScale(X, Y, Z float32) Matrix4 {
+	var c Matrix4
 	c[0] = X
 	c[5] = Y
 	c[10] = Z
-	return
+	c[15] = 1
+	return c
 }
 
 // Matrix4Scale returns the matrix m multiplied by scalar s.
-func Matrix4Scale(s float32, m Matrix4) (x Matrix4) {
+func Matrix4Scale(s float32, m Matrix4) Matrix4 {
+	var c Matrix4
+
 	for i := range m {
-		x[i] = s * m[i]
+		c[i] = s * m[i]
 	}
 
-	return
+	return c
 }
 
 // Matrix4Lerp returns the linear interpolation between matrix a and b. This
 // is only useful in very restricted circumstances.
-func Matrix4Lerp(a, b Matrix4, t float32) (x Matrix4) {
-	for i := range x {
-		x[i] = (1.0-t)*a[i] + t*b[i]
+func Matrix4Lerp(a, b Matrix4, t float32) Matrix4 {
+	var c Matrix4
+
+	for i := range c {
+		c[i] = (1.0-t)*a[i] + t*b[i]
 	}
 
-	return
+	return c
 }
 
-// Matrix4Rotate returns the matrix representing a rotation by angle (radians) around axis [X,Y,Z].
-func Matrix4Rotate(angle, X, Y, Z float32) (c Matrix4) {
+// Matrix4TransformRotate returns the matrix representing a rotation by angle (radians) around axis [X,Y,Z].
+/*func Matrix4TransformRotate(angle, X, Y, Z float32) Matrix4 {
+	var c Matrix4
+
 	// Should normalize X,Y,Z
 	sl := X*X + Y*Y + Z*Z
 
@@ -303,26 +304,28 @@ func Matrix4Rotate(angle, X, Y, Z float32) (c Matrix4) {
 	c[11] = 0.0
 	c[15] = 1.0
 
-	return
-}
+	return c
+}*/
 
 // Matrix4Basis constructs a 4x4 matrix from three basis vectors (for the 3x3 bit)
-func Matrix4Basis(u, v, w Vec3) (out Matrix4) {
-	out[0] = u[0]
-	out[1] = u[1]
-	out[2] = u[2]
+func Matrix4Basis(u, v, w Vec3) Matrix4 {
+	var out Matrix4
 
-	out[4] = v[0]
-	out[5] = v[1]
-	out[6] = v[2]
+	out[0] = u.X
+	out[1] = u.Y
+	out[2] = u.Z
 
-	out[8] = w[0]
-	out[9] = w[1]
-	out[10] = w[2]
+	out[4] = v.X
+	out[5] = v.Y
+	out[6] = v.Z
+
+	out[8] = w.X
+	out[9] = w.Y
+	out[10] = w.Z
 
 	out[15] = 1.0
 
-	return
+	return out
 }
 
 // Matrix4Eq returns true if A-B approx= 0, within given epsilon.
@@ -338,8 +341,8 @@ func Matrix4Eq(A, B Matrix4, eps float32) bool {
 
 // Matrix4PolarFactor computes the Q factor in M = QS where S is a symmetric matrix and Q is
 // a pure rotation. S can then be calculated from S = Q^TM.
-// Returns null,false if unable to decompose (either singular matrix detected or taking
-// too long to converge). det(m) should be +ve.
+// Returns Q,false if unable to decompose (either singular matrix detected or taking
+// too long to converge). det(m) should be +ve. If return is false then Q is undefined.
 func Matrix4PolarFactor(m Matrix4) (Matrix4, bool) {
 	Q := m
 
@@ -347,7 +350,7 @@ func Matrix4PolarFactor(m Matrix4) (Matrix4, bool) {
 		Qinv, ok := Matrix4Inverse(Q)
 
 		if !ok {
-			return Matrix4Null, false
+			return Qinv, false
 		}
 
 		Qnew := Matrix4Scale(.5, Matrix4Add(Q, Matrix4Transpose(Qinv)))
@@ -359,5 +362,5 @@ func Matrix4PolarFactor(m Matrix4) (Matrix4, bool) {
 		Q = Qnew
 	}
 
-	return Matrix4Null, false
+	return Q, false
 }

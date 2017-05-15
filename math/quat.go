@@ -1,4 +1,4 @@
-// Copyright 2016 The Vermeer Light Tools Authors. All rights reserved.
+// Copyright 2017 The Vermeer Light Tools Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -13,8 +13,8 @@ type Quat struct {
 	X, Y, Z, W float32
 }
 
-// QuatIdentity is the identity quaternion.  DO NOT MODIFY!
-var QuatIdentity = Quat{0, 0, 0, 1}
+// QuatIdentity is the identity quaternion.
+func QuatIdentity() Quat { return Quat{0, 0, 0, 1} }
 
 // String returns a string representation of the quaternion: [x,y,z,w].
 func (q *Quat) String() string {
@@ -26,8 +26,43 @@ func QuatLength(q Quat) float32 {
 	return Sqrt(q.X*q.X + q.Y*q.Y + q.Z*q.Z + q.W*q.W)
 }
 
+// QuatMul returns the product of two quaternions.
+func QuatMul(a, b Quat) Quat {
+	var o Quat
+
+	o.W = a.W*b.W - a.X*b.X - a.Y*b.Y - a.Z*b.Z
+	o.X = a.W*b.X + a.X*b.W + a.Y*b.Z - a.Z*b.Y
+	o.Y = a.W*b.Y - a.X*b.Z + a.Y*b.W + a.Z*b.X
+	o.Z = a.W*b.Z + a.X*b.Y - a.Y*b.X + a.Z*b.W
+	return o
+}
+
+// QuatAdd returns the sum of two quaternions.
+func QuatAdd(a, b Quat) Quat {
+	var o Quat
+
+	o.W = a.W + b.W
+	o.X = a.X + b.X
+	o.Y = a.Y + b.Y
+	o.Z = a.Z + b.Z
+	return o
+}
+
+// QuatScale scales the given quaternion by a scalar.
+func QuatScale(s float32, q Quat) Quat {
+	var o Quat
+
+	o.X = q.X * s
+	o.Y = q.Y * s
+	o.Z = q.Z * s
+	o.W = q.W * s
+	return o
+}
+
 // QuatSlerp performs a sperical linear inerpolation between qa and qb parameterised by t.
-func QuatSlerp(qa, qb Quat, t float32) (qm Quat) {
+func QuatSlerp(qa, qb Quat, t float32) Quat {
+	var qm Quat
+
 	// Calculate angle between them.
 	cosHalfTheta := qa.W*qb.W + qa.X*qb.X + qa.Y*qb.Y + qa.Z*qb.Z
 
@@ -37,7 +72,7 @@ func QuatSlerp(qa, qb Quat, t float32) (qm Quat) {
 		qm.X = qa.X
 		qm.Y = qa.Y
 		qm.Z = qa.Z
-		return
+		return qm
 	}
 
 	// Calculate temporary values.
@@ -51,7 +86,7 @@ func QuatSlerp(qa, qb Quat, t float32) (qm Quat) {
 		qm.X = (qa.X*0.5 + qb.X*0.5)
 		qm.Y = (qa.Y*0.5 + qb.Y*0.5)
 		qm.Z = (qa.Z*0.5 + qb.Z*0.5)
-		return
+		return qm
 	}
 
 	ratioA := Sin((1-t)*halfTheta) / sinHalfTheta
@@ -62,7 +97,7 @@ func QuatSlerp(qa, qb Quat, t float32) (qm Quat) {
 	qm.X = (qa.X*ratioA + qb.X*ratioB)
 	qm.Y = (qa.Y*ratioA + qb.Y*ratioB)
 	qm.Z = (qa.Z*ratioA + qb.Z*ratioB)
-	return
+	return qm
 }
 
 // Normalize in-place normalizes the quaternion.
@@ -77,7 +112,9 @@ func (q *Quat) Normalize() {
 }
 
 // QuatToMatrix4 returns the matrix representation of the given quaternion.
-func QuatToMatrix4(q Quat) (m Matrix4) {
+func QuatToMatrix4(q Quat) Matrix4 {
+	var m Matrix4
+
 	n := 1.0 / Sqrt(q.X*q.X+q.Y*q.Y+q.Z*q.Z+q.W*q.W)
 
 	qX := q.X * n
@@ -99,38 +136,15 @@ func QuatToMatrix4(q Quat) (m Matrix4) {
 
 	m.Set(3, 3, 1.0)
 
-	return
+	return m
 }
-
-/*
-func QuatToMatrix3(q Quat) (m Matrix3) {
-	n := 1.0 / Sqrt(q.X*q.X+q.Y*q.Y+q.Z*q.Z+q.W*q.W)
-
-	qX := q.X * n
-	qY := q.Y * n
-	qZ := q.Z * n
-	qW := q.W * n
-
-	m.Set(0, 0, 1-2*qY*qY-2*qZ*qZ)
-	m.Set(0, 1, 2*qX*qY-2*qW*qZ)
-	m.Set(0, 2, 2*qX*qZ+2*qW*qY)
-
-	m.Set(1, 0, 2*qX*qY+2*qW*qZ)
-	m.Set(1, 1, 1-2*qX*qX-2*qZ*qZ)
-	m.Set(1, 2, 2*qY*qZ-2*qW*qX)
-
-	m.Set(2, 0, 2*qX*qZ-2*qW*qY)
-	m.Set(2, 1, 2*qY*qZ+2*qW*qX)
-	m.Set(2, 2, 1-2*qX*qX-2*qY*qY)
-
-	return
-}
-*/
 
 // Matrix4ToQuat converts the upper left 3x3 part of the 4x4 matrix m into a
 // quaternion.  Assumes m is an orthonormal rotation matrix (doesn't have to
 // be quite there, but normalize quaternion afterwards).
-func Matrix4ToQuat(m Matrix4) (q Quat) {
+func Matrix4ToQuat(m Matrix4) Quat {
+	var q Quat
+
 	tr := m.Elt(0, 0) + m.Elt(1, 1) + m.Elt(2, 2)
 
 	if tr > 0.0 {
@@ -158,67 +172,5 @@ func Matrix4ToQuat(m Matrix4) (q Quat) {
 		q.Y = (m.Elt(1, 2) + m.Elt(2, 1)) / S
 		q.Z = 0.25 * S
 	}
-	return
-}
-
-/*
-func Matrix3ToQuat(z Matrix3) (q Quat) {
-	// m := Matrix3Transpose(z)
-	m := z
-	tr := m.Elt(0, 0) + m.Elt(1, 1) + m.Elt(2, 2)
-
-	if tr > 0.0 {
-		S := Sqrt(tr+1.0) * 2 // S=4*qw
-		q.W = 0.25 * S
-		q.X = (m.Elt(2, 1) - m.Elt(1, 2)) / S
-		q.Y = (m.Elt(0, 2) - m.Elt(2, 0)) / S
-		q.Z = (m.Elt(1, 0) - m.Elt(0, 1)) / S
-	} else if (m.Elt(0, 0) > m.Elt(1, 1)) && (m.Elt(0, 0) > m.Elt(2, 2)) {
-		S := Sqrt(1.0+m.Elt(0, 0)-m.Elt(1, 1)-m.Elt(2, 2)) * 2 // S=4*qx
-		q.W = (m.Elt(2, 1) - m.Elt(1, 2)) / S
-		q.X = 0.25 * S
-		q.Y = (m.Elt(0, 1) + m.Elt(1, 0)) / S
-		q.Z = (m.Elt(0, 2) + m.Elt(2, 0)) / S
-	} else if m.Elt(1, 1) > m.Elt(2, 2) {
-		S := Sqrt(1.0+m.Elt(1, 1)-m.Elt(0, 0)-m.Elt(2, 2)) * 2 // S=4*qy
-		q.W = (m.Elt(0, 2) - m.Elt(2, 0)) / S
-		q.X = (m.Elt(0, 1) + m.Elt(1, 0)) / S
-		q.Y = 0.25 * S
-		q.Z = (m.Elt(1, 2) + m.Elt(2, 1)) / S
-	} else {
-		S := Sqrt(1.0+m.Elt(2, 2)-m.Elt(0, 0)-m.Elt(1, 1)) * 2 // S=4*qz
-		q.W = (m.Elt(1, 0) - m.Elt(0, 1)) / S
-		q.X = (m.Elt(0, 2) + m.Elt(2, 0)) / S
-		q.Y = (m.Elt(1, 2) + m.Elt(2, 1)) / S
-		q.Z = 0.25 * S
-	}
-	return
-}
-*/
-
-// QuatMul returns the product of two quaternions.
-func QuatMul(a, b Quat) (o Quat) {
-	o.W = a.W*b.W - a.X*b.X - a.Y*b.Y - a.Z*b.Z
-	o.X = a.W*b.X + a.X*b.W + a.Y*b.Z - a.Z*b.Y
-	o.Y = a.W*b.Y - a.X*b.Z + a.Y*b.W + a.Z*b.X
-	o.Z = a.W*b.Z + a.X*b.Y - a.Y*b.X + a.Z*b.W
-	return
-}
-
-// QuatAdd returns the sum of two quaternions.
-func QuatAdd(a, b Quat) (o Quat) {
-	o.W = a.W + b.W
-	o.X = a.X + b.X
-	o.Y = a.Y + b.Y
-	o.Z = a.Z + b.Z
-	return
-}
-
-// QuatScale scales the given quaternion by a scalar.
-func QuatScale(s float32, q Quat) (o Quat) {
-	o.X = q.X * s
-	o.Y = q.Y * s
-	o.Z = q.Z * s
-	o.W = q.W * s
-	return
+	return q
 }
