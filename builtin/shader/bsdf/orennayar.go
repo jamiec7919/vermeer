@@ -33,7 +33,7 @@ func (b *OrenNayar) Sample(r0, r1 float64) m.Vec3 {
 // PDF implements core.BSDF.
 func (b *OrenNayar) PDF(_omegaO m.Vec3) float64 {
 	omegaO := m.Vec3BasisProject(b.U, b.V, b.N, _omegaO)
-	ODotN := float64(m.Max(0, omegaO[2]))
+	ODotN := float64(m.Max(0, omegaO.Z))
 
 	return ODotN / math.Pi
 }
@@ -48,10 +48,10 @@ func (b *OrenNayar) Eval(_omegaO m.Vec3) (rho colour.Spectrum) {
 
 	B := 0.45 * (sigma * sigma) / ((sigma * sigma) + 0.09)
 
-	phiI := m.Atan2(b.OmegaI[1], b.OmegaI[0])
-	phiO := m.Atan2(omegaO[1], omegaO[0])
-	thetaI := m.Acos(b.OmegaI[2])
-	thetaO := m.Acos(omegaO[2])
+	phiI := m.Atan2(b.OmegaI.Y, b.OmegaI.X)
+	phiO := m.Atan2(omegaO.Y, omegaO.X)
+	thetaI := m.Acos(b.OmegaI.Z)
+	thetaO := m.Acos(omegaO.Z)
 
 	alpha := m.Max(thetaI, thetaO)
 	beta := m.Min(thetaI, thetaO)
@@ -63,7 +63,7 @@ func (b *OrenNayar) Eval(_omegaO m.Vec3) (rho colour.Spectrum) {
 	// gamma := dot(eyeDir - normal * dot(eyeDir, normal), light.direction - normal * dot(light.direction, normal))
 
 	//*out = b.Kd
-	scale := omegaO[2] * (A + (B * m.Max(0, gamma) * C))
+	scale := omegaO.Z * (A + (B * m.Max(0, gamma) * C))
 
 	rho.Lambda = b.Lambda
 	rho.FromRGB(colour.RGB{1, 1, 1})

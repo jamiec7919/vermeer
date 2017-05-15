@@ -40,7 +40,7 @@ func (b *Lambert) Sample(r0, r1 float64) m.Vec3 {
 // PDF implements core.BSDF.
 func (b *Lambert) PDF(_omegaO m.Vec3) float64 {
 	omegaO := m.Vec3BasisProject(b.U, b.V, b.N, _omegaO)
-	ODotN := float64(m.Max(omegaO[2], 0))
+	ODotN := float64(m.Max(omegaO.Z, 0))
 
 	if ODotN > 1.0 {
 		ODotN = 1
@@ -53,7 +53,7 @@ func (b *Lambert) PDF(_omegaO m.Vec3) float64 {
 // Eval implements core.BSDF.
 func (b *Lambert) Eval(_omegaO m.Vec3) (rho colour.Spectrum) {
 	omegaO := m.Vec3BasisProject(b.U, b.V, b.N, _omegaO)
-	weight := m.Max(0, omegaO[2])
+	weight := m.Max(0, omegaO.Z)
 
 	rho.Lambda = b.Lambda
 	rho.FromRGB(colour.RGB{1, 1, 1})
