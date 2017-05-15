@@ -159,14 +159,23 @@ func (sc *ShaderContext) OffsetP(dir int) m.Vec3 {
 	po := m.Vec3Add(sc.P, pofs)
 
 	// round po away from p
-	for i := range po {
-		//log.Printf("%v %v %v", i, offset[i], po[i])
-		if pofs[i] > 0 {
-			po[i] = m.NextFloatUp(po[i])
-		} else if pofs[i] < -0 {
-			po[i] = m.NextFloatDown(po[i])
-		}
-		//log.Printf("%v %v", i, po[i])
+	//log.Printf("%v %v %v", i, offset[i], po[i])
+	if pofs.X > 0 {
+		po.X = m.NextFloatUp(po.X)
+	} else if pofs.X < -0 {
+		po.X = m.NextFloatDown(po.X)
+	}
+	//log.Printf("%v %v", i, po[i])
+	if pofs.Y > 0 {
+		po.Y = m.NextFloatUp(po.Y)
+	} else if pofs.Y < -0 {
+		po.Y = m.NextFloatDown(po.Y)
+	}
+
+	if pofs.Z > 0 {
+		po.Z = m.NextFloatUp(po.Z)
+	} else if pofs.Z < -0 {
+		po.Z = m.NextFloatDown(po.Z)
 	}
 
 	return po

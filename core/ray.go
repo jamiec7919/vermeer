@@ -117,13 +117,13 @@ func (r *Ray) Setup() {
 
 	r.Kz = 0
 
-	if m.Abs(r.D[1]) > m.Abs(r.D[2]) {
-		if m.Abs(r.D[1]) > m.Abs(r.D[0]) {
+	if m.Abs(r.D.Y) > m.Abs(r.D.Z) {
+		if m.Abs(r.D.Y) > m.Abs(r.D.X) {
 			r.Kz = 1
 
 		}
 	} else {
-		if m.Abs(r.D[2]) > m.Abs(r.D[0]) {
+		if m.Abs(r.D.Z) > m.Abs(r.D.X) {
 			r.Kz = 2
 		}
 
@@ -141,22 +141,22 @@ func (r *Ray) Setup() {
 		r.Ky = 0
 	}
 
-	if r.D[r.Kz] < 0.0 {
+	if r.D.Elt(int(r.Kz)) < 0.0 {
 		tmp := r.Kx
 		r.Kx = r.Ky
 		r.Ky = tmp
 	}
 
 	// Divisions as accurate as possible
-	z := float64(r.D[r.Kz])
+	z := float64(r.D.Elt(int(r.Kz)))
 
 	r.S[2] = float32(1.0 / z)
-	r.S[0] = float32(float64(r.D[r.Kx]) / z)
-	r.S[1] = float32(float64(r.D[r.Ky]) / z)
+	r.S[0] = float32(float64(r.D.Elt(int(r.Kx))) / z)
+	r.S[1] = float32(float64(r.D.Elt(int(r.Ky))) / z)
 
-	r.Dinv[0] = float32(1.0 / float64(r.D[0]))
-	r.Dinv[1] = float32(1.0 / float64(r.D[1]))
-	r.Dinv[2] = float32(1.0 / float64(r.D[2]))
+	r.Dinv.X = float32(1.0 / float64(r.D.X))
+	r.Dinv.Y = float32(1.0 / float64(r.D.Y))
+	r.Dinv.Z = float32(1.0 / float64(r.D.Z))
 
 }
 
