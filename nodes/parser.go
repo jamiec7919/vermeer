@@ -273,12 +273,12 @@ func (p *parser) vec3(field reflect.Value) error {
 
 	v := m.Vec3{}
 
-	for i := range v {
+	for i := 0; i < 3; i++ {
 		switch t := p.lex.Lex(&sym); t {
 		case TokInt:
-			v[i] = float32(sym.numInt)
+			v.Set(i, float32(sym.numInt))
 		case TokFloat:
-			v[i] = float32(sym.numFloat)
+			v.Set(i, float32(sym.numFloat))
 		default:
 			return errors.New("Expected vector component.")
 		}
@@ -323,12 +323,12 @@ func (p *parser) pointarray(field reflect.Value) error {
 	for j := 0; j < k*v.ElemsPerKey; j++ {
 		el := m.Vec3{}
 
-		for i := range el {
+		for i := 0; i < 3; i++ {
 			switch t := p.lex.Lex(&sym); t {
 			case TokInt:
-				el[i] = float32(sym.numInt)
+				el.Set(i, float32(sym.numInt))
 			case TokFloat:
-				el[i] = float32(sym.numFloat)
+				el.Set(i, float32(sym.numFloat))
 			default:
 				return errors.New("Expected point component.")
 			}
@@ -375,12 +375,12 @@ func (p *parser) vec3array(field reflect.Value) error {
 	for j := 0; j < k*v.ElemsPerKey; j++ {
 		el := m.Vec3{}
 
-		for i := range el {
+		for i := 0; i < 3; i++ {
 			switch t := p.lex.Lex(&sym); t {
 			case TokInt:
-				el[i] = float32(sym.numInt)
+				el.Set(i, float32(sym.numInt))
 			case TokFloat:
-				el[i] = float32(sym.numFloat)
+				el.Set(i, float32(sym.numFloat))
 			default:
 				return errors.New("Expected vec3 component.")
 			}
@@ -427,12 +427,12 @@ func (p *parser) vec2array(field reflect.Value) error {
 	for j := 0; j < k*v.ElemsPerKey; j++ {
 		el := m.Vec2{}
 
-		for i := range el {
+		for i := 0; i < 2; i++ {
 			switch t := p.lex.Lex(&sym); t {
 			case TokInt:
-				el[i] = float32(sym.numInt)
+				el.Set(i, float32(sym.numInt))
 			case TokFloat:
-				el[i] = float32(sym.numFloat)
+				el.Set(i, float32(sym.numFloat))
 			default:
 				return errors.New("Expected vec2 component.")
 			}
