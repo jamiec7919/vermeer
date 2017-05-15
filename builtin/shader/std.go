@@ -450,6 +450,12 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 				if core.Trace(ray, &samp) {
 					transContrib = samp.Spectrum
 					transContrib.Mul(transColour)
+					//					transContrib = samp.Colour
+					//					absorb := colour.RGB{m.Exp(-(1 - transColour[0]) * ray.Tclosest),
+					//						m.Exp(-(1 - transColour[1]) * ray.Tclosest),
+					//						m.Exp(-(1 - transColour[2]) * ray.Tclosest),
+					//					}
+					//					transContrib.Mul(absorb)
 				}
 
 			}
