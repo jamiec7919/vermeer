@@ -18,7 +18,7 @@ func intersectBoxesSlow(ray *core.Ray, boxes *[4 * 3 * 2]float32, hits *[4]int32
 	var sign [3]uint8
 
 	for k := 0; k < 3; k++ {
-		if ray.Dinv[k] < 0.0 {
+		if ray.Dinv.Elt(k) < 0.0 {
 			sign[k] = 1
 		}
 	}
@@ -28,12 +28,12 @@ func intersectBoxesSlow(ray *core.Ray, boxes *[4 * 3 * 2]float32, hits *[4]int32
 		// x's are: boxes[idx+(sign[0]*12)+0]
 		// y's are: boxes[idx+(sign[1]*12)+4]
 		// z's are: boxes[idx+(sign[2]*12)+8]
-		tmin := (boxes[idx+(sign[0]*12)+0] - ray.P[0]) * ray.Dinv[0]
-		tmax := (boxes[idx+((1-sign[0])*12)+0] - ray.P[0]) * ray.Dinv[0]
-		tymin := (boxes[idx+(sign[1]*12)+4] - ray.P[1]) * ray.Dinv[1]
-		tymax := (boxes[idx+((1-sign[1])*12)+4] - ray.P[1]) * ray.Dinv[1]
-		tzmin := (boxes[idx+(sign[2]*12)+8] - ray.P[2]) * ray.Dinv[2]
-		tzmax := (boxes[idx+((1-sign[2])*12)+8] - ray.P[2]) * ray.Dinv[2]
+		tmin := (boxes[idx+(sign[0]*12)+0] - ray.P.X) * ray.Dinv.X
+		tmax := (boxes[idx+((1-sign[0])*12)+0] - ray.P.X) * ray.Dinv.X
+		tymin := (boxes[idx+(sign[1]*12)+4] - ray.P.Y) * ray.Dinv.Y
+		tymax := (boxes[idx+((1-sign[1])*12)+4] - ray.P.Y) * ray.Dinv.Y
+		tzmin := (boxes[idx+(sign[2]*12)+8] - ray.P.Z) * ray.Dinv.Z
+		tzmax := (boxes[idx+((1-sign[2])*12)+8] - ray.P.Z) * ray.Dinv.Z
 
 		tNear := m.Max(m.Max(tmin, tymin), m.Max(0.0, tzmin))
 		tFar := m.Min(m.Min(tmax, tymax), m.Min(ray.Tclosest, tzmax))
@@ -54,22 +54,22 @@ func intersectBoxesSlow2(ray *core.Ray, boxes *[4 * 3 * 2]float32, hits *[4]int3
 	for idx := uint8(0); idx < 4; idx++ {
 
 		// x's are: boxes[idx+(sign[0]*12)+0]
-		// y's are: boxes[idx+(sign[1]*12)+4]
-		// z's are: boxes[idx+(sign[2]*12)+8]
-		tx1 := (boxes[idx+(0*12)+0] - ray.P[0]) * ray.Dinv[0]
-		tx2 := (boxes[idx+(1*12)+0] - ray.P[0]) * ray.Dinv[0]
+		// y's are: boxes[idx+(sign.Y*12)+4]
+		// z's are: boxes[idx+(sign.Z*12)+8]
+		tx1 := (boxes[idx+(0*12)+0] - ray.P.X) * ray.Dinv.X
+		tx2 := (boxes[idx+(1*12)+0] - ray.P.X) * ray.Dinv.X
 
 		tmin := m.Min(tx1, tx2)
 		tmax := m.Max(tx1, tx2)
 
-		ty1 := (boxes[idx+(0*12)+4] - ray.P[1]) * ray.Dinv[1]
-		ty2 := (boxes[idx+(1*12)+4] - ray.P[1]) * ray.Dinv[1]
+		ty1 := (boxes[idx+(0*12)+4] - ray.P.Y) * ray.Dinv.Y
+		ty2 := (boxes[idx+(1*12)+4] - ray.P.Y) * ray.Dinv.Y
 
 		tmin = m.Max(tmin, m.Min(ty1, ty2))
 		tmax = m.Min(tmax, m.Max(ty1, ty2))
 
-		tz1 := (boxes[idx+(0*12)+8] - ray.P[2]) * ray.Dinv[2]
-		tz2 := (boxes[idx+(1*12)+8] - ray.P[2]) * ray.Dinv[2]
+		tz1 := (boxes[idx+(0*12)+8] - ray.P.Z) * ray.Dinv.Z
+		tz2 := (boxes[idx+(1*12)+8] - ray.P.Z) * ray.Dinv.Z
 
 		tmin = m.Max(tmin, m.Min(tz1, tz2))
 		tmax = m.Min(tmax, m.Max(tz1, tz2))
@@ -134,8 +134,8 @@ func Trace(qbvh []Node, prim Primitive, ray *core.Ray, sg *core.ShaderContext) b
 			//order := [4]int{0, 1, 2, 3} // actually in reverse order as this is order pushed on stack
 			//var order [4]uint8
 
-			if ray.D[qbvh[node].Axis0] < 0 {
-				if ray.D[qbvh[node].Axis1] < 0 {
+			if ray.D.Elt(int(qbvh[node].Axis0)) < 0 {
+				if ray.D.Elt(int(qbvh[node].Axis1)) < 0 {
 
 					ray.Task.Traversal.Stack[stackTop].Node = qbvh[node].Children[0]
 					ray.Task.Traversal.Stack[stackTop].T = ray.Task.Traversal.T[0]
@@ -155,7 +155,7 @@ func Trace(qbvh []Node, prim Primitive, ray *core.Ray, sg *core.ShaderContext) b
 					stackTop -= ray.Task.Traversal.Hits[0]
 				}
 
-				if ray.D[qbvh[node].Axis2] < 0 {
+				if ray.D.Elt(int(qbvh[node].Axis2)) < 0 {
 					ray.Task.Traversal.Stack[stackTop].Node = qbvh[node].Children[2]
 					ray.Task.Traversal.Stack[stackTop].T = ray.Task.Traversal.T[2]
 					stackTop -= ray.Task.Traversal.Hits[2]
@@ -174,7 +174,7 @@ func Trace(qbvh []Node, prim Primitive, ray *core.Ray, sg *core.ShaderContext) b
 
 				}
 			} else {
-				if ray.D[qbvh[node].Axis2] < 0 {
+				if ray.D.Elt(int(qbvh[node].Axis2)) < 0 {
 
 					ray.Task.Traversal.Stack[stackTop].Node = qbvh[node].Children[2]
 					ray.Task.Traversal.Stack[stackTop].T = ray.Task.Traversal.T[2]
@@ -193,7 +193,7 @@ func Trace(qbvh []Node, prim Primitive, ray *core.Ray, sg *core.ShaderContext) b
 					stackTop -= ray.Task.Traversal.Hits[2]
 
 				}
-				if ray.D[qbvh[node].Axis1] < 0 {
+				if ray.D.Elt(int(qbvh[node].Axis1)) < 0 {
 					ray.Task.Traversal.Stack[stackTop].Node = qbvh[node].Children[0]
 					ray.Task.Traversal.Stack[stackTop].T = ray.Task.Traversal.T[0]
 					stackTop -= ray.Task.Traversal.Hits[0]

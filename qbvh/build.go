@@ -52,7 +52,7 @@ func calcMinCost(bounds m.BoundingBox, centroids []m.Vec3, boxes []m.BoundingBox
 
 	for i := range indxs {
 		//c := boxes[indxs[i]].AxisCentroid(axis)
-		c := centroids[i][axis]
+		c := centroids[i].Elt(axis)
 		bin := int(k1 * (c - k0))
 
 		if bin < 0 {
@@ -114,7 +114,7 @@ func calcMinCost(bounds m.BoundingBox, centroids []m.Vec3, boxes []m.BoundingBox
 	//log.Printf("a %v", indxs)
 	for left <= right {
 		//		c := boxes[indxs[left]].AxisCentroid(axis)
-		c := centroids[left][axis]
+		c := centroids[left].Elt(axis)
 
 		bin := int(k1 * (c - k0))
 		//log.Printf("%v %v %v", indxs[left], bin, bin < binMinCost)
