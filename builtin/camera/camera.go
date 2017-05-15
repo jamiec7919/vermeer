@@ -64,7 +64,7 @@ type Camera struct {
 	WorldToLocal param.MatrixArray `node:",opt"`
 	LocalToWorld param.MatrixArray `node:",opt"`
 
-	decomp []m.TransformDecomp
+	decomp []m.Transform
 
 	TanThetaFocal float32 `node:"-"` // = tan(Fov/2)*Focal
 
@@ -141,7 +141,7 @@ func (c *Camera) calcLookatMatrices() {
 			U := m.Vec3Add(m.Vec3Scale(m.Cos(roll), u), m.Vec3Scale(m.Sin(roll), v))
 			V := m.Vec3Add(m.Vec3Scale(-m.Sin(roll), u), m.Vec3Scale(m.Cos(roll), v))
 
-			mtx := m.Matrix4Mul(m.Matrix4Translate(P[0], P[1], P[2]), m.Matrix4Basis(U, V, W))
+			mtx := m.Matrix4Mul(m.Matrix4TransformTranslate(P.X, P.Y, P.Z), m.Matrix4Basis(U, V, W))
 
 			c.LocalToWorld.Elems = append(c.LocalToWorld.Elems, mtx)
 			c.LocalToWorld.MotionKeys++
@@ -179,7 +179,7 @@ func (c *Camera) calcLookatMatrices() {
 			U := m.Vec3Add(m.Vec3Scale(m.Cos(roll), u), m.Vec3Scale(m.Sin(roll), v))
 			V := m.Vec3Add(m.Vec3Scale(-m.Sin(roll), u), m.Vec3Scale(m.Cos(roll), v))
 
-			mtx := m.Matrix4Mul(m.Matrix4Translate(c.From.Elems[i][0], c.From.Elems[i][1], c.From.Elems[i][2]), m.Matrix4Basis(U, V, W))
+			mtx := m.Matrix4Mul(m.Matrix4TransformTranslate(c.From.Elems[i].X, c.From.Elems[i].Y, c.From.Elems[i].Z), m.Matrix4Basis(U, V, W))
 
 			c.LocalToWorld.Elems = append(c.LocalToWorld.Elems, mtx)
 			c.LocalToWorld.MotionKeys++
@@ -188,7 +188,8 @@ func (c *Camera) calcLookatMatrices() {
 	}
 
 	for i := range c.LocalToWorld.Elems {
-		c.decomp = append(c.decomp, m.TransformDecompMatrix4(c.LocalToWorld.Elems[i]))
+
+		c.decomp = append(c.decomp, m.Matrix4ToTransform(c.LocalToWorld.Elems[i]))
 	}
 }
 
@@ -211,7 +212,7 @@ func (c *Camera) matrixCalc() {
 	}
 
 	for i := range c.LocalToWorld.Elems {
-		c.decomp = append(c.decomp, m.TransformDecompMatrix4(c.LocalToWorld.Elems[i]))
+		c.decomp = append(c.decomp, m.Matrix4ToTransform(c.LocalToWorld.Elems[i]))
 	}
 
 }
@@ -220,7 +221,7 @@ func (c *Camera) matrixCalc() {
 // x,y are the raster position, lensU,lensV are in [0,1)x[0,1)
 func (c *Camera) ComputeRay(sc *core.ShaderContext, lensU, lensV float64, ray *core.Ray) {
 
-	M := m.Matrix4Identity
+	M := m.Matrix4Identity()
 
 	if c.decomp != nil {
 		k := sc.Time * float32(len(c.decomp)-1)
@@ -230,9 +231,9 @@ func (c *Camera) ComputeRay(sc *core.ShaderContext, lensU, lensV float64, ray *c
 		key := int(m.Floor(k))
 		key2 := int(m.Ceil(k))
 
-		trn := m.TransformDecompLerp(c.decomp[key], c.decomp[key2], t)
+		trn := m.TransformLerp(c.decomp[key], c.decomp[key2], t)
 
-		M = m.TransformDecompToMatrix4(trn)
+		M = m.TransformToMatrix4(trn)
 	}
 
 	// D = || u*U + v*V - d*W  ||
