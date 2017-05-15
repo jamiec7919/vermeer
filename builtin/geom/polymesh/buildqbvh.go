@@ -54,9 +54,9 @@ func (mesh *PolyMesh) initAccel() error {
 			boxes[i].GrowVec3(V1)
 			boxes[i].GrowVec3(V2)
 
-			for k := 0; k < 3; k++ {
-				centroids[i][k] = (V0[k] + V1[k] + V2[k]) / 3
-			}
+			centroids[i].X = (V0.X + V1.X + V2.X) / 3
+			centroids[i].Y = (V0.Y + V1.Y + V2.Y) / 3
+			centroids[i].Z = (V0.Z + V1.Z + V2.Z) / 3
 
 			idxs[i] = int32(i)
 		}
@@ -83,9 +83,9 @@ func (mesh *PolyMesh) initAccel() error {
 		boxes[i].GrowVec3(V1)
 		boxes[i].GrowVec3(V2)
 
-		for k := 0; k < 3; k++ {
-			centroids[i][k] = (V0[k] + V1[k] + V2[k]) / 3
-		}
+		centroids[i].X = (V0.X + V1.X + V2.X) / 3
+		centroids[i].Y = (V0.Y + V1.Y + V2.Y) / 3
+		centroids[i].Z = (V0.Z + V1.Z + V2.Z) / 3
 
 		//fmt.Printf("%v %v\n", boxes[i], centroids[i])
 		if V0 == V1 && V0 == V2 {

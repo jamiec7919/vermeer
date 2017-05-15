@@ -12,7 +12,7 @@ import (
 func (mesh *PolyMesh) init() error {
 
 	for _, t := range mesh.Transform.Elems {
-		mesh.transformSRT = append(mesh.transformSRT, m.TransformDecompMatrix4(t))
+		mesh.transformSRT = append(mesh.transformSRT, m.Matrix4ToTransform(t))
 	}
 
 	mesh.initTransformBounds()
