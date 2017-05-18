@@ -68,10 +68,10 @@ func (sphere *Sphere) MotionKeys() int {
 func (sphere *Sphere) Bounds(time float32) (b m.BoundingBox) {
 
 	for k := range b.Bounds[0] {
-		b.Bounds[0][k] = sphere.P[k] - sphere.Radius
+		b.Bounds[0][k] = sphere.P.Elt(k) - sphere.Radius
 	}
 	for k := range b.Bounds[1] {
-		b.Bounds[1][k] = sphere.P[k] + sphere.Radius
+		b.Bounds[1][k] = sphere.P.Elt(k) + sphere.Radius
 	}
 	return
 }

@@ -152,16 +152,16 @@ func (d *Sphere) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bo
 	lsg.Ng = N
 	lsg.P = x
 
-	lsg.U = 0.5 + m.Atan2(N[2], N[0])/(2*m.Pi)
-	lsg.V = 0.5 - m.Asin(N[1])/m.Pi
+	lsg.U = 0.5 + m.Atan2(N.Z, N.X)/(2*m.Pi)
+	lsg.V = 0.5 - m.Asin(N.Y)/m.Pi
 	lsg.Shader = d.shader
 
 	E := d.shader.EvalEmission(lsg, m.Vec3Neg(sample.D))
 
 	sg.ReleaseShaderContext(lsg)
 
-	//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
-	//E.Scale(m.Abs(omegaO[2]))
+	//		sg.Liu.FromRGB(E.X*ODotN, E.Y*ODotN, E.Z*ODotN)
+	//E.Scale(m.Abs(omegaO.Z))
 	sample.Liu.FromRGB(E)
 
 	V := m.Vec3Sub(d.P, sg.P)
@@ -243,16 +243,16 @@ func (d *Sphere) SampleArea(sg *core.ShaderContext, n int) error {
 		lsg.N = N
 		lsg.Ng = N
 		lsg.P = x
-		lsg.U = 0.5 + m.Atan2(N[2], N[0])/(2*m.Pi)
-		lsg.V = 0.5 - m.Asin(N[1])/m.Pi
+		lsg.U = 0.5 + m.Atan2(N.Z, N.X)/(2*m.Pi)
+		lsg.V = 0.5 - m.Asin(N.Y)/m.Pi
 		lsg.Shader = d.shader
 
 		E := d.shader.EvalEmission(lsg, m.Vec3Neg(omega))
 
 		sg.ReleaseShaderContext(lsg)
 
-		//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
-		//E.Scale(m.Abs(omegaO[2]))
+		//		sg.Liu.FromRGB(E.X*ODotN, E.Y*ODotN, E.Z*ODotN)
+		//E.Scale(m.Abs(omegaO.Z))
 		ls.Liu.FromRGB(E)
 
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf

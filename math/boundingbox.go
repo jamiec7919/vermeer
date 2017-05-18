@@ -25,9 +25,9 @@ func (b *BoundingBox) Dim(axis int) float32 {
 
 // Centroid returns the 3D point at the centre of the box.
 func (b *BoundingBox) Centroid() (o Vec3) {
-	o[0] = (b.Bounds[1][0] + b.Bounds[0][0]) * 0.5
-	o[1] = (b.Bounds[1][1] + b.Bounds[0][1]) * 0.5
-	o[2] = (b.Bounds[1][2] + b.Bounds[0][2]) * 0.5
+	o.X = (b.Bounds[1][0] + b.Bounds[0][0]) * 0.5
+	o.Y = (b.Bounds[1][1] + b.Bounds[0][1]) * 0.5
+	o.Z = (b.Bounds[1][2] + b.Bounds[0][2]) * 0.5
 	return
 }
 
@@ -92,7 +92,7 @@ func (b *BoundingBox) Reset() {
 
 // GrowVec3 will expand the box to contain the given point represented as a Vec3.
 func (b *BoundingBox) GrowVec3(P Vec3) {
-	b.Grow(P[0], P[1], P[2])
+	b.Grow(P.X, P.Y, P.Z)
 }
 
 // GrowBox will grow the box to contain the given BoundingBox.

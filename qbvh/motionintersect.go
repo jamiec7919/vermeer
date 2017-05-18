@@ -52,15 +52,15 @@ func TraceMotion(qbvh MotionQBVH, time float32, key, key2 int, prim MotionPrimit
 
 			order := [4]int{0, 1, 2, 3} // actually in reverse order as this is order pushed on stack
 
-			if ray.D[pnode.Axis0] < 0 {
-				if ray.D[pnode.Axis2] < 0 {
+			if ray.D.Elt(int(pnode.Axis0)) < 0 {
+				if ray.D.Elt(int(pnode.Axis2)) < 0 {
 					order[3] = 3
 					order[2] = 2
 				} else {
 					order[3] = 2
 					order[2] = 3
 				}
-				if ray.D[pnode.Axis1] < 0 {
+				if ray.D.Elt(int(pnode.Axis1)) < 0 {
 					order[1] = 1
 					order[0] = 0
 				} else {
@@ -68,14 +68,14 @@ func TraceMotion(qbvh MotionQBVH, time float32, key, key2 int, prim MotionPrimit
 					order[0] = 1
 				}
 			} else {
-				if ray.D[pnode.Axis2] < 0 {
+				if ray.D.Elt(int(pnode.Axis2)) < 0 {
 					order[1] = 3
 					order[0] = 2
 				} else {
 					order[1] = 2
 					order[0] = 3
 				}
-				if ray.D[pnode.Axis1] < 0 {
+				if ray.D.Elt(int(pnode.Axis1)) < 0 {
 					order[3] = 1
 					order[2] = 0
 				} else {

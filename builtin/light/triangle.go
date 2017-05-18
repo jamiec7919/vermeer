@@ -503,16 +503,16 @@ func sampleSphericalTriangle(p0, p1, p2, p m.Vec3, r0, r1 float64) (m.Vec3, floa
 	w := m.Vec3Dot(pc, pa)
 
 	var v31 m.Vec3
-	for k := range v31 {
-		v31[k] = pc[k] - w*pa[k]
+	for k := 0; k < 3; k++ {
+		v31.Set(k, pc.Elt(k)-w*pa.Elt(k))
 	}
 
 	v31 = m.Vec3Normalize(v31)
 
 	var v4 m.Vec3
 
-	for k := range v4 {
-		v4[k] = q*pa[k] + m.Sqrt(1-q*q)*v31[k]
+	for k := 0; k < 3; k++ {
+		v4.Set(k, q*pa.Elt(k)+m.Sqrt(1-q*q)*v31.Elt(k))
 	}
 
 	z := 1 - float32(r1)*(1-m.Vec3Dot(v4, pb))
@@ -521,8 +521,8 @@ func sampleSphericalTriangle(p0, p1, p2, p m.Vec3, r0, r1 float64) (m.Vec3, floa
 
 	var v42 m.Vec3
 
-	for k := range v42 {
-		v42[k] = v4[k] - w*pb[k]
+	for k := 0; k < 3; k++ {
+		v42.Set(k, v4.Elt(k)-w*pb.Elt(k))
 	}
 
 	v42 = m.Vec3Normalize(v42)

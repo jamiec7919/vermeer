@@ -54,8 +54,8 @@ func Trace(ray *Ray, samp *TraceSample) bool {
 		task:         ray.Task,
 		Image:        image,
 		Scramble:     ray.Scramble,
-		Transform:    m.Matrix4Identity,
-		InvTransform: m.Matrix4Identity,
+		Transform:    m.Matrix4Identity(),
+		InvTransform: m.Matrix4Identity(),
 	}
 
 	Tclosest := ray.Tclosest // record the original value for this as it gets overwritten

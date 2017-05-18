@@ -40,20 +40,20 @@ func ggxSmithG1(omega, omegaM m.Vec3, alpha float32) float32 {
 
 	ODotN := m.Vec3Dot(omega, omegaM)
 
-	//thetaV := m.Acos(omega[2])
+	//thetaV := m.Acos(omega.Z)
 	//tan := m.Tan(thetaV)
-	//log.Printf("%v %v", tan*tan, (1.0/(omega[2]*omega[2]))-1)
+	//log.Printf("%v %v", tan*tan, (1.0/(omega.Z*omega.Z))-1)
 
-	denom := 1 + m.Sqrt(1+(alpha*alpha)*((1.0/(omega[2]*omega[2]))-1))
+	denom := 1 + m.Sqrt(1+(alpha*alpha)*((1.0/(omega.Z*omega.Z))-1))
 
-	return chi(ODotN/omega[2]) * 2 / denom
+	return chi(ODotN/omega.Z) * 2 / denom
 }
 
 func ggxD(omegaM m.Vec3, alpha float32) float32 {
 
-	numer := alpha * alpha * chi(omegaM[2])
+	numer := alpha * alpha * chi(omegaM.Z)
 
-	if omegaM[2] == 1.0 {
+	if omegaM.Z == 1.0 {
 		// if omegaM == {0,0,1} with alpha small there is a numerical problem
 		// calculating the weight. Since this mostly happens with omegaM being chosen as the
 		// perfect mirror direction (same as shade normal) we do the calculation directly here avoiding
@@ -62,7 +62,7 @@ func ggxD(omegaM m.Vec3, alpha float32) float32 {
 		return 1.0 / (m.Pi * alpha * alpha)
 	}
 
-	denom := m.Pi * sqr32(omegaM[2]*omegaM[2]) * sqr32(alpha*alpha+((1.0/(omegaM[2]*omegaM[2]))-1))
+	denom := m.Pi * sqr32(omegaM.Z*omegaM.Z) * sqr32(alpha*alpha+((1.0/(omegaM.Z*omegaM.Z))-1))
 
 	//log.Printf("%v %v %v", omegaM, numer, denom)
 	return numer / denom
@@ -107,10 +107,10 @@ func (b *MicrofacetGGX) PDF(_omegaO m.Vec3) float64 {
 
 	var omegaM m.Vec3
 
-	omegaM = m.Vec3Scale(sign(b.OmegaR[2]), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omegaO)))
+	omegaM = m.Vec3Scale(sign(b.OmegaR.Z), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omegaO)))
 
 	//log.Printf("D: %v", ggxD(omegaM, alpha))
-	pdf := float64(ggxD(omegaM, alpha) * omegaM[2])
+	pdf := float64(ggxD(omegaM, alpha) * omegaM.Z)
 
 	if math.IsNaN(pdf) {
 		return 0
@@ -125,16 +125,16 @@ func (b *MicrofacetGGX) Eval(_omegaO m.Vec3) (rho colour.Spectrum) {
 
 	alpha := sqr32(b.Roughness)
 
-	h := m.Vec3Scale(sign(b.OmegaR[2]), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omegaI)))
+	h := m.Vec3Scale(sign(b.OmegaR.Z), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omegaI)))
 
 	fresnel := b.Fresnel.Kr(m.Vec3DotAbs(b.OmegaR, h))
 
 	numer := ggxSmithG1(b.OmegaR, h, alpha) * ggxSmithG1(omegaI, h, alpha) * ggxD(h, alpha)
-	denom := 4 * m.Abs(b.OmegaR[2]) * m.Abs(omegaI[2])
+	denom := 4 * m.Abs(b.OmegaR.Z) * m.Abs(omegaI.Z)
 
 	rho.Lambda = b.Lambda
 	rho.FromRGB(fresnel)
-	rho.Scale(m.Abs(omegaI[2]) * numer / denom)
+	rho.Scale(m.Abs(omegaI.Z) * numer / denom)
 
 	for k := range rho.C {
 		if rho.C[k] < 0 || math.IsNaN(float64(rho.C[k])) {
@@ -154,22 +154,22 @@ func (b *MicrofacetGGX) _weight(omegaI m.Vec3) (rho colour.Spectrum) {
 	//etaI := float32(1)
 	//etaO := b.IOR
 
-	//if b.OmegaR[2] < 0.0 {
+	//if b.OmegaR.Z < 0.0 {
 	//	etaI, etaO = etaO, etaI
 	//}
 
 	weight := float32(0)
 
-	//if b.OmegaR[2] > 0 && omegaI[2] < 0 {
+	//if b.OmegaR.Z > 0 && omegaI.Z < 0 {
 	//	omegaM = m.Vec3Normalize(m.Vec3Add(m.Vec3Scale(1.0, b.OmegaR), m.Vec3Scale(b.IOR, omegaI)))
-	//} else if b.OmegaR[2] < 0 && omegaI[2] > 0 {
+	//} else if b.OmegaR.Z < 0 && omegaI.Z > 0 {
 	//	omegaM = m.Vec3Normalize(m.Vec3Add(m.Vec3Scale(b.IOR, b.OmegaR), m.Vec3Scale(1.0, omegaI)))
 	//} else {
 	omegaM = m.Vec3Scale(sign(m.Vec3Dot(b.OmegaR, omegaI)), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omegaI)))
 	//	}
 
 	weight = m.Vec3DotAbs(omegaI, omegaM) * ggxSmithG1(omegaI, omegaM, alpha) * ggxSmithG1(b.OmegaR, omegaM, alpha)
-	weight /= m.Abs(omegaM[2]) * m.Abs(omegaI[2])
+	weight /= m.Abs(omegaM.Z) * m.Abs(omegaI.Z)
 
 	rho.Lambda = b.Lambda
 	rho.FromRGB(colour.RGB{1, 1, 1})

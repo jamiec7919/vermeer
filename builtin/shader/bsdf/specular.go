@@ -20,7 +20,7 @@ func reflect(omegaR, N m.Vec3) (omegaO m.Vec3) {
 
 func refract(omegaR m.Vec3, ior float32) (omegaO m.Vec3) {
 	eta := 1.0 / ior
-	sign := sign(omegaR[2])
+	sign := sign(omegaR.Z)
 
 	if sign < 0 {
 		// Approaching from 'in media' so swap etaI & etaO
@@ -92,7 +92,7 @@ func (b *Specular) Eval(_omegaO m.Vec3) (rho colour.Spectrum) {
 		return
 	}
 
-	fresnel := b.fresnel.Kr(b.OmegaR[2])
+	fresnel := b.fresnel.Kr(b.OmegaR.Z)
 
 	rho.Lambda = b.Lambda
 	rho.FromRGB(fresnel)

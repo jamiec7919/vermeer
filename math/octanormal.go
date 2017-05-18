@@ -13,15 +13,6 @@ the lossless conversion to two float32s.
 */
 type OctaNormal [2]float32
 
-func sign(v float32) float32 {
-	if v >= 0.0 {
-		return 1.0
-	}
-
-	return -1.0
-
-}
-
 func octWrap(v OctaNormal) (on OctaNormal) {
 	on[0] = (1.0 - Abs(v[1])) * sign(v[0])
 	on[1] = (1.0 - Abs(v[0])) * sign(v[1])
@@ -31,17 +22,17 @@ func octWrap(v OctaNormal) (on OctaNormal) {
 
 // EncodeOctahedralNormal converts the (unit) vector n to the Octahedral normal representation.
 func EncodeOctahedralNormal(n Vec3) (on OctaNormal) {
-	nf := Abs(n[0]) + Abs(n[1]) + Abs(n[2])
+	nf := Abs(n.X) + Abs(n.Y) + Abs(n.Z)
 
-	n[0] /= nf
-	n[1] /= nf
-	n[2] /= nf
+	n.X /= nf
+	n.Y /= nf
+	n.Z /= nf
 
-	if n[2] >= 0.0 {
-		on[0] = n[0]
-		on[1] = n[1]
+	if n.Z >= 0.0 {
+		on[0] = n.X
+		on[1] = n.Y
 	} else {
-		on = octWrap(OctaNormal{n[0], n[1]})
+		on = octWrap(OctaNormal{n.X, n.Y})
 
 	}
 
@@ -56,14 +47,14 @@ func DecodeOctahedralNormal(on OctaNormal) Vec3 {
 	on[1] = on[1]*2.0 - 1.0
 
 	var n Vec3
-	n[2] = 1.0 - Abs(on[0]) - Abs(on[1])
-	if n[2] >= 0.0 {
-		n[0] = on[0]
-		n[1] = on[1]
+	n.Z = 1.0 - Abs(on[0]) - Abs(on[1])
+	if n.Z >= 0.0 {
+		n.X = on[0]
+		n.Y = on[1]
 	} else {
 		o := octWrap(on)
-		n[0] = o[0]
-		n[1] = o[1]
+		n.X = o[0]
+		n.Y = o[1]
 	}
 	return Vec3Normalize(n)
 }

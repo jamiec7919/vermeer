@@ -43,15 +43,15 @@ func SampleFeline(filename string, sc *core.ShaderContext) (c [3]float32) {
 	// TODO: tidy this all up, the mip mapping and texture structures are
 	// a complete mess.
 
-	Dduvdx[0] = Dduvdx[0] * float32(img.w)
-	Dduvdy[0] = Dduvdy[0] * float32(img.w)
+	Dduvdx.X = Dduvdx.X * float32(img.w)
+	Dduvdy.X = Dduvdy.X * float32(img.w)
 
-	Dduvdx[1] = Dduvdx[1] * float32(img.h)
-	Dduvdy[1] = Dduvdy[1] * float32(img.h)
+	Dduvdx.Y = Dduvdx.Y * float32(img.h)
+	Dduvdy.Y = Dduvdy.Y * float32(img.h)
 
-	Ann := Dduvdx[1]*Dduvdx[1] + Dduvdy[1]*Dduvdy[1]
-	Bnn := -2 * (Dduvdx[0]*Dduvdx[1] + Dduvdy[0]*Dduvdy[1])
-	Cnn := Dduvdx[0]*Dduvdx[0] + Dduvdy[0]*Dduvdy[0]
+	Ann := Dduvdx.Y*Dduvdx.Y + Dduvdy.Y*Dduvdy.Y
+	Bnn := -2 * (Dduvdx.X*Dduvdx.Y + Dduvdy.X*Dduvdy.Y)
+	Cnn := Dduvdx.X*Dduvdx.X + Dduvdy.X*Dduvdy.X
 	F := Ann*Cnn - (Bnn * Bnn / 4)
 
 	A := Ann / F
@@ -144,7 +144,7 @@ func SampleFeline(filename string, sc *core.ShaderContext) (c [3]float32) {
 		c[k] = accum[k] / accumWeight
 	}
 
-	//c[0] = levelOfDetail * 10 //m.Floor(levelOfDetail) / float32(img.mipmap.MaxLevelOfDetail())
+	//c.X = levelOfDetail * 10 //m.Floor(levelOfDetail) / float32(img.mipmap.MaxLevelOfDetail())
 
 	return
 

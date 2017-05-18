@@ -31,7 +31,7 @@ type PolyMesh struct {
 	IsVisible   bool `node:",opt"`
 
 	Transform    param.MatrixArray `node:",opt"`
-	transformSRT []m.TransformDecomp
+	transformSRT []m.Transform
 	//	invTransformSRT []m.TransformDecomp
 
 	UV    param.Vec2Array `node:",opt"`

@@ -22,8 +22,8 @@ func (sphere *Sphere) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 
 			N := m.Vec3Normalize(m.Vec3Sub(P, sphere.P))
 
-			U := 0.5 + m.Atan2(N[2], N[0])/(2*m.Pi)
-			V := 0.5 - m.Asin(N[1])/m.Pi
+			U := 0.5 + m.Atan2(N.Z, N.X)/(2*m.Pi)
+			V := 0.5 - m.Asin(N.Y)/m.Pi
 
 			sg.Poffset = m.Vec3Scale(0.001, N)
 			sg.Ng = N
@@ -35,13 +35,13 @@ func (sphere *Sphere) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 			sg.U = U
 			sg.V = V
 
-			sg.DdPdu[0] = 1
-			sg.DdPdu[1] = 0
-			sg.DdPdu[2] = 0
+			sg.DdPdu.X = 1
+			sg.DdPdu.Y = 0
+			sg.DdPdu.Z = 0
 
-			sg.DdPdv[0] = 0
-			sg.DdPdv[1] = 0
-			sg.DdPdv[2] = 1
+			sg.DdPdv.X = 0
+			sg.DdPdv.Y = 0
+			sg.DdPdv.Z = 1
 
 			sg.Shader = sphere.shader
 
