@@ -4,6 +4,10 @@
 
 package colour
 
+import (
+	m "github.com/jamiec7919/vermeer/math"
+)
+
 /*
 
   Uses the idea of Hero Wavelength. (add ref..)
@@ -16,8 +20,8 @@ package colour
 // Constants for min and maximum wavelength and number of wavelength samples in use for the
 // hero-wavelength.
 const (
-	LambdaMin = 450
-	LambdaMax = 750
+	LambdaMin = spectrumSampleMin // 450
+	LambdaMax = spectrumSampleMax // 750
 	LambdaN   = 4
 )
 
@@ -47,9 +51,18 @@ func (wv *Spectrum) Set(v float32) {
 
 // FromRGB ses the spectrum from the RGB values.
 func (wv *Spectrum) FromRGB(rgb RGB) error {
+
+	xyz := sRGB.RGBToXYZ(rgb)
+
 	for k := 0; k < 4; k++ {
-		wv.C[k] = RGBToSpectrumSmits99(rgb[0], rgb[1], rgb[2], wv.Wavelength(k))
+		wv.C[k] = spectrumXYZToP(wv.Wavelength(k), xyz) / equalEnergyReflectance
+		wv.C[k] = m.Min(1, wv.C[k]) // clip
 	}
+	/*
+		for k := 0; k < 4; k++ {
+			wv.C[k] = RGBToSpectrumSmits99(rgb[0], rgb[1], rgb[2], wv.Wavelength(k))
+		}
+	*/
 	return nil
 }
 
@@ -66,8 +79,49 @@ func (wv *Spectrum) ToRGB() (rgb RGB) {
 		z += wv.C[i] * cie1931deg2.Z(wv.Wavelength(i))
 	}
 
+	//x *= float32(LambdaMax-LambdaMin) / 5
+	//y *= float32(LambdaMax-LambdaMin) / 5
+	//z *= float32(LambdaMax-LambdaMin) / 5
 	// Now transform XYZ to RGB.  Should make this selectable as to which RGB.
-	return sRGB.XYZToRGB(x, y, z)
+	rgb = sRGB.XYZToRGB(x, y, z)
+	rgb.Clamp()
+	return rgb
+}
+
+// FromRGB ses the spectrum from the RGB values.
+func (wv *Spectrum) FromXYZ(xyz RGB) error {
+
+	for k := 0; k < 4; k++ {
+		wv.C[k] = spectrumXYZToP(wv.Wavelength(k), xyz) / equalEnergyReflectance
+		wv.C[k] = m.Min(1, wv.C[k]) // clip
+	}
+	/*
+		for k := 0; k < 4; k++ {
+			wv.C[k] = RGBToSpectrumSmits99(rgb[0], rgb[1], rgb[2], wv.Wavelength(k))
+		}
+	*/
+
+	return nil
+}
+
+// ToRGB converts the spectrum to RGB.
+func (wv *Spectrum) ToXYZ() (xyz RGB) {
+	var x, y, z float32
+
+	// Treat s as a line spectrum, therefore integrals required are: Glassner 1987
+	// (How to Derive a Spectrum From an RGB Triple)
+
+	for i := 0; i < LambdaN; i++ {
+		x += wv.C[i] * cie1931deg2.X(wv.Wavelength(i))
+		y += wv.C[i] * cie1931deg2.Y(wv.Wavelength(i))
+		z += wv.C[i] * cie1931deg2.Z(wv.Wavelength(i))
+	}
+
+	//x *= float32(LambdaMax-LambdaMin) / 5
+	//y *= float32(LambdaMax-LambdaMin) / 5
+	//z *= float32(LambdaMax-LambdaMin) / 5
+	// Now transform XYZ to RGB.  Should make this selectable as to which RGB.
+	return RGB{x, y, z}
 }
 
 // Mul multiplies the spectrum by other.  Both spectra must represent the same wavelength.
@@ -100,7 +154,7 @@ func (wv *Spectrum) Add(other Spectrum) {
 // j = 0..LambdaN
 func (wv *Spectrum) Wavelength(j int) (v float32) {
 
-	v = (wv.Lambda - LambdaMin + (float32(j)/LambdaN)*lambdaBar)
+	v = ((wv.Lambda - LambdaMin) + (float32(j)/LambdaN)*lambdaBar)
 
 	if v >= lambdaBar {
 		v -= lambdaBar
