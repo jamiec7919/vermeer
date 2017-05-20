@@ -80,10 +80,13 @@ func fresnel(r, g, cosTheta float32) float32 {
 // cosTheta is the clamped dot product of direction and surface normal.
 //
 // Note that this returns an RGB value.  To get a single value use RGB.Maxh().
-func (f *Conductor) Kr(cosTheta float32) (out colour.RGB) {
-	for k := range out {
-		out[k] = fresnel(f.r[k], f.g[k], cosTheta)
+func (f *Conductor) Kr(lambda float32, cosTheta float32) (out colour.Spectrum) {
+	var rgb colour.RGB
+	for k := range rgb {
+		rgb[k] = fresnel(f.r[k], f.g[k], cosTheta)
 	}
 
+	out.Lambda = lambda
+	out.FromRGB(rgb)
 	return
 }

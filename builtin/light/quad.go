@@ -155,7 +155,7 @@ func (d *Quad) SampleArea(sg *core.ShaderContext, n int) error {
 		sg.ReleaseShaderContext(lsg)
 		//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
 		//E.Scale(m.Abs(omegaO[2]))
-		ls.Liu.FromRGB(E)
+		ls.Liu = E //.FromRGB(E)
 
 		// geometry term / pdf, lots of cancellations
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf

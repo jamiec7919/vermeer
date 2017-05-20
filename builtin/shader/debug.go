@@ -42,13 +42,16 @@ func (sh *Debug) PostRender() error { return nil }
 // Eval implements core.Shader.  Performs all shading for the surface point in sg.  May trace
 // rays and shadow rays.
 func (sh *Debug) Eval(sg *core.ShaderContext) bool {
-	sg.OutRGB = sh.Colour.RGB(sg)
+	//sg.OutRGB = sh.Colour.RGB(sg)
+	sg.Out = sh.Colour.RGB(sg)
 
 	return true
 }
 
 // EvalEmission implements core.Shader.
-func (sh *Debug) EvalEmission(sg *core.ShaderContext, omegaO m.Vec3) colour.RGB { return colour.RGB{} }
+func (sh *Debug) EvalEmission(sg *core.ShaderContext, omegaO m.Vec3) colour.Spectrum {
+	return colour.Spectrum{Lambda: sg.Lambda}
+}
 
 func init() {
 	nodes.Register("DebugShader", func() (core.Node, error) {

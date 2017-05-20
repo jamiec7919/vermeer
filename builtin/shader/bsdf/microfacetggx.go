@@ -8,7 +8,6 @@ import (
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
-	//"log"
 	"math"
 )
 
@@ -127,13 +126,13 @@ func (b *MicrofacetGGX) Eval(_omegaO m.Vec3) (rho colour.Spectrum) {
 
 	h := m.Vec3Scale(sign(b.OmegaR.Z), m.Vec3Normalize(m.Vec3Add(b.OmegaR, omegaI)))
 
-	fresnel := b.Fresnel.Kr(m.Vec3DotAbs(b.OmegaR, h))
+	fresnel := b.Fresnel.Kr(b.Lambda, m.Vec3DotAbs(b.OmegaR, h))
 
 	numer := ggxSmithG1(b.OmegaR, h, alpha) * ggxSmithG1(omegaI, h, alpha) * ggxD(h, alpha)
 	denom := 4 * m.Abs(b.OmegaR.Z) * m.Abs(omegaI.Z)
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(fresnel)
+	rho = fresnel
 	rho.Scale(m.Abs(omegaI.Z) * numer / denom)
 
 	for k := range rho.C {
