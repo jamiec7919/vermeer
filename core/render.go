@@ -5,6 +5,7 @@
 package core
 
 import (
+	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/math/ldseq"
 	"log"
 	"math"
@@ -91,7 +92,7 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 				//rasterY = rand.Float64() + float64(y)
 
 				time := ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].time)
-				lambda := (720-450)*ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].lambda) + 450
+				lambda := (colour.LambdaMax-colour.LambdaMin)*ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].lambda) + colour.LambdaMin
 
 				lensU := ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].lensU)
 				lensV := ldseq.Sobol(uint64(iter), framescramble[pixIdx].lensV)
