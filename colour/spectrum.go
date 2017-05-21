@@ -127,6 +127,9 @@ func (wv *Spectrum) ToXYZ() (xyz RGB) {
 // Mul multiplies the spectrum by other.  Both spectra must represent the same wavelength.
 func (wv *Spectrum) Mul(other Spectrum) {
 	// if wv.Lambda != other.Lambda IS ERROR
+	if wv.Lambda != other.Lambda {
+		panic("wv.Lambda != other.Lambda")
+	}
 	wv.C[0] *= other.C[0]
 	wv.C[1] *= other.C[1]
 	wv.C[2] *= other.C[2]
@@ -144,6 +147,9 @@ func (wv *Spectrum) Scale(s float32) {
 // Add adds other to the spectrum.  Both spectra must represent the same wavelength.
 func (wv *Spectrum) Add(other Spectrum) {
 	// if wv.Lambda != other.Lambda IS ERROR
+	if wv.Lambda != other.Lambda {
+		panic("wv.Lambda != other.Lambda")
+	}
 	wv.C[0] += other.C[0]
 	wv.C[1] += other.C[1]
 	wv.C[2] += other.C[2]
