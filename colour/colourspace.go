@@ -7,7 +7,6 @@ package colour
 
 import (
 	"github.com/jamiec7919/vermeer/math"
-	"log"
 )
 
 // Space represents a transform from XYZ to a different space.
