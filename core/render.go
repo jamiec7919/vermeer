@@ -5,6 +5,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/math/ldseq"
 	"log"
@@ -203,7 +204,8 @@ func Render(maxIter int, exit chan bool) (RenderStats, error) {
 		close(workqueue)
 		wg.Wait()
 
-		log.Printf("Iter %v", iter)
+		// TODO: Should check if stdout is to terminal or not.
+		fmt.Printf("\rIter %v", iter)
 
 		select {
 		case <-exit:
@@ -211,6 +213,9 @@ func Render(maxIter int, exit chan bool) (RenderStats, error) {
 		default:
 		}
 	}
+
+	// Skip to next line after iter print.
+	fmt.Printf("\n")
 
 	stats.end()
 
