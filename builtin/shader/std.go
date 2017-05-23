@@ -470,7 +470,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 
 				if core.Trace(ray, &samp) {
 					transContrib = samp.Spectrum
-					transContrib.Mul(transColour)
+					//transContrib.Mul(transColour)
 				}
 			} else {
 				omega := reflect(sg.Rd, m.Vec3Neg(sg.N))
