@@ -16,6 +16,7 @@ package texture
 import (
 	//"fmt"
 	"bytes"
+	"fmt"
 	"github.com/blezek/tga"
 	"github.com/jamiec7919/vermeer/core"
 	m "github.com/jamiec7919/vermeer/math"
@@ -135,7 +136,16 @@ func loadTexture(url string, file io.Reader) (*Texture, error) {
 		}
 	}
 
-	mipmap := stdfilter(t.w, t.h, t.data, 3)
+	defer func() {
+		e := recover()
+
+		if e != nil {
+			panic(fmt.Sprintf("%v: %v", url))
+		}
+	}()
+
+	//mipmap := stdfilter(t.w, t.h, t.data, 3)
+	mipmap := AverageMipMapFilterRU(t.w, t.h, 3, t.data)
 
 	t.mipmap = mipmap
 
@@ -301,7 +311,7 @@ func SampleRGB(filename string, sg *core.ShaderContext) (out [3]float32) {
 		lod = 0
 	}
 
-	out = img.mipmap.TrilinearSample(sg.U, sg.V, lod)
+	out = img.mipmap.TrilinearSample(sg.U, sg.V, lod, WrapModeRepeat, WrapModeRepeat)
 	out[0] /= 255.0
 	out[1] /= 255.0
 	out[2] /= 255.0

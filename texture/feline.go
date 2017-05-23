@@ -128,7 +128,7 @@ func SampleFeline(filename string, sc *core.ShaderContext) (c [3]float32) {
 		d2 := (sqr(n) / 4) * (sqr(dU) + sqr(dV)) / sqr(majorRadius)
 		relativeWeight := m.Exp(-alpha * d2)
 
-		sample := img.mipmap.TrilinearSample(u/float32(img.w), v/float32(img.h), levelOfDetail)
+		sample := img.mipmap.TrilinearSample(u/float32(img.w), v/float32(img.h), levelOfDetail, WrapModeRepeat, WrapModeRepeat)
 
 		for k := range accum {
 			accum[k] += (sample[k] / 255.0) * relativeWeight
