@@ -5,6 +5,11 @@
 // Package colour provides spectral, hero-wavelength and RGB support functions and types.
 package colour
 
+import (
+	"github.com/jamiec7919/vermeer/math"
+	"log"
+)
+
 // Space represents a transform from XYZ to a different space.
 type Space struct {
 	m    [9]float32 // Matrix to convert XYZ->RGB
@@ -27,4 +32,62 @@ func (s *Space) RGBToXYZ(rgb RGB) (xyz [3]float32) {
 	xyz[2] = rgb[0]*s.mInv[6] + rgb[1]*s.mInv[7] + rgb[2]*s.mInv[8]
 
 	return
+}
+
+func CalcMatrix(xr, yr, xg, yg, xb, yb, Xw, Yw, Zw float32) [9]float32 {
+	m := [9]float32{
+		xr / yr, xg / yg, xb / yb,
+		1, 1, 1,
+		(1 - xr - yr) / yr, (1 - xg - yg) / yg, (1 - xb - yb) / yb,
+	}
+
+	mInv, _ := math.Matrix3Inverse(m)
+
+	Sr := Xw*mInv[0] + Yw*mInv[1] + Zw*mInv[2]
+	Sg := Xw*mInv[3] + Yw*mInv[4] + Zw*mInv[5]
+	Sb := Xw*mInv[6] + Yw*mInv[7] + Zw*mInv[8]
+
+	return [9]float32{
+		Sr * m[0], Sg * m[1], Sb * m[2],
+		Sr * m[3], Sg * m[4], Sb * m[5],
+		Sr * m[6], Sg * m[7], Sb * m[8],
+	}
+}
+
+func init() {
+	log.Printf("%v", CalcMatrix(0.64, 0.33, 0.3, 0.6, 0.15, 0.06, 0.95047, 1, 1.08883))
+}
+
+var BradfordD50ToD65 = [...]float32{
+	0.9555766, -0.0230393, 0.0631636,
+	-0.0282895, 1.0099416, 0.0210077,
+	0.0122982, -0.0204830, 1.3299098,
+}
+
+var BradfordD65ToD50 = [...]float32{
+	1.0478112, 0.0228866, -0.0501270,
+	0.0295424, 0.9904844, -0.0170491,
+	-0.0092345, 0.0150436, 0.752131,
+}
+
+var XYZScalingD65ToE = [...]float32{
+	1.0521111, 0.0000000, 0.0000000,
+	0.0000000, 1.0000000, 0.0000000,
+	0.0000000, 0.0000000, 0.9184170,
+}
+
+var XYZScalingEToD65 = [...]float32{
+	0.9504700, 0.0000000, 0.0000000,
+	0.0000000, 1.0000000, 0.0000000,
+	0.0000000, 0.0000000, 1.0888300,
+}
+
+func ChromaticAdjust(mat [9]float32, a [3]float32) [3]float32 {
+	var b [3]float32
+
+	b[0] = a[0]*mat[0] + a[1]*mat[1] + a[2]*mat[2]
+	b[1] = a[0]*mat[3] + a[1]*mat[4] + a[2]*mat[5]
+	b[2] = a[0]*mat[6] + a[1]*mat[7] + a[2]*mat[8]
+
+	return b
 }

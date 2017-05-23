@@ -66,7 +66,7 @@ func spectrumXYZToP(lambda float32, xyz [3]float32) float32 {
 	var p [6]float32
 	// this clamping is only necessary if lambda is not sure to be >= spectrum_sample_min and <= spectrum_sample_max:
 	sb := //fminf(spectrum_num_samples-1e-4, fmaxf(0.0f,
-		(lambda - spectrumSampleMin) / (spectrumSampleMax - spectrumSampleMin) * (spectrumNumSamples - 1) //));
+		((lambda - spectrumSampleMin) / (spectrumSampleMax - spectrumSampleMin)) * (spectrumNumSamples - 1) //));
 	//assert(sb >= 0.f);
 	//assert(sb <= spectrum_num_samples);
 

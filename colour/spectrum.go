@@ -5,7 +5,7 @@
 package colour
 
 import (
-	m "github.com/jamiec7919/vermeer/math"
+//m "github.com/jamiec7919/vermeer/math"
 )
 
 /*
@@ -53,16 +53,26 @@ func (wv *Spectrum) Set(v float32) {
 func (wv *Spectrum) FromRGB(rgb RGB) error {
 
 	xyz := sRGB.RGBToXYZ(rgb)
+	xyz = ChromaticAdjust(XYZScalingD65ToE, xyz) // Chromatic shift to E illuminant
 
 	for k := 0; k < 4; k++ {
 		wv.C[k] = spectrumXYZToP(wv.Wavelength(k), xyz) / equalEnergyReflectance
-		wv.C[k] = m.Min(1, wv.C[k]) // clip
+		//wv.C[k] = m.Min(1, wv.C[k]) // clip
 	}
 	/*
 		for k := 0; k < 4; k++ {
 			wv.C[k] = RGBToSpectrumSmits99(rgb[0], rgb[1], rgb[2], wv.Wavelength(k))
 		}
 	*/
+	return nil
+}
+
+// FromRGB ses the spectrum from the RGB values.
+func (wv *Spectrum) FromRGBSmits(rgb RGB) error {
+
+	for k := 0; k < 4; k++ {
+		wv.C[k] = RGBToSpectrumSmits99(rgb[0], rgb[1], rgb[2], wv.Wavelength(k))
+	}
 	return nil
 }
 
@@ -93,7 +103,7 @@ func (wv *Spectrum) FromXYZ(xyz RGB) error {
 
 	for k := 0; k < 4; k++ {
 		wv.C[k] = spectrumXYZToP(wv.Wavelength(k), xyz) / equalEnergyReflectance
-		wv.C[k] = m.Min(1, wv.C[k]) // clip
+		//wv.C[k] = m.Min(1, wv.C[k]) // clip
 	}
 	/*
 		for k := 0; k < 4; k++ {
