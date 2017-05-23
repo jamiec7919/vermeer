@@ -162,7 +162,7 @@ func (d *Sphere) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bo
 
 	//		sg.Liu.FromRGB(E.X*ODotN, E.Y*ODotN, E.Z*ODotN)
 	//E.Scale(m.Abs(omegaO.Z))
-	sample.Liu.FromRGB(E)
+	sample.Liu = E //.FromRGB(E)
 
 	V := m.Vec3Sub(d.P, sg.P)
 
@@ -253,7 +253,7 @@ func (d *Sphere) SampleArea(sg *core.ShaderContext, n int) error {
 
 		//		sg.Liu.FromRGB(E.X*ODotN, E.Y*ODotN, E.Z*ODotN)
 		//E.Scale(m.Abs(omegaO.Z))
-		ls.Liu.FromRGB(E)
+		ls.Liu = E // .FromRGB(E)
 
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
 		ls.Pdf = 1 / (2 * m.Pi * (1 - m.Sqrt(1-sqr(d.Radius/l)))) // q_2 from Shirley96

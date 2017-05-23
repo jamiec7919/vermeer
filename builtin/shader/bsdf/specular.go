@@ -92,10 +92,10 @@ func (b *Specular) Eval(_omegaO m.Vec3) (rho colour.Spectrum) {
 		return
 	}
 
-	fresnel := b.fresnel.Kr(b.OmegaR.Z)
+	fresnel := b.fresnel.Kr(b.Lambda, b.OmegaR.Z)
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(fresnel)
+	rho = fresnel
 	rho.Scale(m.Vec3DotAbs(omegaO, m.Vec3{0, 0, 1}))
 	return
 }

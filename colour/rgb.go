@@ -48,6 +48,13 @@ func (c *RGB) Normalize() {
 	}
 }
 
+// Clamp will clamp components of c to [0,1].
+func (c *RGB) Clamp() {
+	for k := range c {
+		c[k] = m.Min(1, m.Max(0, c[k]))
+	}
+}
+
 // Maxh returns the maximum component.
 func (c RGB) Maxh() float32 {
 	return m.Max(m.Max(c[0], c[1]), c[2])

@@ -18,7 +18,7 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/ldseq"
 	"github.com/jamiec7919/vermeer/nodes"
-	"math"
+	//"math"
 )
 
 // ShaderStd is the default surface shader.
@@ -243,12 +243,14 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 	diffBrdf := bsdf.NewOrenNayar(sg.Lambda, m.Vec3Neg(sg.Rd), diffRoughness, U, V, sg.N)
 	//diffBrdf := bsdf.NewLambert(sg.Lambda, m.Vec3Neg(sg.Rd), U, V, sg.N)
 
-	var diffContrib colour.RGB
+	var diffContrib colour.Spectrum
+	diffContrib.Lambda = sg.Lambda
 
-	var diffColour colour.RGB
+	var diffColour colour.Spectrum
+	diffColour.Lambda = sg.Lambda
 
 	if sh.DiffuseColour != nil {
-		diffColour = sh.DiffuseColour.RGB(sg)
+		diffColour.FromRGB(sh.DiffuseColour.RGB(sg))
 	}
 
 	var diffWeight, spec1Weight, transWeight, totalWeight float32
@@ -323,7 +325,8 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 		fresnel = fr.NewConductor(0, refl, edge)
 	}
 
-	var spec1Contrib colour.RGB
+	var spec1Contrib colour.Spectrum
+	spec1Contrib.Lambda = sg.Lambda
 
 	if spec1Weight > 0.0 {
 		spec1Roughness := float32(0.5)
@@ -332,10 +335,11 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 			spec1Roughness = sh.Spec1Roughness.Float32(sg)
 		}
 
-		var spec1Colour colour.RGB
+		var spec1Colour colour.Spectrum
+		spec1Colour.Lambda = sg.Lambda
 
 		if sh.Spec1Colour != nil {
-			spec1Colour = sh.Spec1Colour.RGB(sg)
+			spec1Colour.FromRGB(sh.Spec1Colour.RGB(sg))
 		}
 
 		var spec1BRDF core.BSDF
@@ -378,18 +382,18 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 
 				rho.Scale(1.0 / float32(pdf))
 
-				col := rho.ToRGB()
+				//col := rho.ToRGB()
 
 				//fmt.Printf("%v %v\n", col, samp.Colour)
-				col.Mul(spec1Colour)
-				col.Mul(samp.Colour)
+				rho.Mul(spec1Colour)
+				rho.Mul(samp.Spectrum)
 
-				for k := range col {
-					if col[k] < 0 || math.IsNaN(float64(col[k])) {
-						col[k] = 0
-					}
-				}
-				spec1Contrib.Add(col)
+				//for k := range col {
+				//	if col[k] < 0 || math.IsNaN(float64(col[k])) {
+				//		col[k] = 0
+				//	}
+				//}
+				spec1Contrib.Add(rho)
 			}
 
 		}
@@ -420,16 +424,18 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 		spec1Contrib.Scale(spec1Weight)
 	}
 
-	var transContrib colour.RGB
+	var transContrib colour.Spectrum
+	transContrib.Lambda = sg.Lambda
 
 	if sh.IsTransmissive {
 		ray := sg.NewRay()
 		var samp core.TraceSample
 
-		var transColour colour.RGB
+		var transColour colour.Spectrum
+		transColour.Lambda = sg.Lambda
 
 		if sh.TransColour != nil {
-			transColour = sh.TransColour.RGB(sg)
+			transColour.FromRGB(sh.TransColour.RGB(sg))
 		}
 
 		if transEnter {
@@ -442,7 +448,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 				ray.InteriorList = append(ray.InteriorList, core.InteriorListEntry{IOR: ior, InteriorID: sh.interiorID})
 
 				if core.Trace(ray, &samp) {
-					transContrib = samp.Colour
+					transContrib = samp.Spectrum
 					transContrib.Mul(transColour)
 				}
 
@@ -463,8 +469,8 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 				}
 
 				if core.Trace(ray, &samp) {
-					transContrib = samp.Colour
-					transContrib.Mul(transColour)
+					transContrib = samp.Spectrum
+					//transContrib.Mul(transColour)
 				}
 			} else {
 				omega := reflect(sg.Rd, m.Vec3Neg(sg.N))
@@ -472,7 +478,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 				ray.Init(core.RayTypeRefracted, sg.OffsetP(-1), omega, m.Inf(1), sg.Level+1, sg)
 
 				if core.Trace(ray, &samp) {
-					transContrib = samp.Colour
+					transContrib = samp.Spectrum
 					transWeight = spec1Weight // This is really a specular bounce
 				}
 			}
@@ -483,7 +489,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 
 	}
 
-	contrib := colour.RGB{}
+	contrib := colour.Spectrum{Lambda: sg.Lambda}
 
 	emissContrib := sh.EvalEmission(sg, m.Vec3Neg(sg.Rd))
 
@@ -492,25 +498,26 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 	contrib.Add(spec1Contrib)
 	contrib.Add(transContrib)
 
-	sg.OutRGB = contrib
+	//sg.OutRGB = contrib.ToRGB()
+	sg.Out = contrib
 
 	return true
 }
 
 // EvalEmission implements core.Shader.
-func (sh *ShaderStd) EvalEmission(sg *core.ShaderContext, omegaO m.Vec3) colour.RGB {
+func (sh *ShaderStd) EvalEmission(sg *core.ShaderContext, omegaO m.Vec3) colour.Spectrum {
 
-	var emissColour colour.RGB
+	emissColour := colour.Spectrum{Lambda: sg.Lambda}
 	var emissStrength float32 = 0
 
 	if sh.EmissionColour != nil {
-		emissColour = sh.EmissionColour.RGB(sg)
+		emissColour.FromRGB(sh.EmissionColour.RGB(sg))
 	}
 
 	if sh.EmissionStrength != nil {
 		emissStrength = sh.EmissionStrength.Float32(sg)
 	} else {
-		return colour.RGB{}
+		return colour.Spectrum{Lambda: sg.Lambda}
 	}
 
 	emissColour.Scale(emissStrength)

@@ -56,7 +56,8 @@ func (b *Lambert) Eval(_omegaO m.Vec3) (rho colour.Spectrum) {
 	weight := m.Max(0, omegaO.Z)
 
 	rho.Lambda = b.Lambda
-	rho.FromRGB(colour.RGB{1, 1, 1})
+	//rho.FromRGB(colour.RGB{1, 1, 1})
+	rho.Set(1)
 	rho.Scale(weight / m.Pi)
 
 	return

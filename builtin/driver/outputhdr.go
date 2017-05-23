@@ -5,10 +5,13 @@
 package driver
 
 import (
+	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/core"
 	"github.com/jamiec7919/vermeer/image"
 	_ "github.com/jamiec7919/vermeer/image/hdr"
+	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/nodes"
+	"log"
 )
 
 // OutputHDR is a node which saves the rendered image intoa Radiance HDR file.
@@ -47,12 +50,45 @@ func (n *OutputHDR) PostRender() error {
 
 	ty := image.TypeDesc{BaseType: image.FLOAT}
 
-	if err := i.WriteImage(ty, core.FrameBuf()); err != nil {
+	// framebuffer is XYZ
+	rgb := make([]float32, w*h*3)
+
+	for k := 0; k < w*h*3; k += 3 {
+		xyz := [3]float32{core.FrameBuf()[k+0], core.FrameBuf()[k+1], core.FrameBuf()[k+2]}
+		xyz = colour.ChromaticAdjust(colour.XYZScalingEToD65, xyz)
+
+		//norm := 1 / (xyz[0] + xyz[1] + xyz[2])
+		// I think converting to xyY then sRGB then scaling by the luminance might result in slightly better behaviour
+		// but realistically we should either output XYZ or do proper tone mapping (currently just relying on RGBE/radiance)
+
+		//if norm < m.Float32Max {
+		//	col := colour.SRGB.XYZToRGB(xyz[0]*norm, xyz[1]*norm, xyz[2]*norm)
+		//	rgb[k+0] = col[0] / norm
+		//	rgb[k+1] = col[1] / norm
+		//	rgb[k+2] = col[2] / norm
+		//}
+
+		//xyz = colour.ChromaticAdjust(colour.BradfordD65ToD50, xyz)
+
+		col := colour.SRGB.XYZToRGB(xyz[0], xyz[1], xyz[2])
+
+		// Fix gamut issue where components are < 0
+		for k := range col {
+			col[k] = m.Max(0, col[k])
+		}
+
+		rgb[k+0] = col[0]
+		rgb[k+1] = col[1]
+		rgb[k+2] = col[2]
+	}
+
+	if err := i.WriteImage(ty, rgb); err != nil {
 		return err
 	}
 
 	i.Close()
 
+	log.Printf("Wrote %s", n.Filename)
 	return nil
 }
 

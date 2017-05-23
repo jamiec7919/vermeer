@@ -157,7 +157,7 @@ func (d *Disk) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool
 
 	sg.ReleaseShaderContext(lsg)
 
-	sample.Liu.FromRGB(E)
+	sample.Liu = E // .FromRGB(E)
 
 	// Convert dA to dSigma
 	sample.PdfLight = float32(pdf) * (sample.Ldist * sample.Ldist) / (m.Abs(m.Vec3Dot(sample.Ld, d.N)))
@@ -202,7 +202,7 @@ func (d *Disk) SampleArea(sg *core.ShaderContext, n int) error {
 			E := d.shader.EvalEmission(lsg, m.Vec3Neg(ls.Ld))
 			//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
 			//E.Scale(m.Abs(omegaO[2]))
-			ls.Liu.FromRGB(E)
+			ls.Liu = E // .FromRGB(E)
 
 			sg.ReleaseShaderContext(lsg)
 

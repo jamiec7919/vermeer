@@ -11,13 +11,14 @@ import (
 
 // TraceSample is returned by Trace.
 type TraceSample struct {
-	Colour  colour.RGB
-	Opacity colour.RGB
-	Alpha   float32
-	Point   m.Vec3
-	Z       float64
-	ElemID  uint32
-	Geom    Geom
+	Colour   colour.RGB
+	Spectrum colour.Spectrum
+	Opacity  colour.RGB
+	Alpha    float32
+	Point    m.Vec3
+	Z        float64
+	ElemID   uint32
+	Geom     Geom
 }
 
 // TraceProbe intersects ray with the scene and sets up the globals sg with the first intersection.
@@ -89,7 +90,10 @@ retry:
 		}
 
 		if samp != nil {
-			samp.Colour = sg.OutRGB
+			spec := sg.OutSpectrum_r()
+
+			samp.Colour = spec.ToXYZ()
+			samp.Spectrum = sg.OutSpectrum_r()
 			samp.Point = sg.P
 			samp.ElemID = sg.ElemID
 			samp.Geom = sg.Geom

@@ -31,17 +31,23 @@ func NewDielectric(eta float32) *Dielectric {
 // cosTheta is the clamped dot product of direction and surface normal.
 //
 // Note that this returns an RGB value.  To get a single value use RGB.Maxh().
-func (f *Dielectric) Kr(cosTheta float32) colour.RGB {
+func (f *Dielectric) Kr(lambda float32, cosTheta float32) colour.Spectrum {
 	c := cosTheta
 	g := (f.eta * f.eta) - 1 + (c * c)
 
 	if g < 0.0 {
-		return colour.RGB{1, 1, 1}
+		var out colour.Spectrum
+		out.Lambda = lambda
+		out.Set(1)
+		return out
 	}
 
 	g = m.Sqrt(g)
 
 	fr := (1.0 / 2.0) * sqr32((g-c)/(g+c)) * (1 + sqr32((c*(g+c)-1)/(c*(g-c)+1)))
 
-	return colour.RGB{fr, fr, fr}
+	var out colour.Spectrum
+	out.Lambda = lambda
+	out.Set(fr)
+	return out
 }

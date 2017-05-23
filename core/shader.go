@@ -36,7 +36,7 @@ type BSDFSample struct {
 type Fresnel interface {
 	// Kr returns the fresnel value.  cos_theta is the clamped dot product of
 	// view direction and surface normal.
-	Kr(cosTheta float32) colour.RGB
+	Kr(lambda float32, cosTheta float32) colour.Spectrum
 }
 
 type InteriorListEntry struct {
@@ -52,7 +52,7 @@ type Shader interface {
 	Eval(sc *ShaderContext) bool
 
 	// EvalEmission evaluates the shader and returns emission value.
-	EvalEmission(sc *ShaderContext, omegaO m.Vec3) colour.RGB
+	EvalEmission(sc *ShaderContext, omegaO m.Vec3) colour.Spectrum
 }
 
 // ShaderContext encapsulates all of the data needed for evaluating shaders.
@@ -100,8 +100,9 @@ type ShaderContext struct {
 
 	Image *Image // Image constant values stored here
 
-	OutRGB      colour.RGB
-	OutSpectrum colour.Spectrum
+	//OutRGB      colour.RGB
+	//OutSpectrum colour.Spectrum
+	Out interface{}
 
 	task *RenderTask
 	next *ShaderContext // Pool link
@@ -117,6 +118,38 @@ func (sc *ShaderContext) NewShaderContext() *ShaderContext {
 	s := sc.task.NewShaderContext()
 	s.Image = sc.Image
 	return s
+}
+
+func (sc *ShaderContext) OutRGB_r() colour.RGB {
+	if sc.Out == nil {
+		return colour.RGB{}
+	}
+
+	switch t := sc.Out.(type) {
+	case colour.RGB:
+		return t
+	case colour.Spectrum:
+		return t.ToRGB() // sc.Lambda
+	}
+
+	return colour.RGB{}
+}
+
+func (sc *ShaderContext) OutSpectrum_r() colour.Spectrum {
+	if sc.Out == nil {
+		return colour.Spectrum{Lambda: sc.Lambda}
+	}
+
+	switch t := sc.Out.(type) {
+	case colour.RGB:
+		s := colour.Spectrum{Lambda: sc.Lambda}
+		s.FromRGB(t)
+		return s
+	case colour.Spectrum:
+		return t // sc.Lambda
+	}
+
+	return colour.Spectrum{Lambda: sc.Lambda}
 }
 
 // ReleaseShaderContext returns a context to the pool.
@@ -219,9 +252,10 @@ func (sc *ShaderContext) NextLight() bool {
 // return total contribution.  This can be weighted by albedo (colour).
 // Will do MIS for diffuse too but just discard any that miss light. Can do BRDF first up to NSamples/2
 // then any left over samples will be given to light sampling.
-func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
+func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.Spectrum {
 	var bsdfSamples []BSDFSample
-	var col colour.RGB
+	var col colour.Spectrum
+	col.Lambda = sc.Lambda
 
 	if sc.NSamples > 1 {
 		// BEWARE correlation between light samples and BSDF.  Seems to be some patterning due
@@ -271,7 +305,7 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 		totalSamples := nBSDFSamples + nLightSamples
 
 		if totalSamples == 0 {
-			return colour.RGB{}
+			return col
 		}
 
 		//totalSamples = sc.NSamples
@@ -286,9 +320,9 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 			}
 
 			if m.Vec3Dot(ls.Ld, sc.Ng) < 0 {
-				ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(ls.Ldist*(1.0-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
+				ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(ls.Ldist*(0.8-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
 			} else {
-				ray.Init(RayTypeShadow, sc.OffsetP(1), m.Vec3Scale(ls.Ldist*(1.0-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
+				ray.Init(RayTypeShadow, sc.OffsetP(1), m.Vec3Scale(ls.Ldist*(0.8-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
 
 			}
 
@@ -307,15 +341,15 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 				rho.Scale(1.0 / p_hat)
 
 				//fmt.Printf("%v\n\n", rho)
-				rgb := rho.ToRGB()
+				//rgb := rho.ToRGB()
 
-				for k := range rgb {
-					if rgb[k] < 0 {
-						rgb[k] = 0
-					}
-				}
+				//for k := range rgb {
+				//	if rgb[k] < 0 {
+				//		rgb[k] = 0
+				//	}
+				//}
 
-				col.Add(rgb)
+				col.Add(rho)
 
 			}
 		}
@@ -327,9 +361,9 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 			}
 
 			if m.Vec3Dot(bs.Ld, sc.Ng) < 0 {
-				ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(bs.Ldist*(1.0-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
+				ray.Init(RayTypeShadow, m.Vec3Mad(sc.P, sc.Ng, -0.1) /*sc.OffsetP(-1)*/, m.Vec3Scale(bs.Ldist*(0.8-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
 			} else {
-				ray.Init(RayTypeShadow, sc.OffsetP(1), m.Vec3Scale(bs.Ldist*(1.0-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
+				ray.Init(RayTypeShadow, m.Vec3Mad(sc.P, sc.Ng, 0.1) /* sc.OffsetP(1)*/, m.Vec3Scale(bs.Ldist*(0.8-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
 
 			}
 
@@ -345,17 +379,17 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 
 				rho.Scale(1.0 / p_hat)
 
-				rgb := rho.ToRGB()
+				//rgb := rho.ToRGB()
 
 				//fmt.Printf("%v %v %v %v %v %v %v\n", sc.X, sc.Y, totalSamples, bs.Pdf, p_hat, rho, rgb)
 
-				for k := range rgb {
-					if rgb[k] < 0 {
-						rgb[k] = 0
-					}
-				}
+				//for k := range rgb {
+				//	if rgb[k] < 0 {
+				//		rgb[k] = 0
+				//	}
+				//}
 
-				col.Add(rgb)
+				col.Add(rho)
 
 			}
 
@@ -406,9 +440,9 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.RGB {
 				rho.Scale(1.0 / ls.Pdf)
 
 				//fmt.Printf("%v\n\n", rho)
-				rgb := rho.ToRGB()
+				//rgb := rho.ToRGB()
 
-				col.Add(rgb)
+				col.Add(rho)
 
 			}
 			sc.ReleaseRay(ray)

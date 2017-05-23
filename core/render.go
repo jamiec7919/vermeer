@@ -5,6 +5,8 @@
 package core
 
 import (
+	"fmt"
+	"github.com/jamiec7919/vermeer/colour"
 	"github.com/jamiec7919/vermeer/math/ldseq"
 	"log"
 	"math"
@@ -91,7 +93,7 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 				//rasterY = rand.Float64() + float64(y)
 
 				time := ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].time)
-				lambda := (720-450)*ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].lambda) + 450
+				lambda := (colour.LambdaMax-colour.LambdaMin)*ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].lambda) + colour.LambdaMin
 
 				lensU := ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].lensU)
 				lensV := ldseq.Sobol(uint64(iter), framescramble[pixIdx].lensV)
@@ -202,7 +204,8 @@ func Render(maxIter int, exit chan bool) (RenderStats, error) {
 		close(workqueue)
 		wg.Wait()
 
-		log.Printf("Iter %v", iter)
+		// TODO: Should check if stdout is to terminal or not.
+		fmt.Printf("\rIter %v", iter)
 
 		select {
 		case <-exit:
@@ -210,6 +213,9 @@ func Render(maxIter int, exit chan bool) (RenderStats, error) {
 		default:
 		}
 	}
+
+	// Skip to next line after iter print.
+	fmt.Printf("\n")
 
 	stats.end()
 

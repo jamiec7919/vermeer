@@ -176,7 +176,7 @@ func (d *Tri) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool 
 		sg.ReleaseShaderContext(lsg)
 		//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
 		//E.Scale(m.Abs(omegaO[2]))
-		sample.Liu.FromRGB(E)
+		sample.Liu = E //.FromRGB(E)
 
 		sample.PdfLight = float32(pdf) * sqr(sample.Ldist) / m.Vec3DotAbs(sample.Ld, N)
 
@@ -220,7 +220,7 @@ func (d *Tri) ValidSample(sg *core.ShaderContext, sample *core.BSDFSample) bool 
 		sg.ReleaseShaderContext(lsg)
 		//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
 		//E.Scale(m.Abs(omegaO[2]))
-		sample.Liu.FromRGB(E)
+		sample.Liu = E // .FromRGB(E)
 
 		sample.PdfLight = float32(pdf)
 
@@ -269,7 +269,7 @@ func (d *Tri) sampleByArea(sg *core.ShaderContext, n int) error {
 		sg.ReleaseShaderContext(lsg)
 		//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
 		//E.Scale(m.Abs(omegaO[2]))
-		ls.Liu.FromRGB(E)
+		ls.Liu = E //.FromRGB(E)
 
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
 		ls.Pdf = float32(pdf) * sqr(ls.Ldist) / m.Vec3DotAbs(ls.Ld, N)
@@ -332,7 +332,7 @@ func (d *Tri) SampleArea(sg *core.ShaderContext, n int) error {
 		sg.ReleaseShaderContext(lsg)
 		//		sg.Liu.FromRGB(E[0]*ODotN, E[1]*ODotN, E[2]*ODotN)
 		//E.Scale(m.Abs(omegaO[2]))
-		ls.Liu.FromRGB(E)
+		ls.Liu = E // FromRGB(E)
 
 		// http://www.cs.virginia.edu/~jdl/bib/globillum/mis/shirley96.pdf
 		ls.Pdf = float32(pdf)
