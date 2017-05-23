@@ -4,14 +4,13 @@
 
 package math
 
-/* Matrix4 represents a 4x4 homogenous matrix.
+/* Matrix3 represents a 3x3 matrix. FIXME: THIS IS NOT TRUE.
 
 Column major
 
-[ 0 4 8 12 ]
-[ 1 5 9 13 ]
-[ 2 6 10 14]
-[ 3 7 11 15]
+[ 0 4 8 ]
+[ 1 5 9 ]
+[ 2 6 10 ]
 
 Transforms must POST multiply matrix by column vector.
 */

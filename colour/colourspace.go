@@ -13,7 +13,7 @@ import (
 // Space represents a transform from XYZ to a different space.
 type Space struct {
 	m    [9]float32 // Matrix to convert XYZ->RGB
-	mInv [9]float32 // Matrix to convert XYZ->RGB
+	mInv [9]float32 // Matrix to convert RGB->XYZ
 }
 
 // XYZToRGB returns the transformed XYZ to RGB
@@ -34,7 +34,9 @@ func (s *Space) RGBToXYZ(rgb RGB) (xyz [3]float32) {
 	return
 }
 
-func CalcMatrix(xr, yr, xg, yg, xb, yb, Xw, Yw, Zw float32) [9]float32 {
+// BuildRGBToXYZMatrix computes the 3 × 3 matrix for converting RGB to XYZ.
+// Chromaticity coordinates of an RGB system (xr, yr), (xg, yg) and (xb, yb) and its reference white (XW, YW, ZW).
+func BuildRGBToXYZMatrix(xr, yr, xg, yg, xb, yb, Xw, Yw, Zw float32) [9]float32 {
 	m := [9]float32{
 		xr / yr, xg / yg, xb / yb,
 		1, 1, 1,
@@ -54,34 +56,35 @@ func CalcMatrix(xr, yr, xg, yg, xb, yb, Xw, Yw, Zw float32) [9]float32 {
 	}
 }
 
-func init() {
-	log.Printf("%v", CalcMatrix(0.64, 0.33, 0.3, 0.6, 0.15, 0.06, 0.95047, 1, 1.08883))
-}
-
+//BradfordD50ToD65 is the matrix for conversion from illuminant D50 to D65 (Bradford algorithm).
 var BradfordD50ToD65 = [...]float32{
 	0.9555766, -0.0230393, 0.0631636,
 	-0.0282895, 1.0099416, 0.0210077,
 	0.0122982, -0.0204830, 1.3299098,
 }
 
+//BradfordD65ToD50 is the matrix for conversion from illuminant D65 to D50 (Bradford algorithm).
 var BradfordD65ToD50 = [...]float32{
 	1.0478112, 0.0228866, -0.0501270,
 	0.0295424, 0.9904844, -0.0170491,
 	-0.0092345, 0.0150436, 0.752131,
 }
 
+// XYZScalingD65ToE is the matrix for conversion from illuminant D65 to E.
 var XYZScalingD65ToE = [...]float32{
 	1.0521111, 0.0000000, 0.0000000,
 	0.0000000, 1.0000000, 0.0000000,
 	0.0000000, 0.0000000, 0.9184170,
 }
 
+// XYZScalingEToD65 is the matrix for conversion from illuminant E to D65.
 var XYZScalingEToD65 = [...]float32{
 	0.9504700, 0.0000000, 0.0000000,
 	0.0000000, 1.0000000, 0.0000000,
 	0.0000000, 0.0000000, 1.0888300,
 }
 
+// ChromaticAdjust shifts the white-point of the XYZ colour using one of the Bradford* or XYZScaling* matrices.
 func ChromaticAdjust(mat [9]float32, a [3]float32) [3]float32 {
 	var b [3]float32
 
