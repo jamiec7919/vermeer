@@ -5,6 +5,7 @@
 package colour
 
 import (
+	"fmt"
 	m "github.com/jamiec7919/vermeer/math"
 )
 
@@ -105,6 +106,9 @@ func spectrumXYZToP(lambda float32, xyz [3]float32) float32 {
 		// need to go through triangulation :(
 		// we get the indices in such an order that they form a triangle fan around idx[0].
 		// compute barycentric coordinates of our xy* point for all triangles in the fan:
+		if idx[0] < 0 {
+			fmt.Printf(":%v %v %v %v %v", xyz, uv, uvi, cellIdx, cell)
+		}
 		ex := uv[0] - spectrumDataPoints[idx[0]].uv[0]
 		ey := uv[1] - spectrumDataPoints[idx[0]].uv[1]
 		e0x := spectrumDataPoints[idx[1]].uv[0] - spectrumDataPoints[idx[0]].uv[0]
