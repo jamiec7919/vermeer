@@ -465,7 +465,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 			}
 
 		} else {
-			ok, omega := refract(sg.Rd, m.Vec3Neg(sg.N), ior1/ior2)
+			omega, ok := m.Vec3Refract(sg.Rd, m.Vec3Neg(sg.N), ior1/ior2)
 
 			if ok {
 				// we've left the surface so remove the interior
@@ -483,7 +483,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 					//transContrib.Mul(transColour)
 				}
 			} else {
-				omega := reflect(sg.Rd, m.Vec3Neg(sg.N))
+				//omega := reflect(sg.Rd, m.Vec3Neg(sg.N))
 
 				ray.Init(core.RayTypeRefracted, sg.OffsetP(-1), omega, m.Inf(1), sg.Level+1, sg)
 

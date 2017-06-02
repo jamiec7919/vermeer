@@ -111,7 +111,7 @@ func (mesh *PolyMesh) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 func sqr(x float32) float32 { return x * x }
 
 // TraceElems implements qbvh.Primitive.
-//go:nosplit
+///go:nosplit
 func (mesh *PolyMesh) TraceElems(ray *core.Ray, sg *core.ShaderContext, base, count int) bool {
 
 	// NOTES: by unrolling many of the vector ops we avoid storing vec3's on the stack and allows it to fit

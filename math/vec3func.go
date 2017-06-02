@@ -15,17 +15,17 @@ func Vec3ProjectParallel(v, n Vec3) Vec3 {
 }
 
 // Vec3Reflect reflects v about vector n. This assumes that v is heading into the plane
-// defined by n and will return the vector pointing away from the plane.  The same is
+// defined by N and will return the vector pointing away from the plane.  The same is
 // true on the other side of the plane.
-func Vec3Reflect(v, n Vec3) Vec3 {
-	return Vec3Add(v, Vec3Scale(2.0*Vec3Dot(v, n), n))
+func Vec3Reflect(v, N Vec3) Vec3 {
+	return Vec3Add(v, Vec3Scale(2.0*Vec3Dot(v, N), N))
 }
 
 // Vec3Refract implements optical refraction at an interface between dielectrics. Assumes vector
 // is heading into the plane.
 // ior = n/n_t  where n is index of refraction of the 'from' medium and n_t is the index of refraction
-// of the 'to' medium.  Returns false if total internal reflection occurs.
-func Vec3Refract(d, N Vec3, ior float32) (bool, Vec3) {
+// of the 'to' medium.  Returns false and reflected direction if total internal reflection occurs.
+func Vec3Refract(d, N Vec3, ior float32) (Vec3, bool) {
 	// ior = n/n_t or inverse
 	dotN := Vec3Dot(d, N)
 
@@ -33,10 +33,10 @@ func Vec3Refract(d, N Vec3, ior float32) (bool, Vec3) {
 
 	// Total internal reflection
 	if sq < 0 {
-		return false, Vec3{}
+		return Vec3Reflect(d, N), false
 	}
 
 	omega := Vec3Sub(Vec3Scale(ior, Vec3Sub(d, Vec3Scale(dotN, N))), Vec3Scale(Sqrt(sq), N))
 
-	return true, omega
+	return omega, true
 }
