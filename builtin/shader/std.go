@@ -18,7 +18,7 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 	"github.com/jamiec7919/vermeer/math/ldseq"
 	"github.com/jamiec7919/vermeer/nodes"
-	//"math"
+	"math"
 )
 
 // ShaderStd is the default surface shader.
@@ -42,6 +42,8 @@ type ShaderStd struct {
 	spec1FresnelModel fr.Model
 	Spec1FresnelRefl  param.RGBUniform `node:",opt"` // Colour parameter
 	Spec1FresnelEdge  param.RGBUniform `node:",opt"` // Colour parameter
+
+	GlossySamples int `node:",opt"`
 
 	IsTransmissive bool `node:"Transmissive,opt"`
 	Priority       int  `node:",opt"` // Must be <= 255 (8 bits), lower is higher priority
@@ -354,7 +356,11 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 		var samp core.TraceSample
 		ray := sg.NewRay()
 
-		spec1Samples := 0
+		spec1Samples := 2
+
+		if sg.Level > 0 {
+			spec1Samples = 1
+		}
 
 		if spec1Roughness == 0.0 {
 			spec1Samples = 1
@@ -368,31 +374,40 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 			spec1OmegaO := spec1BRDF.Sample(r0, r1)
 			pdf := spec1BRDF.PDF(spec1OmegaO)
 
+			if pdf == 0.0 {
+				continue
+			}
+
 			if m.Vec3Dot(spec1OmegaO, sg.Ng) <= 0.0 {
 				continue
 
 			}
 			//fmt.Printf("%v %v\n", spec1Omega, m.Vec3Length(spec1Omega))
 
+			//			ray.Init(core.RayTypeReflected, m.Vec3Add(sg.OffsetP(1), m.Vec3Scale(0.001, sg.Ng)), spec1OmegaO, m.Inf(1), sg.Level+1, sg)
 			ray.Init(core.RayTypeReflected, sg.OffsetP(1), spec1OmegaO, m.Inf(1), sg.Level+1, sg)
 
 			if core.Trace(ray, &samp) {
 
 				rho := spec1BRDF.Eval(spec1OmegaO)
-
+				rho1 := rho
 				rho.Scale(1.0 / float32(pdf))
 
-				//col := rho.ToRGB()
+				for k := range rho.C {
+					if rho.C[k] < 0 || math.IsNaN(float64(rho.C[k])) {
+						fmt.Printf("%v %v\n", rho1, pdf)
+
+						for k := range rho.C {
+							rho.C[k] = 0
+						}
+						break
+					}
+				} //col := rho.ToRGB()
 
 				//fmt.Printf("%v %v\n", col, samp.Colour)
 				rho.Mul(spec1Colour)
 				rho.Mul(samp.Spectrum)
 
-				//for k := range col {
-				//	if col[k] < 0 || math.IsNaN(float64(col[k])) {
-				//		col[k] = 0
-				//	}
-				//}
 				spec1Contrib.Add(rho)
 			}
 
@@ -460,6 +475,13 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 					absorb.Lambda = transContrib.Lambda
 					absorb.FromRGB(absorbRGB)
 					transContrib.Mul(absorb)
+					fresnelC := fresnel.Kr(absorb.Lambda, m.Vec3DotAbs(sg.Rd, sg.N))
+					fresnelC.C[0] = 1 - fresnelC.C[0]
+					fresnelC.C[1] = 1 - fresnelC.C[1]
+					fresnelC.C[2] = 1 - fresnelC.C[2]
+					fresnelC.C[3] = 1 - fresnelC.C[3]
+
+					transContrib.Mul(fresnelC)
 				}
 
 			}
@@ -480,6 +502,12 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 
 				if core.Trace(ray, &samp) {
 					transContrib = samp.Spectrum
+					fresnelC := fresnel.Kr(transContrib.Lambda, m.Vec3DotAbs(sg.Rd, sg.N))
+					fresnelC.C[0] = 1 - fresnelC.C[0]
+					fresnelC.C[1] = 1 - fresnelC.C[1]
+					fresnelC.C[2] = 1 - fresnelC.C[2]
+					fresnelC.C[3] = 1 - fresnelC.C[3]
+					transContrib.Mul(fresnelC)
 					//transContrib.Mul(transColour)
 				}
 			} else {
@@ -490,6 +518,9 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 				if core.Trace(ray, &samp) {
 					transContrib = samp.Spectrum
 					transWeight = spec1Weight // This is really a specular bounce
+					fresnelC := fresnel.Kr(transContrib.Lambda, m.Vec3DotAbs(sg.Rd, sg.N))
+
+					transContrib.Mul(fresnelC)
 				}
 			}
 		}
@@ -501,9 +532,9 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 
 	contrib := colour.Spectrum{Lambda: sg.Lambda}
 
-	emissContrib := sh.EvalEmission(sg, m.Vec3Neg(sg.Rd))
+	//emissContrib := sh.EvalEmission(sg, m.Vec3Neg(sg.Rd))
 
-	contrib.Add(emissContrib)
+	//contrib.Add(emissContrib)
 	contrib.Add(diffContrib)
 	contrib.Add(spec1Contrib)
 	contrib.Add(transContrib)
