@@ -19,6 +19,7 @@ type PolyMesh struct {
 	NodeDef  core.NodeDef `node:"-"`
 	NodeName string       `node:"Name"`
 	RayBias  float32      `node:",opt"`
+	Opaque   bool         `node:",opt"`
 
 	Verts     param.PointArray
 	PolyCount []int32 `node:",opt"`
@@ -58,6 +59,8 @@ type PolyMesh struct {
 	bounds          m.BoundingBox
 	motionBounds    []m.BoundingBox
 	transformBounds []m.BoundingBox
+
+	flags uint32
 }
 
 // Assert that PolyMesh implements important interfaces.
@@ -74,6 +77,10 @@ func (mesh *PolyMesh) Def() core.NodeDef { return mesh.NodeDef }
 func (mesh *PolyMesh) PreRender() error {
 	if err := mesh.init(); err != nil {
 		return err
+	}
+
+	if mesh.Opaque {
+		mesh.flags |= core.GeomFlagOpaque
 	}
 
 	mesh.facecount = len(mesh.idxp) / 3
@@ -122,8 +129,13 @@ func (mesh *PolyMesh) MotionKeys() int {
 
 }
 
+// HasFlags implements core.Geom.
+func (mesh *PolyMesh) HasFlags(f uint32) bool {
+	return mesh.flags&f == f
+}
+
 func create() (core.Node, error) {
-	mfile := PolyMesh{IsVisible: true}
+	mfile := PolyMesh{IsVisible: true, Opaque: true}
 
 	return &mfile, nil
 }

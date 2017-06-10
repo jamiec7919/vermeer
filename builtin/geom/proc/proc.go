@@ -62,6 +62,8 @@ type Proc struct {
 	Transform    param.MatrixArray `node:",opt"`
 	transformSRT TransformSRTArray
 
+	flags uint32
+
 	//geom core.Geom
 
 	bounds []m.BoundingBox
@@ -138,8 +140,15 @@ func (proc *Proc) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 	return hit
 }
 
+// HasFlags implements core.Geom.
+func (proc *Proc) HasFlags(f uint32) bool {
+	return proc.flags&f == f
+}
+
 // PreRender is a core.Node method.
 func (proc *Proc) PreRender() error {
+
+	proc.flags |= core.GeomFlagOpaque
 
 	proc.handler = lookupHandler(proc.Handler)
 

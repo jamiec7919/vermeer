@@ -17,6 +17,8 @@ type Sphere struct {
 	NodeName string       `node:"Name"`
 	RayBias  float32      `node:",opt"`
 
+	flags uint32
+
 	P      m.Vec3
 	Radius float32
 	Shader string
@@ -37,8 +39,15 @@ func (sphere *Sphere) Name() string { return sphere.NodeName }
 // Def is a core.Node method.
 func (sphere *Sphere) Def() core.NodeDef { return sphere.NodeDef }
 
+// HasFlags implements core.Geom.
+func (sphere *Sphere) HasFlags(f uint32) bool {
+	return sphere.flags&f == f
+}
+
 // PreRender is a core.Node method.
 func (sphere *Sphere) PreRender() error {
+
+	sphere.flags |= core.GeomFlagOpaque
 
 	if s := core.FindNode(sphere.Shader); s != nil {
 		shader, ok := s.(core.Shader)
