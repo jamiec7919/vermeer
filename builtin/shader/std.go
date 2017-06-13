@@ -45,6 +45,7 @@ type ShaderStd struct {
 
 	GlossySamples int `node:",opt"`
 
+	Thin           bool `node:",opt"`
 	IsTransmissive bool `node:"Transmissive,opt"`
 	Priority       int  `node:",opt"` // Must be <= 255 (8 bits), lower is higher priority
 	interiorID     uint64
@@ -163,7 +164,7 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 	transEnter := true     // Assume we're entering surface
 	var ior1, ior2 float32 // ior1 is the medium we're going from, ior2 is medium we're entering
 
-	if sh.IsTransmissive {
+	if sh.IsTransmissive && !sh.Thin {
 		if m.Vec3Dot(sg.Rd, sg.Ng) > 0 {
 			// Nope we're exiting
 			transEnter = false
@@ -447,15 +448,39 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 		var samp core.TraceSample
 
 		var transColourRGB colour.RGB
-		var transColour colour.Spectrum
-		transColour.Lambda = sg.Lambda
+		//var transColour colour.Spectrum
+		//transColour.Lambda = sg.Lambda
 
 		if sh.TransColour != nil {
 			transColourRGB = sh.TransColour.RGB(sg)
-			transColour.FromRGB(sh.TransColour.RGB(sg))
+			//	transColour.FromRGB(sh.TransColour.RGB(sg))
+			//for k := range transColourRGB {
+			//transColourRGB[k] = 1 - transColourRGB[k]
+			//}
 		}
 
-		if transEnter {
+		if sh.Thin {
+
+			if m.Vec3Dot(sg.Rd, sg.Ng) < 0 {
+				ray.Init(0, sg.OffsetP(-1), sg.Rd, m.Inf(1), sg.Level+1, sg)
+			} else {
+				ray.Init(0, sg.OffsetP(1), sg.Rd, m.Inf(1), sg.Level+1, sg)
+			}
+			if core.Trace(ray, &samp) {
+				transContrib = samp.Spectrum
+
+				if core.Trace(ray, &samp) {
+					transContrib = samp.Spectrum
+					fresnelC := fresnel.Kr(transContrib.Lambda, m.Vec3DotAbs(sg.Rd, sg.N))
+					fresnelC.C[0] = 1 - fresnelC.C[0]
+					fresnelC.C[1] = 1 - fresnelC.C[1]
+					fresnelC.C[2] = 1 - fresnelC.C[2]
+					fresnelC.C[3] = 1 - fresnelC.C[3]
+					transContrib.Mul(fresnelC)
+					//transContrib.Mul(transColour)
+				}
+			}
+		} else if transEnter {
 			ok, omega := refract(sg.Rd, sg.N, ior1/ior2)
 
 			if ok {
@@ -467,13 +492,21 @@ func (sh *ShaderStd) Eval(sg *core.ShaderContext) bool {
 				if core.Trace(ray, &samp) {
 					transContrib = samp.Spectrum
 					//transContrib.Mul(transColour)
-					absorbRGB := colour.RGB{m.Exp(-(1 - transColourRGB[0]) * ray.Tclosest),
-						m.Exp(-(1 - transColourRGB[1]) * ray.Tclosest),
-						m.Exp(-(1 - transColourRGB[2]) * ray.Tclosest),
-					}
+
+					//absorbRGB := colour.RGB{m.Exp(-(m.Log(transColourRGB[0])) * ray.Tclosest),
+					//	m.Exp(-(m.Log(transColourRGB[1])) * ray.Tclosest),
+					//	m.Exp(-(m.Log(transColourRGB[2])) * ray.Tclosest),
+					//}
+
 					var absorb colour.Spectrum
 					absorb.Lambda = transContrib.Lambda
-					absorb.FromRGB(absorbRGB)
+					//absorb.FromRGB(absorbRGB)
+					absorb.FromRGB(transColourRGB)
+
+					for k := range absorb.C {
+						absorb.C[k] = m.Exp(-m.Log(absorb.C[k]) * ray.Tclosest)
+					}
+
 					transContrib.Mul(absorb)
 					fresnelC := fresnel.Kr(absorb.Lambda, m.Vec3DotAbs(sg.Rd, sg.N))
 					fresnelC.C[0] = 1 - fresnelC.C[0]
