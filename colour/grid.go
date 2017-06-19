@@ -22,7 +22,7 @@ import (
 /*
  * Evaluate the spectrum for xyz at the given wavelength.
  */
-func spectrumXYZToP(lambda float32, xyz [3]float32) float32 {
+func spectrumXYZToP(lambda float32, xyz [3]float32) Spectrum {
 	//assert(lambda >= spectrum_sample_min)
 	//assert(lambda <= spectrum_sample_max)
 
@@ -32,7 +32,7 @@ func spectrumXYZToP(lambda float32, xyz [3]float32) float32 {
 	norm := 1.0 / (xyz[0] + xyz[1] + xyz[2])
 
 	if !(norm < m.Float32Max) {
-		return 0.0
+		return Spectrum{Lambda: lambda}
 	}
 
 	// convert to xy chromaticities
@@ -46,7 +46,7 @@ func spectrumXYZToP(lambda float32, xyz [3]float32) float32 {
 
 	if uv[0] < 0.0 || uv[0] >= spectrumGridWidth ||
 		uv[1] < 0.0 || uv[1] >= spectrumGridHeight {
-		return 0.0
+		return Spectrum{Lambda: lambda}
 	}
 
 	uvi := [2]int{int(uv[0]), int(uv[1])}
@@ -64,31 +64,38 @@ func spectrumXYZToP(lambda float32, xyz [3]float32) float32 {
 	num := int(cell.num_points)
 
 	// get linearly interpolated spectral power for the corner vertices:
-	var p [6]float32
-	// this clamping is only necessary if lambda is not sure to be >= spectrum_sample_min and <= spectrum_sample_max:
-	sb := //fminf(spectrum_num_samples-1e-4, fmaxf(0.0f,
-		((lambda - spectrumSampleMin) / (spectrumSampleMax - spectrumSampleMin)) * (spectrumNumSamples - 1) //));
-	//assert(sb >= 0.f);
-	//assert(sb <= spectrum_num_samples);
+	var p [6]Spectrum
 
-	sb0 := int(sb)
-	sb1 := sb0 + 1
+	p[0].Lambda = lambda
 
-	if sb1 >= spectrumNumSamples {
-		sb1 = spectrumNumSamples - 1
+	for k := range p[0].C {
+		// this clamping is only necessary if lambda is not sure to be >= spectrum_sample_min and <= spectrum_sample_max:
+		sb := //fminf(spectrum_num_samples-1e-4, fmaxf(0.0f,
+			((p[0].Wavelength(k) - spectrumSampleMin) / (spectrumSampleMax - spectrumSampleMin)) * (spectrumNumSamples - 1) //));
+		//assert(sb >= 0.f);
+		//assert(sb <= spectrum_num_samples);
+
+		sb0 := int(sb)
+		sb1 := sb0 + 1
+
+		if sb1 >= spectrumNumSamples {
+			sb1 = spectrumNumSamples - 1
+		}
+
+		sbf := sb - m.Floor(sb)
+
+		for i := 0; i < num; i++ {
+			p[i].Lambda = lambda
+			//assert(idx[i] >= 0);
+			//assert(sb0 < spectrum_num_samples);
+			//assert(sb1 < spectrum_num_samples);
+
+			p[i].C[k] = spectrumDataPoints[idx[i]].spectrum[sb0]*(1.0-sbf) + spectrumDataPoints[idx[i]].spectrum[sb1]*sbf
+		}
 	}
 
-	sbf := sb - m.Floor(sb)
-
-	for i := 0; i < num; i++ {
-		//assert(idx[i] >= 0);
-		//assert(sb0 < spectrum_num_samples);
-		//assert(sb1 < spectrum_num_samples);
-
-		p[i] = spectrumDataPoints[idx[i]].spectrum[sb0]*(1.0-sbf) + spectrumDataPoints[idx[i]].spectrum[sb1]*sbf
-	}
-
-	var interpolated_p float32
+	var interpolated_p Spectrum
+	interpolated_p.Lambda = lambda
 
 	if inside != 0 { // fast path for normal inner quads:
 		uv[0] -= float32(uvi[0])
@@ -99,9 +106,11 @@ func spectrumXYZToP(lambda float32, xyz [3]float32) float32 {
 		// the layout of the vertices in the quad is:
 		//  2  3
 		//  0  1
-		interpolated_p =
-			p[0]*(1.0-uv[0])*(1.0-uv[1]) + p[2]*(1.0-uv[0])*uv[1] +
-				p[3]*uv[0]*uv[1] + p[1]*uv[0]*(1.0-uv[1])
+		for k := range interpolated_p.C {
+			interpolated_p.C[k] =
+				p[0].C[k]*(1.0-uv[0])*(1.0-uv[1]) + p[2].C[k]*(1.0-uv[0])*uv[1] +
+					p[3].C[k]*uv[0]*uv[1] + p[1].C[k]*uv[0]*(1.0-uv[1])
+		}
 	} else {
 		// need to go through triangulation :(
 		// we get the indices in such an order that they form a triangle fan around idx[0].
@@ -149,13 +158,16 @@ func spectrumXYZToP(lambda float32, xyz [3]float32) float32 {
 			}
 
 			//interpolated_p = p[0] * w + p[i+1] * v + p[(i == num-2) ? 1 : (i+2)] * u
-			interpolated_p = p[0]*w + p[i+1]*v + p[otherIdx]*u
+			for k := range interpolated_p.C {
+				interpolated_p.C[k] = p[0].C[k]*w + p[i+1].C[k]*v + p[otherIdx].C[k]*u
+			}
 			break
 		}
 	}
 
 	// now we have a spectrum which corresponds to the xy chromaticities of the input. need to scale according to the
 	// input brightness X+Y+Z now:
-	return interpolated_p / norm
+	interpolated_p.Scale(1 / norm)
+	return interpolated_p
 
 }
