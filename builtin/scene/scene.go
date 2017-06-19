@@ -63,6 +63,14 @@ func (s *Scene) TraceElems(ray *core.Ray, sc *core.ShaderContext, base, count in
 	hit := false
 
 	for i := base; i < base+count; i++ {
+		if ray.Type&core.RayTypeShadow != 0 {
+			// If this is a shadow ray but the geom is marked as non-opaque then can't
+			// affect shadow vis.
+			if !s.geoms[i].HasFlags(core.GeomFlagOpaque) {
+				continue
+			}
+		}
+
 		if s.geoms[i].Trace(ray, sc) {
 			sc.Geom = s.geoms[i]
 

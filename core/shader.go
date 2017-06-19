@@ -270,6 +270,9 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.Spectrum {
 
 			s := BSDFSample{D: omegaO, Pdf: bsdf.PDF(omegaO)}
 
+			if m.Vec3Dot(omegaO, sc.Ng) <= 0 {
+				continue
+			}
 			if s.Pdf <= 0 {
 				continue
 			}
@@ -294,12 +297,13 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.Spectrum {
 
 		nBSDFSamples := sc.NSamples / 2
 		nLightSamples := sc.NSamples / 2
-
+		//bsdfSamples = nil
+		//sc.Lsamples = sc.Lsamples[:0]
 		if len(sc.Lsamples) == 0 { // NOTE this needs thinking about, if we take any samples at all then should count all of them, otherwise use BSDF.
-			nLightSamples = 0
+			//nLightSamples = 0
 		}
 		if len(bsdfSamples) == 0 { // NOTE this needs thinking about, if we take any samples at all then should count all of them, otherwise use BSDF.
-			nBSDFSamples = 0
+			//nBSDFSamples = 0
 		}
 
 		totalSamples := nBSDFSamples + nLightSamples
@@ -320,7 +324,8 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.Spectrum {
 			}
 
 			if m.Vec3Dot(ls.Ld, sc.Ng) < 0 {
-				ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(ls.Ldist*(0.8-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
+				//ray.Init(RayTypeShadow, sc.OffsetP(-1), m.Vec3Scale(ls.Ldist*(0.8-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
+				continue
 			} else {
 				ray.Init(RayTypeShadow, sc.OffsetP(1), m.Vec3Scale(ls.Ldist*(0.8-ShadowRayEpsilon), ls.Ld), 1.0, 0, sc)
 
@@ -361,7 +366,8 @@ func (sc *ShaderContext) EvaluateLightSamples(bsdf BSDF) colour.Spectrum {
 			}
 
 			if m.Vec3Dot(bs.Ld, sc.Ng) < 0 {
-				ray.Init(RayTypeShadow, m.Vec3Mad(sc.P, sc.Ng, -0.1) /*sc.OffsetP(-1)*/, m.Vec3Scale(bs.Ldist*(0.8-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
+				continue
+				//ray.Init(RayTypeShadow, m.Vec3Mad(sc.P, sc.Ng, -0.1) /*sc.OffsetP(-1)*/, m.Vec3Scale(bs.Ldist*(0.8-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
 			} else {
 				ray.Init(RayTypeShadow, m.Vec3Mad(sc.P, sc.Ng, 0.1) /* sc.OffsetP(1)*/, m.Vec3Scale(bs.Ldist*(0.8-ShadowRayEpsilon), bs.Ld), 1.0, 0, sc)
 

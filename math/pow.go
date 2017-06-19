@@ -18,6 +18,11 @@ func Exp(x float32) float32 {
 	return float32(m.Exp(float64(x)))
 }
 
+// Log returns ln(x)
+func Log(x float32) float32 {
+	return float32(m.Log(float64(x)))
+}
+
 // Pow returns x^y
 func Pow(x, y float32) float32 {
 	return float32(m.Pow(float64(x), float64(y)))

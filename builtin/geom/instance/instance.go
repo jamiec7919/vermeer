@@ -49,12 +49,19 @@ type Instance struct {
 
 	geom core.Geom
 
+	flags uint32
+
 	bounds []m.BoundingBox
 }
 
 // Assert that Instance implements important interfaces.
 var _ core.Node = (*Instance)(nil)
 var _ core.Geom = (*Instance)(nil)
+
+// HasFlags implements core.Geom.
+func (ins *Instance) HasFlags(f uint32) bool {
+	return ins.flags&f == f
+}
 
 // Name is a core.Node method.
 func (ins *Instance) Name() string { return ins.NodeName }
@@ -115,6 +122,8 @@ func (ins *Instance) Trace(ray *core.Ray, sg *core.ShaderContext) bool {
 
 // PreRender is a core.Node method.
 func (ins *Instance) PreRender() error {
+
+	ins.flags |= core.GeomFlagOpaque
 
 	for i := range ins.Transform.Elems {
 		ins.transformSRT = append(ins.transformSRT, m.Matrix4ToTransform(ins.Transform.Elems[i]))
