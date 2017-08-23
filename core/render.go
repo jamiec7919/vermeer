@@ -15,18 +15,6 @@ import (
 	"sync"
 )
 
-// Need to pick scramble values per pixel (and per frame for raster positions). Basic
-// values for lens (u&v), time, lambda.
-// 32 byte.  Not sure I like this, a large buffer for such things!
-type pixelscramble struct {
-	lensU, lensV uint64
-	time         uint64
-	lambda       uint64
-	scramble     [2]uint64 // Light and glossy scramble.  Currently each light uses same, but could combine with a unique light scramble (e.g. xor?)
-}
-
-var framescramble []pixelscramble
-
 type workitem struct {
 	x, y, w, h int
 }
@@ -82,7 +70,7 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 				x := i + item.x
 				y := j + item.y
 
-				pixIdx := x + y*framebuffer.Width
+				//pixIdx := x + y*framebuffer.Width
 
 				// If buffer size isn't a multiple of tile size skip any overhanging pixels
 				if x >= framebuffer.Width || y >= framebuffer.Height {
@@ -92,16 +80,10 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 				_, rasterX, rasterY := ldseq.RasterXY(12, uint32(iter), uint32(x), uint32(y), 0, 0)
 				//rasterX = rand.Float64() + float64(x)
 				//rasterY = rand.Float64() + float64(y)
-				time := ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].time)
-
-				/*
-					lambda := (colour.LambdaMax-colour.LambdaMin)*ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].lambda) + colour.LambdaMin
-
-					lensU := ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].lensU)
-					lensV := ldseq.Sobol(uint64(iter), framescramble[pixIdx].lensV)
-				*/
 
 				ditheridx := (x % bluenoisedither.TileSize) + ((y % bluenoisedither.TileSize) * bluenoisedither.TileSize)
+
+				time := ldseq.VanDerCorput(uint64(iter), bluenoisedither.Time1D[ditheridx])
 				lambda := (colour.LambdaMax-colour.LambdaMin)*ldseq.VanDerCorput(uint64(iter), bluenoisedither.Time1D[ditheridx]) + colour.LambdaMin
 
 				lensU := ldseq.VanDerCorput(uint64(iter), bluenoisedither.Lens2D[ditheridx][0])
@@ -172,18 +154,6 @@ func Render(maxIter int, exit chan bool) (RenderStats, error) {
 
 	if !ok {
 		return stats, ErrNoCamera
-	}
-
-	framescramble = make([]pixelscramble, framebuffer.Width*framebuffer.Height)
-
-	for i := range framescramble {
-		framescramble[i].lensU = rand.Uint64()
-		framescramble[i].lensV = rand.Uint64()
-		framescramble[i].time = rand.Uint64()
-		framescramble[i].lambda = rand.Uint64()
-		framescramble[i].scramble[0] = rand.Uint64()
-		framescramble[i].scramble[1] = rand.Uint64()
-
 	}
 
 	image = &Image{}
