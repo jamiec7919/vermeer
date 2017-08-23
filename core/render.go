@@ -7,6 +7,7 @@ package core
 import (
 	"fmt"
 	"github.com/jamiec7919/vermeer/colour"
+	"github.com/jamiec7919/vermeer/math/bluenoisedither"
 	"github.com/jamiec7919/vermeer/math/ldseq"
 	"log"
 	"math"
@@ -91,12 +92,20 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 				_, rasterX, rasterY := ldseq.RasterXY(12, uint32(iter), uint32(x), uint32(y), 0, 0)
 				//rasterX = rand.Float64() + float64(x)
 				//rasterY = rand.Float64() + float64(y)
-
 				time := ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].time)
-				lambda := (colour.LambdaMax-colour.LambdaMin)*ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].lambda) + colour.LambdaMin
 
-				lensU := ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].lensU)
-				lensV := ldseq.Sobol(uint64(iter), framescramble[pixIdx].lensV)
+				/*
+					lambda := (colour.LambdaMax-colour.LambdaMin)*ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].lambda) + colour.LambdaMin
+
+					lensU := ldseq.VanDerCorput(uint64(iter), framescramble[pixIdx].lensU)
+					lensV := ldseq.Sobol(uint64(iter), framescramble[pixIdx].lensV)
+				*/
+
+				ditheridx := (x % bluenoisedither.TileSize) + ((y % bluenoisedither.TileSize) * bluenoisedither.TileSize)
+				lambda := (colour.LambdaMax-colour.LambdaMin)*ldseq.VanDerCorput(uint64(iter), bluenoisedither.Time1D[ditheridx]) + colour.LambdaMin
+
+				lensU := ldseq.VanDerCorput(uint64(iter), bluenoisedither.Lens2D[ditheridx][0])
+				lensV := ldseq.Sobol(uint64(iter), bluenoisedither.Lens2D[ditheridx][1])
 
 				if filter != nil {
 					pixu := rasterX - math.Floor(rasterX)
@@ -123,7 +132,7 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 
 				samp := TraceSample{}
 				ray.I = int(iter)
-				ray.Scramble = framescramble[pixIdx].scramble
+				ray.Scramble = bluenoisedither.Lens2D[ditheridx] //framescramble[pixIdx].scramble
 				Trace(ray, &samp)
 
 				for k := 0; k < 3; k++ {
