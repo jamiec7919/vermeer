@@ -28,3 +28,16 @@ func Inf(sign int) float32 {
 func IsInf(v float32) bool {
 	return v > math.MaxFloat32 || v < -math.MaxFloat32
 }
+
+// Exponent is all 1's, mantisa is non-zero (sign ignored)
+func IsNaN(v float32) bool {
+	i := math.Float32bits(v)
+
+	if i&(0xff<<23) == (0xff << 23) {
+		if i&0x7fffff != 0 {
+			return true
+		}
+	}
+
+	return false
+}
