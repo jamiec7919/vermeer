@@ -314,8 +314,11 @@ func (c *Camera) ComputeRay(sc *core.ShaderContext, lensU, lensV float64, ray *c
 	_ = dx
 	_ = dy
 
-	sc.Image.PixelDelta[0] = 0.1 * 2 * c.TanThetaFocal / float32(w)
-	sc.Image.PixelDelta[1] = 0.1 * 2 * c.TanThetaFocal / (c.Aspect * float32(h))
+	// Not sure of correct scaling factors here.. or why I added the 0.1 factor, breaks the texturing!
+	//sc.Image.PixelDelta[0] = 0.1 * 2 * c.TanThetaFocal / float32(w)
+	//sc.Image.PixelDelta[1] = 0.1 * 2 * c.TanThetaFocal / (c.Aspect * float32(h))
+	sc.Image.PixelDelta[0] = 2 * c.TanThetaFocal / float32(w)
+	sc.Image.PixelDelta[1] = 2 * c.TanThetaFocal / (c.Aspect * float32(h))
 
 	ray.Init(core.RayTypeCamera, P, D, m.Inf(1), 0, sc)
 
