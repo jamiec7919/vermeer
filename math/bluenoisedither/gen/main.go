@@ -1,3 +1,7 @@
+// Copyright 2016 The Vermeer Light Tools Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package main
 
 /* This utility generates the blue-noise dithering patterns used as scrambles in Vermeer.
@@ -6,6 +10,7 @@ patterns, giving it at least 1,000,000 iterations.
 */
 import (
 	//"encoding/binary"
+	"flag"
 	"log"
 	"math"
 	"math/rand"
@@ -14,23 +19,48 @@ import (
 	"text/template"
 )
 
-var file = `package {{.Package}}
+var iterations = flag.Int("iter", 1000000, "Number of iterations to use.")
+var oflag = flag.String("o", "", "Output filename.")
+
+var file = `// Copyright 2017 The Vermeer Light Tools Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package {{.Package}}
+
+// This file is generated.  DO NOT MODIFY.
 
 const TileSize = {{.TileSize}}
 
-var Time1D = [{{.TileSize}}*{{.TileSize}}]uint64 {
-	{{range .Time1D}}{{.}},
+var Tile1D = [{{len .Tiles1D}}][{{.TileSize}}*{{.TileSize}}]uint64 {
+	{{range .Tiles1D}}[...]uint64{
+	{{range .}}{{.}},
+	{{end}}
+	},
 	{{end}}
 }
 
-var Lens2D = [{{.TileSize}}*{{.TileSize}}][2]uint64 {
-	{{range .Lens2D}}{ {{index . 0}}, {{index . 1}} },
+var Tile2D = [{{len .Tiles2D}}][{{.TileSize}}*{{.TileSize}}][2]uint64 {
+	{{range .Tiles2D}}[...][2]uint64{
+	{{range .}}{ {{index . 0}}, {{index . 1}} },
+	{{end}}
+	},
 	{{end}}
 }
 
 `
 
 var tpl = template.Must(template.New("file").Parse(file))
+
+var Seeds1D = []int64{
+	12423523,
+	0x13214ad4242aff,
+}
+
+var Seeds2D = []int64{
+	12212443623523,
+	0x13214ad4242aff,
+}
 
 func Float64ToScramble(x float64) uint64 {
 	bits := math.Float64bits(x + 1.0)
@@ -413,24 +443,26 @@ func Blue2D(size, iter int, buf []float64) error {
 
 }
 
-func White1D(size int, buf []float64) {
+func White1D(size int, rng *rand.Rand, buf []float64) {
 	for i := 0; i < size*size; i++ {
-		buf[i] = rand.Float64()
+		buf[i] = rng.Float64()
 		//buf[i] = float64(i%256) / 256.0
 		//log.Printf("buf[%v] %v", i, buf[i])
 	}
 }
 
-func White2D(size int, buf []float64) {
+func White2D(size int, rng *rand.Rand, buf []float64) {
 	for i := 0; i < size*size; i++ {
-		buf[i*2] = rand.Float64()
-		buf[i*2+1] = rand.Float64()
+		buf[i*2] = rng.Float64()
+		buf[i*2+1] = rng.Float64()
 		//buf[i] = float64(i%256) / 256.0
 		//log.Printf("buf[%v] %v", i, buf[i])
 	}
 }
 
 func main() {
+	flag.Parse()
+
 	rand.Seed(123134)
 	size := 128
 	/*
@@ -488,40 +520,63 @@ func main() {
 	wg.Add(2)
 
 	go func() {
+		var Tiles1D [][]uint64
+
 		buf := make([]float64, size*size)
-		White1D(size, buf)
-		Blue1D(size, 1000000, buf)
-		Time1D := make([]uint64, size*size)
-		for i := range buf {
-			Time1D[i] = Float64ToScramble(buf[i])
+		for k := range Seeds1D {
+			rng := rand.New(rand.NewSource(Seeds1D[k]))
+			White1D(size, rng, buf)
+			Blue1D(size, *iterations, buf)
+			Tile1D := make([]uint64, size*size)
+			for i := range buf {
+				Tile1D[i] = Float64ToScramble(buf[i])
+			}
+			Tiles1D = append(Tiles1D, Tile1D)
 		}
 
 		dataMutex.Lock()
-		data["Time1D"] = Time1D
+		data["Tiles1D"] = Tiles1D
 		dataMutex.Unlock()
 		wg.Done()
 	}()
 
 	go func() {
+		var Tiles2D [][][2]uint64
+
 		buf := make([]float64, size*size*2)
+		for k := range Seeds2D {
+			rng := rand.New(rand.NewSource(Seeds2D[k]))
 
-		White2D(size, buf)
-		Blue2D(size, 1000000, buf)
+			White2D(size, rng, buf)
+			Blue2D(size, *iterations, buf)
 
-		Lens2D := make([][2]uint64, size*size)
+			Tile2D := make([][2]uint64, size*size)
 
-		for i := range Lens2D {
-			Lens2D[i][0] = Float64ToScramble(buf[i*2+0])
-			Lens2D[i][1] = Float64ToScramble(buf[i*2+1])
+			for i := range Tile2D {
+				Tile2D[i][0] = Float64ToScramble(buf[i*2+0])
+				Tile2D[i][1] = Float64ToScramble(buf[i*2+1])
+			}
+			Tiles2D = append(Tiles2D, Tile2D)
 		}
 
 		dataMutex.Lock()
-		data["Lens2D"] = Lens2D
+		data["Tiles2D"] = Tiles2D
 		dataMutex.Unlock()
 		wg.Done()
 	}()
 
 	wg.Wait()
 
-	tpl.Execute(os.Stdout, data)
+	if *oflag != "" {
+		f, err := os.Create(*oflag)
+
+		if err != nil {
+			log.Fatalf("Error creating output: %v", err)
+		}
+		defer f.Close()
+
+		tpl.Execute(f, data)
+	} else {
+		tpl.Execute(os.Stdout, data)
+	}
 }
