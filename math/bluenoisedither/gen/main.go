@@ -17,6 +17,7 @@ import (
 	"os"
 	"sync"
 	"text/template"
+	"time"
 )
 
 var iterations = flag.Int("iter", 1000000, "Number of iterations to use.")
@@ -28,7 +29,8 @@ var file = `// Copyright 2017 The Vermeer Light Tools Authors. All rights reserv
 
 package {{.Package}}
 
-// This file is generated.  DO NOT MODIFY.
+// This file was generated on {{.Date}}.  DO NOT MODIFY.
+// Parameters: iterations={{.Iter}}
 
 const TileSize = {{.TileSize}}
 
@@ -369,7 +371,7 @@ func Blue1D(size, iter int, buf []float64) error {
 			E := math.Exp(-ispace - isamp)
 		*/
 
-		log.Printf("Iter %v %v %v\n", i, Etotal, Etest)
+		//log.Printf("Iter %v %v %v\n", i, Etotal, Etest)
 	}
 
 	Eend := E1D(size, buf)
@@ -432,7 +434,7 @@ func Blue2D(size, iter int, buf []float64) error {
 			E := math.Exp(-ispace - isamp)
 		*/
 
-		log.Printf("Iter %v %v %v\n", i, Etotal, Etest)
+		//log.Printf("Iter %v %v %v\n", i, Etotal, Etest)
 	}
 
 	Eend := E2D(size, buf)
@@ -514,6 +516,7 @@ func main() {
 
 	data["Package"] = "bluenoisedither"
 	data["TileSize"] = size
+	data["Iter"] = *iterations
 
 	var wg sync.WaitGroup
 
@@ -566,6 +569,8 @@ func main() {
 	}()
 
 	wg.Wait()
+
+	data["Date"] = time.Now()
 
 	if *oflag != "" {
 		f, err := os.Create(*oflag)

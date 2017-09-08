@@ -83,11 +83,11 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 
 				ditheridx := (x % bluenoisedither.TileSize) + ((y % bluenoisedither.TileSize) * bluenoisedither.TileSize)
 
-				time := ldseq.VanDerCorput(uint64(iter), bluenoisedither.Time1D[ditheridx])
-				lambda := (colour.LambdaMax-colour.LambdaMin)*ldseq.VanDerCorput(uint64(iter), bluenoisedither.Time1D[ditheridx]) + colour.LambdaMin
+				time := ldseq.VanDerCorput(uint64(iter), bluenoisedither.Tile1D[0][ditheridx])
+				lambda := (colour.LambdaMax-colour.LambdaMin)*ldseq.VanDerCorput(uint64(iter), bluenoisedither.Tile1D[1][ditheridx]) + colour.LambdaMin
 
-				lensU := ldseq.VanDerCorput(uint64(iter), bluenoisedither.Lens2D[ditheridx][0])
-				lensV := ldseq.Sobol(uint64(iter), bluenoisedither.Lens2D[ditheridx][1])
+				lensU := ldseq.VanDerCorput(uint64(iter), bluenoisedither.Tile2D[0][ditheridx][0])
+				lensV := ldseq.Sobol(uint64(iter), bluenoisedither.Tile2D[0][ditheridx][1])
 
 				if filter != nil {
 					pixu := rasterX - math.Floor(rasterX)
@@ -114,7 +114,7 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 
 				samp := TraceSample{}
 				ray.I = int(iter)
-				ray.Scramble = bluenoisedither.Lens2D[ditheridx] //framescramble[pixIdx].scramble
+				ray.Scramble = bluenoisedither.Tile2D[1][ditheridx] //framescramble[pixIdx].scramble
 				Trace(ray, &samp)
 
 				for k := 0; k < 3; k++ {
