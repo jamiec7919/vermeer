@@ -296,8 +296,10 @@ func (c *Camera) ComputeRay(sc *core.ShaderContext, lensU, lensV float64, ray *c
 	}
 	//D = D
 
-	right := m.Vec3{M[0], M[1], M[2]}
-	up := m.Vec3{M[4], M[5], M[6]}
+	// Right and Up vectors take into account the world space distance between pixels.
+	// A differential of size 1 should then be 1 screen pixel.
+	right := m.Vec3Scale(2*c.TanThetaFocal/float32(w), m.Vec3{M[0], M[1], M[2]})
+	up := m.Vec3Scale(2*c.TanThetaFocal/(c.Aspect*float32(h)), m.Vec3{M[4], M[5], M[6]})
 	//right := m.Vec3{M[0], M[4], M[8]}
 	//up := m.Vec3{M[1], M[5], M[9]}
 
@@ -306,6 +308,7 @@ func (c *Camera) ComputeRay(sc *core.ShaderContext, lensU, lensV float64, ray *c
 	ray.DdDdx = m.Vec3Scale(1/(m.Vec3Dot(d, d)*m.Sqrt(m.Vec3Dot(d, d))), m.Vec3Sub(m.Vec3Scale(m.Vec3Dot(d, d), right), m.Vec3Scale(m.Vec3Dot(d, right), d)))
 	ray.DdDdy = m.Vec3Scale(1/(m.Vec3Dot(d, d)*m.Sqrt(m.Vec3Dot(d, d))), m.Vec3Sub(m.Vec3Scale(m.Vec3Dot(d, d), up), m.Vec3Scale(m.Vec3Dot(d, up), d)))
 
+	//fmt.Printf("%v %v %v %v %v\n", ray.DdDdx, ray.DdDdy, m.Vec3Length(ray.DdDdx), m.Vec3Length(ray.DdDdy), m.Vec3Length(m.Vec3Scale(c.Focal, ray.DdDdx)))
 	// Should calculate these from world space dimensions
 	//w, h := core.FrameMetrics()
 	dx = 2.0 / float32(w)
@@ -317,8 +320,8 @@ func (c *Camera) ComputeRay(sc *core.ShaderContext, lensU, lensV float64, ray *c
 	// Not sure of correct scaling factors here.. or why I added the 0.1 factor, breaks the texturing!
 	//sc.Image.PixelDelta[0] = 0.1 * 2 * c.TanThetaFocal / float32(w)
 	//sc.Image.PixelDelta[1] = 0.1 * 2 * c.TanThetaFocal / (c.Aspect * float32(h))
-	sc.Image.PixelDelta[0] = 2 * c.TanThetaFocal / float32(w)
-	sc.Image.PixelDelta[1] = 2 * c.TanThetaFocal / (c.Aspect * float32(h))
+	sc.Image.PixelDelta[0] = 1 //2 * c.TanThetaFocal / float32(w)
+	sc.Image.PixelDelta[1] = 1 //2 * c.TanThetaFocal / (c.Aspect * float32(h))
 
 	ray.Init(core.RayTypeCamera, P, D, m.Inf(1), 0, sc)
 
