@@ -70,13 +70,35 @@ func Float64ToScramble(x float64) uint64 {
 	return bits << (64 - 53)
 }
 
+func wrappedDist2(x1, y1, x2, y2, size int) float64 {
+	if x2 < x1 {
+		x1, x2 = x2, x1
+	}
+	if y2 < y1 {
+		y1, y2 = y2, y1
+	}
+
+	dx := x2 - x1
+	dy := y2 - y1
+
+	if (x1+size)-x2 < dx {
+		dx = (x1 + size) - x2
+	}
+
+	if (y1+size)-y2 < dy {
+		dy = (y1 + size) - y2
+	}
+
+	return float64(dx*dx + dy*dy)
+}
+
 // This calculates the total energy due to 1 pixel
 func E1DPixel(size int, buf []float64, x, y int) float64 {
 	Etotal := 0.0
 
 	samp2 := buf[x+size*y]
-	x2 := float64(x)
-	y2 := float64(y)
+	x2 := x
+	y2 := y
 
 	for j := 0; j < size; j++ {
 		for i := 0; i < size; i++ {
@@ -85,22 +107,11 @@ func E1DPixel(size int, buf []float64, x, y int) float64 {
 				continue
 			}
 
-			x1 := float64(i)
-			y1 := float64(j)
+			x1 := i
+			y1 := j
 			samp1 := buf[i+size*j]
 
-			dx := x2 - x1
-			dy := y2 - y1
-			// Wrap boundary
-			if true {
-				if (x2+float64(size))-x1 < dx {
-					dx = (x2 + float64(size)) - x1
-				}
-				if (y2+float64(size))-y1 < dy {
-					dy = (y2 + float64(size)) - y1
-				}
-			}
-			ispace := ((dx * dx) + (dy * dy)) / (2.1 * 2.1)
+			ispace := wrappedDist2(x1, y1, x2, y2, size) / (2.1 * 2.1)
 
 			dsamp := samp2 - samp1
 
@@ -125,8 +136,8 @@ func E2DPixel(size int, buf []float64, x, y int) float64 {
 
 	samp21 := buf[(x+size*y)*2+0]
 	samp22 := buf[(x+size*y)*2+1]
-	x2 := float64(x)
-	y2 := float64(y)
+	x2 := x
+	y2 := y
 
 	for j := 0; j < size; j++ {
 		for i := 0; i < size; i++ {
@@ -135,23 +146,12 @@ func E2DPixel(size int, buf []float64, x, y int) float64 {
 				continue
 			}
 
-			x1 := float64(i)
-			y1 := float64(j)
+			x1 := i
+			y1 := j
 			samp11 := buf[(i+size*j)*2+0]
 			samp12 := buf[(i+size*j)*2+1]
 
-			dx := x2 - x1
-			dy := y2 - y1
-			// Wrap boundary
-			if true {
-				if (x2+float64(size))-x1 < dx {
-					dx = (x2 + float64(size)) - x1
-				}
-				if (y2+float64(size))-y1 < dy {
-					dy = (y2 + float64(size)) - y1
-				}
-			}
-			ispace := ((dx * dx) + (dy * dy)) / (2.1 * 2.1)
+			ispace := wrappedDist2(x1, y1, x2, y2, size) / (2.1 * 2.1)
 
 			dsamp := (samp21-samp11)*(samp21-samp11) + (samp22-samp12)*(samp22-samp12)
 
