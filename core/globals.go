@@ -6,13 +6,13 @@ package core
 
 // Globals is a node representing the global render settings.
 type Globals struct {
-	NodeDef       NodeDef `node:",opt"`
-	XRes, YRes    int     `node:",opt"`
-	UseProgress   bool    `node:",opt"`
-	MaxGoRoutines int     `node:",opt"`
-	Camera        string  `node:",opt"`
-	MaxIter       int     `node:",opt"`
-	Output        string  `node:",opt"`
+	NodeDef       NodeDef  `node:",opt"`
+	XRes, YRes    int      `node:",opt"`
+	UseProgress   bool     `node:",opt"`
+	MaxGoRoutines int      `node:",opt"`
+	Camera        string   `node:",opt"`
+	MaxIter       int      `node:",opt"`
+	Output        []string `node:",opt"` // Output is a string array of AOVs, each string is of format "<AOV name> <format> <filter> <driver>"
 }
 
 var _ Node = (*Globals)(nil)
