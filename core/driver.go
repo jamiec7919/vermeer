@@ -99,11 +99,20 @@ func (fb *Framebuffer) AddSample(x, y, i int, s TraceSample) {
 func (fb *Framebuffer) AddSampleTile(x, y, i, w, h int, s []TraceSample) {
 	rgb := fb.aovs["RGB"]
 
+	if x+w > fb.width-1 {
+		w = fb.width - x
+	}
+
+	if y+h > fb.height-1 {
+		h = fb.height - y
+	}
+
 	if rgb != nil {
 		buf := rgb.([]float32)
 
 		for row := 0; row < h; row++ {
 			for j := 0; j < w; j++ {
+
 				buf[(x+j+((y+row)*fb.width))*3+0] += (s[j+(row*w)].Colour[0] - buf[(x+j+((y+row)*fb.width))*3+0]) / float32(i)
 				buf[(x+j+((y+row)*fb.width))*3+1] += (s[j+(row*w)].Colour[1] - buf[(x+j+((y+row)*fb.width))*3+1]) / float32(i)
 				buf[(x+j+((y+row)*fb.width))*3+2] += (s[j+(row*w)].Colour[2] - buf[(x+j+((y+row)*fb.width))*3+2]) / float32(i)
