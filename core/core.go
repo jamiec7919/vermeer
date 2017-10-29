@@ -7,6 +7,11 @@ Package core provides core interfaces and main render control paths.
 */
 package core
 
+import (
+	"log"
+	"strings"
+)
+
 var stats RenderStats
 var scene Scene
 var nodes []Node
@@ -20,6 +25,7 @@ var defaultGlobals = Globals{
 	YRes:          1024,
 	MaxGoRoutines: 5,
 	MaxIter:       16,
+	Output:        []string{"RGB RGB default_filter default_driver"},
 }
 
 // Init initializes the core system with the given Scene.
@@ -35,7 +41,20 @@ func Init(s Scene) {
 // Nodes may add new nodes so PreRender iterates until no new nodes are created.
 func PreRender() error {
 
-	framebuffer = &Framebuffer{globals.XRes, globals.YRes, make([]float32, globals.XRes*globals.YRes*3)}
+	//framebuffer = &Framebuffer{globals.XRes, globals.YRes, make([]float32, globals.XRes*globals.YRes*3)}
+	// Should create one buffer for each aov
+	//	var aovs []AOV
+
+	if len(globals.Output) == 0 {
+		// just do RGB to default driver
+	}
+
+	//for _, aov := range globals.Output {
+	//	parts := strings.Split(aov, " ")
+
+	//}
+
+	framebuffer = NewFramebuffer(globals.XRes, globals.YRes, []AOV{AOV{"RGB", AOVRGB}})
 
 	// pre and fixup nodes
 	// Note that nodes in PreRender may add new nodes, so we must backup and
@@ -70,7 +89,40 @@ func PostRender() error {
 		}
 	}
 
+	// Collect AOVs for each driver
+
+	drivers := map[string][]string{}
+
+	for _, aov := range globals.Output {
+		parts := strings.Split(aov, " ")
+
+		driver := parts[3]
+
+		drivers[driver] = append(drivers[driver], parts[0])
+	}
+
+	for name, aovs := range drivers {
+		log.Printf("Driver: %v %v", name, aovs)
+
+		node := FindNode(name)
+
+		driver, ok := node.(Driver)
+
+		if !ok {
+			log.Printf("Driver %v not found", name)
+			continue
+		}
+
+		err := driver.Write(framebuffer, aovs)
+
+		if err != nil {
+			log.Printf("Driver error: %v", err)
+		}
+
+	}
+
 	return nil
+
 }
 
 // AddNode adds a node to the core.

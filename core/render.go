@@ -25,15 +25,15 @@ type Image struct {
 }
 
 // Framebuffer represents a buffer of pixels, RGB or deep.
-type Framebuffer struct {
-	Width, Height int
-	Buf           []float32
-}
+//type Framebuffer struct {
+//	Width, Height int
+//	Buf           []float32
+//}
 
 // Aspect returns the aspect ratio of this framebuffer.
-func (fb *Framebuffer) Aspect() float32 {
-	return float32(fb.Width) / float32(fb.Height)
-}
+//func (fb *Framebuffer) Aspect() float32 {
+//	return float32(fb.Width) / float32(fb.Height)
+//}
 
 var image *Image
 var framebuffer *Framebuffer
@@ -45,12 +45,12 @@ func FrameAspect() float32 {
 
 // FrameMetrics returns the width and height of the current framebuffer.
 func FrameMetrics() (int, int) {
-	return framebuffer.Width, framebuffer.Height
+	return framebuffer.Width(), framebuffer.Height()
 }
 
 // FrameBuf returns the []float32 slice of pixels
 func FrameBuf() []float32 {
-	return framebuffer.Buf
+	return nil // framebuffer.Buf
 }
 
 // render represents one goroutine.
@@ -63,6 +63,8 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 	sc := task.NewShaderContext()
 	sc.Image = image
 
+	tile := make([]TraceSample, 32*32)
+
 	for item := range work {
 		for j := 0; j < item.h; j++ {
 			for i := 0; i < item.w; i++ {
@@ -73,7 +75,7 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 				//pixIdx := x + y*framebuffer.Width
 
 				// If buffer size isn't a multiple of tile size skip any overhanging pixels
-				if x >= framebuffer.Width || y >= framebuffer.Height {
+				if x >= framebuffer.Width() || y >= framebuffer.Height() {
 					continue
 				}
 
@@ -112,17 +114,15 @@ func render(iter int, camera Camera, framebuffer *Framebuffer, work chan workite
 
 				camera.ComputeRay(sc, lensU, lensV, ray)
 
-				samp := TraceSample{}
 				ray.I = int(iter)
 				ray.Scramble = bluenoisedither.Tile2D[1][ditheridx] //framescramble[pixIdx].scramble
-				Trace(ray, &samp)
 
-				for k := 0; k < 3; k++ {
-					framebuffer.Buf[(x+y*framebuffer.Width)*3+k] = (framebuffer.Buf[(x+y*framebuffer.Width)*3+k]*float32(iter) + samp.Colour[k]) / float32(iter+1)
-				}
+				Trace(ray, &tile[i+j*32])
 
 			}
 		}
+
+		framebuffer.AddSampleTile(item.x, item.y, iter, item.w, item.h, tile)
 	}
 
 	task.ReleaseRay(ray)
@@ -162,7 +162,13 @@ func Render(maxIter int, exit chan bool) (RenderStats, error) {
 
 	finish := false
 
-	for iter := 0; (iter < globals.MaxIter || globals.MaxIter == 0) && !finish; iter++ {
+	var iter int
+
+	for !finish {
+
+		if globals.MaxIter > 0 && iter >= globals.MaxIter-1 {
+			finish = true
+		}
 
 		// Spawn one goroutine per CPU (ish)
 		workqueue := make(chan workitem)
@@ -191,7 +197,11 @@ func Render(maxIter int, exit chan bool) (RenderStats, error) {
 			finish = true
 		default:
 		}
+
+		iter++
 	}
+
+	framebuffer.Flush(iter)
 
 	// Skip to next line after iter print.
 	fmt.Printf("\n")
