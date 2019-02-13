@@ -10,6 +10,12 @@ import (
 	m "github.com/jamiec7919/vermeer/math"
 )
 
+//go:generate go run asm.go -out asm_amd64.s
+
+//go:nosplit
+//go:noescape
+func IntersectBoxes(ray *core.Ray, boxes *[4 * 3 * 2]float32, hits *[4]int32, t *[4]float32)
+
 //go:nosplit
 //go:noescape
 func intersectBoxes(ray *core.Ray, boxes *[4 * 3 * 2]float32, hits *[4]int32, t *[4]float32)
@@ -112,7 +118,7 @@ func Trace(qbvh []Node, prim Primitive, ray *core.Ray, sg *core.ShaderContext) b
 
 		if node >= 0 {
 			ray.NodesT++
-			intersectBoxes(ray, &qbvh[node].Boxes, &ray.Task.Traversal.Hits, &ray.Task.Traversal.T)
+			IntersectBoxes(ray, &qbvh[node].Boxes, &ray.Task.Traversal.Hits, &ray.Task.Traversal.T)
 			/*
 				if false {
 					var hits, hits2 [4]int32
