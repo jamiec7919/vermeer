@@ -14,7 +14,7 @@ import (
 
 //go:nosplit
 //go:noescape
-func IntersectBoxes(ray *core.Ray, boxes *[4 * 3 * 2]float32, hits *[4]int32, t *[4]float32)
+//func IntersectBoxes(ray *core.Ray, boxes *[4 * 3 * 2]float32, hits *[4]int32, t *[4]float32)
 
 //go:nosplit
 //go:noescape
@@ -118,7 +118,7 @@ func Trace(qbvh []Node, prim Primitive, ray *core.Ray, sg *core.ShaderContext) b
 
 		if node >= 0 {
 			ray.NodesT++
-			IntersectBoxes(ray, &qbvh[node].Boxes, &ray.Task.Traversal.Hits, &ray.Task.Traversal.T)
+			intersectBoxes(ray, &qbvh[node].Boxes, &ray.Task.Traversal.Hits, &ray.Task.Traversal.T)
 			/*
 				if false {
 					var hits, hits2 [4]int32

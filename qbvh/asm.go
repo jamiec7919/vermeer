@@ -9,7 +9,7 @@ import (
 
 func main() {
 	Package("github.com/jamiec7919/vermeer/qbvh")
-	Implement("IntersectBoxes")
+	Implement("intersectBoxes")
 
 	ray := Dereference(Param("ray"))
 
@@ -19,6 +19,7 @@ func main() {
 	SHUFPS(U8(0), Dinvx, Dinvx)
 
 	box := Load(Param("boxes"), GP64())
+
 	t1 := XMM()
 	MOVAPS(Mem{Base: box}, t1)
 	SUBPS(Px, t1)
